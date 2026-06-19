@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useTheme } from '../hooks/useTheme'
 import { useAuth } from '../hooks/useAuth'
 import { togglePanel } from '../store/slices/notificationSlice'
+import { toggleSidebar } from '../store/slices/sidebarSlice'
 import { setCopilotContext } from '../store/slices/copilotSlice'
 import { websocketService } from '../services/websocketService'
 import Sidebar from './Sidebar'
@@ -137,7 +138,15 @@ const DashboardLayout = () => {
   const { unreadCount } = useSelector((state) => state.notifications)
 
   useEffect(() => {
-    if (isAuthenticated && user) websocketService.connect()
+    if (isAuthenticated && user) {
+      // Connect immediately on auth
+      websocketService.connect()
+      
+      // Also subscribe to presence for online status
+      websocketService.subscribeToPresence((presenceData) => {
+        // Presence updates will be handled by websocket subscriptions in useChat/usePresence
+      })
+    }
   }, [isAuthenticated, user])
 
   useEffect(() => {
@@ -151,7 +160,11 @@ const DashboardLayout = () => {
         <header className="border-b border-gray-200 bg-white px-6 py-3 dark:border-[#30363D] dark:bg-[#161B22]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <button className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-700 lg:hidden">
+              <button
+                onClick={() => dispatch(toggleSidebar())}
+                aria-label="Toggle sidebar"
+                className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-700 lg:hidden transition-colors"
+              >
                 <FiMenu className="text-xl" />
               </button>
             </div>

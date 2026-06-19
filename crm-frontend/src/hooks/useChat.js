@@ -94,11 +94,23 @@ export const useChat = (roomId = null) => {
       }))
       queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
     },
-    onError: (error, _variables, context) => {
+    onError: (error, variables, context) => {
       if (context?.clientId) {
         dispatch(removeMessage({ roomId: context.roomId, messageId: context.clientId }))
       }
-      toast.error(error.message || 'Failed to send message')
+      
+      // Retry if network error (no response or connection refused)
+      if (error.response?.status === 0 || error.code === 'ECONNREFUSED' || !error.response) {
+        toast.error('Network error. Retrying...')
+        
+        // Retry after 2 seconds
+        setTimeout(() => {
+          console.log('Retrying failed message:', variables.content)
+          sendMessageMutation.mutate(variables)
+        }, 2000)
+      } else {
+        toast.error(error.message || 'Failed to send message')
+      }
     },
   })
 

@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import { useTheme } from './hooks/useTheme'
 
+import AuthLayout from './layouts/AuthLayout'
 import DashboardLayout from './layouts/DashboardLayout'
 
 // Components
@@ -11,9 +12,8 @@ import NotificationPanel from './components/notifications/NotificationPanel'
 
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const Landing = lazy(() => import('./pages/Landing'))
-const EnhancedAuthLayout = lazy(() => import('./layouts/EnhancedAuthLayout'))
-const EnhancedLogin = lazy(() => import('./pages/auth/EnhancedLogin'))
-const EnhancedRegister = lazy(() => import('./pages/auth/EnhancedRegister'))
+const Login = lazy(() => import('./pages/auth/Login'))
+const Register = lazy(() => import('./pages/auth/Register'))
 const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'))
 const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'))
 const SessionExpired = lazy(() => import('./pages/auth/SessionExpired'))
@@ -28,7 +28,6 @@ const Analytics = lazy(() => import('./pages/Analytics'))
 const AIInsights = lazy(() => import('./pages/AIInsights'))
 const Profile = lazy(() => import('./pages/Profile'))
 const Settings = lazy(() => import('./pages/Settings'))
-const GlobalCopilot = lazy(() => import('./components/ai/GlobalCopilot'))
 
 const PageLoader = () => (
   <div className="flex h-full min-h-[50vh] items-center justify-center">
@@ -54,10 +53,10 @@ function App() {
         {/* Landing Page */}
         <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" /> : <Suspense fallback={<PageLoader />}><Landing /></Suspense>} />
 
-        {/* Enhanced Auth Routes */}
-        <Route element={<Suspense fallback={<PageLoader />}><EnhancedAuthLayout /></Suspense>}>
-          <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" /> : <Suspense fallback={<PageLoader />}><EnhancedLogin /></Suspense>} />
-          <Route path="/register" element={isAuthenticated ? <Navigate to="/dashboard" /> : <Suspense fallback={<PageLoader />}><EnhancedRegister /></Suspense>} />
+        {/* Auth Routes - Original Simple Layout */}
+        <Route element={<Suspense fallback={<PageLoader />}><AuthLayout /></Suspense>}>
+          <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" /> : <Suspense fallback={<PageLoader />}><Login /></Suspense>} />
+          <Route path="/register" element={isAuthenticated ? <Navigate to="/dashboard" /> : <Suspense fallback={<PageLoader />}><Register /></Suspense>} />
           <Route path="/forgot-password" element={<Suspense fallback={<PageLoader />}><ForgotPassword /></Suspense>} />
           <Route path="/reset-password" element={<Suspense fallback={<PageLoader />}><ResetPassword /></Suspense>} />
         </Route>
@@ -68,7 +67,7 @@ function App() {
         {/* OAuth2 callback — standalone, no auth required */}
         <Route path="/oauth2/callback" element={<Suspense fallback={<PageLoader />}><OAuth2Callback /></Suspense>} />
 
-        {/* Protected Routes */}
+        {/* Protected Routes - Original Dashboard Layout */}
         <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
           <Route path="/dashboard" element={<Suspense fallback={<PageLoader />}><Dashboard /></Suspense>} />
           <Route path="/workspaces" element={<Suspense fallback={<PageLoader />}><Workspaces /></Suspense>} />
@@ -90,11 +89,6 @@ function App() {
 
       {/* Global Notification Panel */}
       {isAuthenticated && <NotificationPanel />}
-      {isAuthenticated && (
-        <Suspense fallback={null}>
-          <GlobalCopilot />
-        </Suspense>
-      )}
     </>
   )
 }

@@ -1,13 +1,16 @@
 import { useEffect } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
+import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { FiBell, FiX } from 'react-icons/fi'
 import { closePanel, setNotifications } from '../../store/slices/notificationSlice'
 import api from '../../services/api'
 import { formatDistanceToNow } from 'date-fns'
+import toast from 'react-hot-toast'
 
 const NotificationPanel = () => {
   const dispatch = useDispatch()
+  const navigate = useNavigate()
   const { isOpen, notifications, unreadCount } = useSelector((state) => state.notifications)
 
   const { data } = useQuery({
@@ -29,6 +32,51 @@ const NotificationPanel = () => {
       dispatch(setNotifications(data))
     }
   }, [data, dispatch])
+
+  const handleNotificationClick = async (notification) => {
+    try {
+      // Mark as read
+      if (!notification.isRead) {
+        await api.post(`/notifications/${notification.id}/read`)
+      }
+
+      // Navigate based on type
+      switch (notification.referenceType) {
+        case 'TASK':
+        case 'TASK_ASSIGNED':
+          if (notification.projectId) {
+            navigate(`/projects/${notification.projectId}/tasks`)
+          }
+          break
+        case 'CHAT':
+        case 'MESSAGE':
+          if (notification.chatRoomId) {
+            navigate(`/chat/${notification.chatRoomId}`)
+          }
+          break
+        case 'WORKSPACE':
+          navigate('/workspaces')
+          break
+        case 'WORKSPACE_MEMBER':
+        case 'WORKSPACE_INVITATION':
+          navigate('/workspaces')
+          break
+        case 'COMMENT':
+          if (notification.projectId) {
+            navigate(`/projects/${notification.projectId}/tasks`)
+          }
+          break
+        default:
+          console.warn('Unknown notification type:', notification.referenceType)
+      }
+
+      // Close panel
+      dispatch(closePanel())
+    } catch (error) {
+      console.error('Error handling notification:', error)
+      toast.error('Failed to process notification')
+    }
+  }
 
   if (!isOpen) return null
 
@@ -66,9 +114,17 @@ const NotificationPanel = () => {
               {notifications.map((notification) => (
                 <div
                   key={notification.id}
-                  className={`p-4 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${
+                  onClick={() => handleNotificationClick(notification)}
+                  className={`p-4 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors ${
                     !notification.isRead ? 'bg-primary-50 dark:bg-primary-900/20' : ''
                   }`}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      handleNotificationClick(notification)
+                    }
+                  }}
                 >
                   <div className="flex items-start gap-3">
                     <div className="flex-1">
@@ -81,7 +137,7 @@ const NotificationPanel = () => {
                       </p>
                     </div>
                     {!notification.isRead && (
-                      <div className="w-2 h-2 bg-primary-600 rounded-full mt-2" />
+                      <div className="w-2 h-2 bg-primary-600 rounded-full mt-2 flex-shrink-0" />
                     )}
                   </div>
                 </div>

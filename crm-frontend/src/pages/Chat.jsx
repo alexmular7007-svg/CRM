@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { FiMessageSquare } from 'react-icons/fi'
 import { useChat } from '../hooks/useChat'
+import { websocketService } from '../services/websocketService'
 import ConversationSidebar from '../components/chat/ConversationSidebar'
 import ChatHeader from '../components/chat/ChatHeader'
 import MessageArea from '../components/chat/MessageArea'
@@ -129,6 +130,11 @@ const Chat = () => {
               onTyping={sendTypingIndicator}
               roomId={currentRoom?.id}
               disabled={!isConnected}
+              onRetryConnect={() => {
+                if (!isConnected) {
+                  websocketService.connect()
+                }
+              }}
             />
           </>
         ) : (

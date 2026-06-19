@@ -10,6 +10,7 @@ import pipelineReducer from './slices/pipelineSlice'
 import analyticsReducer from './slices/analyticsSlice'
 import aiReducer from './slices/aiSlice'
 import copilotReducer from './slices/copilotSlice'
+import sidebarReducer from './slices/sidebarSlice'
 
 export const store = configureStore({
   reducer: {
@@ -24,6 +25,7 @@ export const store = configureStore({
     analytics: analyticsReducer,
     ai: aiReducer,
     copilot: copilotReducer,
+    sidebar: sidebarReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
