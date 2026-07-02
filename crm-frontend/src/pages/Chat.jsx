@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
 import { FiMessageSquare } from 'react-icons/fi'
 import { useChat } from '../hooks/useChat'
@@ -13,14 +14,22 @@ import RoomInfoPanel from '../components/chat/RoomInfoPanel'
 import MessageSearch from '../components/chat/MessageSearch'
 import ChatAIPanel from '../components/ai/ChatAIPanel'
 import Spinner from '../components/common/Spinner'
+import { useAutoRefreshOnMemberRemoval } from '../hooks/useAutoRefreshOnMemberRemoval'
+import { useQueryClient } from '@tanstack/react-query'
 
 const Chat = () => {
   const { roomId } = useParams()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const currentWorkspace = useSelector((state) => state.workspace.currentWorkspace)
+  const workspaceId = currentWorkspace?.id
   const [showInfo, setShowInfo] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
   const [showAI, setShowAI] = useState(false)
+
+  // PHASE 7: Auto-refresh when member is removed from workspace
+  useAutoRefreshOnMemberRemoval(workspaceId, queryClient)
   const {
     rooms,
     currentRoom,
@@ -186,6 +195,7 @@ const Chat = () => {
       <CreateRoomModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
+        workspaceId={workspaceId}
       />
     </div>
   )

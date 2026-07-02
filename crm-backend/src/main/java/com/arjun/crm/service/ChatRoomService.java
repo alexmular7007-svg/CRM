@@ -10,7 +10,18 @@ public interface ChatRoomService {
     ChatRoomResponse createChatRoom(ChatRoomCreateRequest request);
     ChatRoomResponse getChatRoom(Long roomId);
     Page<ChatRoomResponse> getUserChatRooms(Pageable pageable);
-    ChatRoomResponse getOrCreatePrivateChat(Long otherUserId);
+    /**
+     * Get or create private chat between two users in a workspace.
+     * 
+     * SECURITY: Both users MUST be members of the provided workspace.
+     * 
+     * @param otherUserId ID of the other user
+     * @param workspaceId ID of the workspace (required for validation)
+     * @return ChatRoomResponse for the direct message room
+     * @throws AccessDeniedException if users don't share the workspace
+     * @throws ResourceNotFoundException if user not found
+     */
+    ChatRoomResponse getOrCreatePrivateChat(Long otherUserId, Long workspaceId);
     void addParticipant(Long roomId, Long userId);
     void removeParticipant(Long roomId, Long userId);
     void updateLastRead(Long roomId);

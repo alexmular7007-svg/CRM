@@ -40,21 +40,22 @@ import { getLeadAnalytics } from '../services/crmService'
 import { workspaceService } from '../services/workspaceService'
 import { projectService } from '../services/projectService'
 import { setAnalyticsFilters, resetAnalyticsFilters } from '../store/slices/analyticsSlice'
+import { useThemeContext } from '../contexts/ThemeContext'
 import Spinner from '../components/common/Spinner'
 
-const STATUS_COLORS = {
-  TODO: '#94a3b8',
-  IN_PROGRESS: '#3b82f6',
-  IN_REVIEW: '#f59e0b',
-  DONE: '#10b981',
-  BLOCKED: '#ef4444',
-  LEAD: '#64748b',
-  QUALIFIED: '#2563eb',
+const getThemeStatusColors = (theme = {}) => ({
+  TODO: theme?.colors?.textMuted ?? '#6b7280',
+  IN_PROGRESS: theme?.colors?.info ?? '#3b82f6',
+  IN_REVIEW: theme?.colors?.warning ?? '#f97316',
+  DONE: theme?.colors?.success ?? '#10b981',
+  BLOCKED: theme?.colors?.danger ?? '#ef4444',
+  LEAD: theme?.colors?.textMuted ?? '#6b7280',
+  QUALIFIED: theme?.colors?.info ?? '#3b82f6',
   PROPOSAL: '#8b5cf6',
   NEGOTIATION: '#f97316',
-  WON: '#16a34a',
-  LOST: '#dc2626',
-}
+  WON: theme?.colors?.success ?? '#10b981',
+  LOST: theme?.colors?.danger ?? '#ef4444',
+})
 
 const PRIORITY_COLORS = ['#22c55e', '#3b82f6', '#f97316', '#ef4444']
 
@@ -86,13 +87,30 @@ const createDateSeries = (activitiesByDate = {}) => (
     }))
 )
 
-const KpiCard = memo(({ title, value, detail, icon: Icon, tone = 'blue', trend, sparkline = [] }) => {
+const KpiCard = memo(({ title, value, detail, icon: Icon, tone = 'blue', trend, sparkline = [], themeColors = {} }) => {
+  // Safe defaults for theme colors
+  const safeColors = {
+    info: themeColors?.info ?? '#3b82f6',
+    success: themeColors?.success ?? '#10b981',
+    warning: themeColors?.warning ?? '#f97316',
+    primary: themeColors?.primary ?? '#3b82f6',
+    textMuted: themeColors?.textMuted ?? '#6b7280',
+  }
+
   const toneClasses = {
-    blue: 'from-blue-500 to-cyan-500',
-    green: 'from-emerald-500 to-teal-500',
-    orange: 'from-orange-500 to-rose-500',
-    purple: 'from-violet-500 to-fuchsia-500',
-    slate: 'from-slate-600 to-slate-800',
+    blue: `${safeColors.info}30`,
+    green: `${safeColors.success}30`,
+    orange: `${safeColors.warning}30`,
+    purple: `${safeColors.primary}30`,
+    slate: `${safeColors.textMuted}30`,
+  }
+
+  const toneBg = {
+    blue: safeColors.info,
+    green: safeColors.success,
+    orange: safeColors.warning,
+    purple: safeColors.primary,
+    slate: safeColors.textMuted,
   }
 
   return (
@@ -174,6 +192,29 @@ const AnalyticsSkeleton = () => (
 const Analytics = () => {
   const dispatch = useDispatch()
   const queryClient = useQueryClient()
+  const { currentTheme, theme: themeId } = useThemeContext()
+  
+  // Fallback theme colors if currentTheme is undefined
+  const theme = currentTheme && currentTheme.colors ? currentTheme : {
+    colors: {
+      textMuted: '#6b7280',
+      info: '#3b82f6',
+      warning: '#f97316',
+      success: '#10b981',
+      danger: '#ef4444',
+      primary: '#3b82f6',
+    }
+  }
+  
+  const STATUS_COLORS = getThemeStatusColors(theme ?? {})
+  const c = theme?.colors ?? {
+    info: '#3b82f6',
+    success: '#10b981',
+    warning: '#f97316',
+    danger: '#ef4444',
+    primary: '#3b82f6',
+    textMuted: '#6b7280',
+  }
   const { filters } = useSelector((state) => state.analytics)
   const { unreadCount } = useSelector((state) => state.notifications)
   const { currentWorkspace } = useSelector((state) => state.workspace)
@@ -185,7 +226,7 @@ const Analytics = () => {
   }, [filters])
 
   useEffect(() => {
-    queryClient.invalidateQueries({ queryKey: ['analytics'] })
+    queryClient.invalidateQueries({ queryKey: ['analytics'] }, { exact: false })
   }, [queryClient, unreadCount])
 
   const { data: workspaces = [] } = useQuery({
@@ -230,24 +271,27 @@ const Analytics = () => {
   })
 
   const taskQuery = useQuery({
-    queryKey: ['analytics', 'tasks', dateParams],
-    queryFn: () => analyticsService.getTaskAnalytics(dateParams),
+    queryKey: ['analytics', 'tasks', activeWorkspaceId, dateParams],
+    queryFn: () => analyticsService.getTaskAnalytics({ ...dateParams, workspaceId: activeWorkspaceId }),
+    enabled: Boolean(activeWorkspaceId),
     staleTime: 30000,
     retry: false,
     throwOnError: false,
   })
 
   const teamQuery = useQuery({
-    queryKey: ['analytics', 'team', dateParams],
-    queryFn: () => analyticsService.getTeamPerformance(dateParams),
+    queryKey: ['analytics', 'team', activeWorkspaceId, dateParams],
+    queryFn: () => analyticsService.getTeamPerformance({ ...dateParams, workspaceId: activeWorkspaceId }),
+    enabled: Boolean(activeWorkspaceId),
     staleTime: 30000,
     retry: false,
     throwOnError: false,
   })
 
   const activityQuery = useQuery({
-    queryKey: ['analytics', 'activity', dateParams],
-    queryFn: () => analyticsService.getActivityAnalytics(dateParams),
+    queryKey: ['analytics', 'activity', activeWorkspaceId, dateParams],
+    queryFn: () => analyticsService.getActivityAnalytics({ ...dateParams, workspaceId: activeWorkspaceId }),
+    enabled: Boolean(activeWorkspaceId),
     staleTime: 30000,
     retry: false,
     throwOnError: false,
@@ -309,30 +353,70 @@ const Analytics = () => {
 
   if (isInitialLoading) return <AnalyticsSkeleton />
 
+  const isDarkTheme = themeId === 'dark'
+
   return (
     <div className="space-y-6">
-      <div className="relative overflow-hidden rounded-[2rem] border border-blue-200/60 bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 p-6 text-white shadow-xl">
-        <div className="absolute -right-20 -top-24 h-72 w-72 rounded-full bg-cyan-400/20 blur-3xl" />
-        <div className="absolute bottom-0 left-1/3 h-40 w-40 rounded-full bg-orange-400/10 blur-2xl" />
+      <div 
+        className="relative overflow-hidden rounded-[2rem] border p-6 shadow-xl"
+        style={{
+          background: isDarkTheme 
+            ? 'linear-gradient(135deg, rgb(15, 23, 42) 0%, rgb(30, 58, 138) 50%, rgb(15, 23, 42) 100%)'
+            : currentTheme?.colors?.surface || '#FFFFFF',
+          borderColor: isDarkTheme 
+            ? 'rgba(99, 102, 241, 0.4)'
+            : currentTheme?.colors?.border || '#D1D5DB',
+        }}
+      >
+        {isDarkTheme && (
+          <>
+            <div className="absolute -right-20 -top-24 h-72 w-72 rounded-full bg-cyan-400/20 blur-3xl" />
+            <div className="absolute bottom-0 left-1/3 h-40 w-40 rounded-full bg-orange-400/10 blur-2xl" />
+          </>
+        )}
         <div className="relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div>
-            <p className="text-sm font-bold uppercase tracking-[0.25em] text-cyan-200">Enterprise Analytics</p>
-            <h1 className="mt-3 text-4xl font-black tracking-tight">Revenue, work, and collaboration in one cockpit</h1>
-            <p className="mt-3 max-w-3xl text-blue-100">
+            <p 
+              className="text-sm font-bold uppercase tracking-[0.25em]"
+              style={{
+                color: isDarkTheme ? '#06B6D4' : currentTheme?.colors?.primary || '#3B82F6'
+              }}
+            >
+              Enterprise Analytics
+            </p>
+            <h1 
+              className="mt-3 text-4xl font-black tracking-tight"
+              style={{
+                color: isDarkTheme ? '#FFFFFF' : currentTheme?.colors?.text || '#0F172A'
+              }}
+            >
+              Revenue, work, and collaboration in one cockpit
+            </h1>
+            <p 
+              className="mt-3 max-w-3xl"
+              style={{
+                color: isDarkTheme ? '#BEE3F8' : currentTheme?.colors?.textSecondary || '#334155'
+              }}
+            >
               Live operational intelligence from tasks, CRM, activity, AI recommendations, and team performance.
             </p>
-            <div className="mt-4 flex flex-wrap gap-2 text-xs text-blue-100">
-              {selectedProjectName && <span className="rounded-full bg-white/10 px-3 py-1">Project: {selectedProjectName}</span>}
-              {selectedMemberName && <span className="rounded-full bg-white/10 px-3 py-1">Member: {selectedMemberName}</span>}
-              {debouncedFilters.crmStage && <span className="rounded-full bg-white/10 px-3 py-1">CRM: {debouncedFilters.crmStage}</span>}
+            <div className="mt-4 flex flex-wrap gap-2 text-xs" style={{ color: isDarkTheme ? '#BEE3F8' : currentTheme?.colors?.textSecondary || '#334155' }}>
+              {selectedProjectName && <span className="rounded-full px-3 py-1" style={{ backgroundColor: isDarkTheme ? 'rgba(255,255,255,0.1)' : currentTheme?.colors?.surfaceSecondary || '#F1F5F9' }}>Project: {selectedProjectName}</span>}
+              {selectedMemberName && <span className="rounded-full px-3 py-1" style={{ backgroundColor: isDarkTheme ? 'rgba(255,255,255,0.1)' : currentTheme?.colors?.surfaceSecondary || '#F1F5F9' }}>Member: {selectedMemberName}</span>}
+              {debouncedFilters.crmStage && <span className="rounded-full px-3 py-1" style={{ backgroundColor: isDarkTheme ? 'rgba(255,255,255,0.1)' : currentTheme?.colors?.surfaceSecondary || '#F1F5F9' }}>CRM: {debouncedFilters.crmStage}</span>}
             </div>
           </div>
 
           <button
             onClick={() => {
-              queryClient.invalidateQueries({ queryKey: ['analytics'] })
+              queryClient.invalidateQueries({ queryKey: ['analytics'] }, { exact: false })
             }}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white/10 px-5 py-3 text-sm font-bold text-white ring-1 ring-white/20 transition hover:bg-white/20"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-bold transition hover:opacity-80"
+            style={{
+              backgroundColor: isDarkTheme ? 'rgba(255,255,255,0.1)' : currentTheme?.colors?.surfaceSecondary || '#F1F5F9',
+              color: isDarkTheme ? '#FFFFFF' : currentTheme?.colors?.text || '#0F172A',
+              border: `1px solid ${isDarkTheme ? 'rgba(255,255,255,0.2)' : currentTheme?.colors?.border || '#D1D5DB'}`
+            }}
           >
             <FiRefreshCw className={dashboardQuery.isFetching ? 'animate-spin' : ''} />
             Refresh live data
@@ -408,14 +492,14 @@ const Analytics = () => {
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <KpiCard title="Total tasks" value={number.format(taskAnalytics.totalTasks || dashboard.taskStatistics?.totalTasks || 0)} detail="Tracked in selected period" icon={FiTarget} tone="blue" sparkline={activitySeries} />
-        <KpiCard title="Completed tasks" value={number.format(taskAnalytics.completedTasks || dashboard.taskStatistics?.completedTasks || 0)} detail={`${completionRate.toFixed(1)}% completion rate`} icon={FiCheckCircle} tone="green" trend={completionRate - 50} />
-        <KpiCard title="Active projects" value={number.format(dashboard.projectStatistics?.activeProjects || 0)} detail={`${dashboard.projectStatistics?.averageProgress?.toFixed?.(1) || 0}% average progress`} icon={FiBriefcase} tone="purple" />
-        <KpiCard title="Pipeline value" value={currency.format(Number(crm.totalPipelineValue || 0))} detail={`${number.format(crm.totalLeads || 0)} active CRM leads`} icon={FiDollarSign} tone="green" />
-        <KpiCard title="Won / Lost" value={`${number.format(crm.leadsByStatus?.WON || 0)} / ${number.format(crm.leadsByStatus?.LOST || 0)}`} detail={currency.format(Number(crm.wonValue || 0)) + ' won value'} icon={FiTrendingUp} tone="orange" trend={crm.conversionRate || 0} />
-        <KpiCard title="Team activity score" value={Number(activityScore || 0).toFixed(1)} detail={`${number.format(activity.totalActivities || 0)} logged activities`} icon={FiActivity} tone="blue" sparkline={activitySeries} />
-        <KpiCard title="Chat activity" value={number.format(team.totalTeamMessages || dashboard.userProductivity?.messagesSet || 0)} detail="Messages in team workflow" icon={FiUsers} tone="slate" />
-        <KpiCard title="Notifications" value={number.format(dashboard.notificationStatistics?.unreadCount ?? unreadCount ?? 0)} detail={`${number.format(dashboard.notificationStatistics?.totalCount || 0)} total notifications`} icon={FiZap} tone="orange" />
+        <KpiCard title="Total tasks" value={number.format(taskAnalytics.totalTasks || dashboard.taskStatistics?.totalTasks || 0)} detail="Tracked in selected period" icon={FiTarget} tone="blue" sparkline={activitySeries} themeColors={c} />
+        <KpiCard title="Completed tasks" value={number.format(taskAnalytics.completedTasks || dashboard.taskStatistics?.completedTasks || 0)} detail={`${completionRate.toFixed(1)}% completion rate`} icon={FiCheckCircle} tone="green" trend={completionRate - 50} themeColors={c} />
+        <KpiCard title="Active projects" value={number.format(dashboard.projectStatistics?.activeProjects || 0)} detail={`${dashboard.projectStatistics?.averageProgress?.toFixed?.(1) || 0}% average progress`} icon={FiBriefcase} tone="purple" themeColors={c} />
+        <KpiCard title="Pipeline value" value={currency.format(Number(crm.totalPipelineValue || 0))} detail={`${number.format(crm.totalLeads || 0)} active CRM leads`} icon={FiDollarSign} tone="green" themeColors={c} />
+        <KpiCard title="Won / Lost" value={`${number.format(crm.leadsByStatus?.WON || 0)} / ${number.format(crm.leadsByStatus?.LOST || 0)}`} detail={currency.format(Number(crm.wonValue || 0)) + ' won value'} icon={FiTrendingUp} tone="orange" trend={crm.conversionRate || 0} themeColors={c} />
+        <KpiCard title="Team activity score" value={Number(activityScore || 0).toFixed(1)} detail={`${number.format(activity.totalActivities || 0)} logged activities`} icon={FiActivity} tone="blue" sparkline={activitySeries} themeColors={c} />
+        <KpiCard title="Chat activity" value={number.format(team.totalTeamMessages || dashboard.userProductivity?.messagesSet || 0)} detail="Messages in team workflow" icon={FiUsers} tone="slate" themeColors={c} />
+        <KpiCard title="Notifications" value={number.format(dashboard.notificationStatistics?.unreadCount ?? unreadCount ?? 0)} detail={`${number.format(dashboard.notificationStatistics?.totalCount || 0)} total notifications`} icon={FiZap} tone="orange" themeColors={c} />
       </div>
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">

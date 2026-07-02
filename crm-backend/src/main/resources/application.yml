@@ -10,6 +10,9 @@ spring:
   application:
     name: crm-backend
   
+  main:
+    allow-bean-definition-overriding: true
+  
   # ─────────────────────────────────────────────────────────────────────────
   # OAuth2 Client Configuration (Google & GitHub)
   # ─────────────────────────────────────────────────────────────────────────
@@ -37,7 +40,7 @@ spring:
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/crm_db}
     username: ${DATABASE_USERNAME:postgres}
-    password: ${DATABASE_PASSWORD:postgres}
+    password: ${DATABASE_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: ${DB_POOL_SIZE:10}
@@ -153,13 +156,14 @@ spring:
     date-format: yyyy-MM-dd'T'HH:mm:ss.SSS'Z'
 
   # ─────────────────────────────────────────────────────────────────────────
-  # Mail Configuration (Optional)
+  # Mail Configuration (Gmail SMTP)
   # ─────────────────────────────────────────────────────────────────────────
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
     port: ${MAIL_PORT:587}
     username: ${MAIL_USERNAME:}
     password: ${MAIL_PASSWORD:}
+    protocol: smtp
     properties:
       mail:
         smtp:
@@ -167,9 +171,10 @@ spring:
           starttls:
             enable: true
             required: true
-          connectiontimeout: 5000
-          timeout: 5000
-          writetimeout: 5000
+          connectiontimeout: 30000
+          timeout: 30000
+          writetimeout: 30000
+        debug: false
 
   # ─────────────────────────────────────────────────────────────────────────
   # Pagination Configuration (merged with spring.data above)
@@ -256,7 +261,7 @@ oauth2:
 # JWT Configuration
 # ───────────────────────────────────────────────────────────────────────────
 jwt:
-  secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+  secret: ${JWT_SECRET}
   expiration: ${JWT_EXPIRATION:86400000}  # 24 hours in milliseconds
   refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}  # 7 days
   issuer: ${JWT_ISSUER:crm-backend}

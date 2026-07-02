@@ -8,7 +8,7 @@ import {
   Plus, Menu, X
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useTheme } from '../hooks/useTheme'
+import { useThemeContext } from '../contexts/ThemeContext'
 import { useAuth } from '../hooks/useAuth'
 import { togglePanel } from '../store/slices/notificationSlice'
 import { toggleSidebar } from '../store/slices/sidebarSlice'
@@ -258,7 +258,7 @@ const TopNavBar = ({ user, logout, unreadCount, onNotifications, isDark, toggle,
               type="text"
               placeholder="Search projects, tasks, leads..."
               className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700
-                bg-white dark:bg-gray-800 text-sm placeholder-gray-500 dark:placeholder-gray-400
+                bg-white dark:bg-gray-800 text-sm placeholder-gray-600 dark:placeholder-gray-400
                 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
@@ -269,13 +269,14 @@ const TopNavBar = ({ user, logout, unreadCount, onNotifications, isDark, toggle,
           {/* Notifications */}
           <button
             onClick={onNotifications}
-            className="relative p-2.5 rounded-lg text-gray-600 dark:text-gray-400
+            className="relative p-2.5 rounded-lg text-gray-700 dark:text-gray-200
               hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            aria-label="View notifications"
           >
             <Bell size={20} />
             {unreadCount > 0 && (
-              <span className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white
-                flex items-center justify-center rounded-full text-xs font-bold">
+              <span className="absolute top-0.5 right-0.5 w-5 h-5 bg-red-500 text-white
+                flex items-center justify-center rounded-full text-xs font-bold leading-none">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
@@ -284,10 +285,12 @@ const TopNavBar = ({ user, logout, unreadCount, onNotifications, isDark, toggle,
           {/* Theme Toggle */}
           <button
             onClick={toggle}
-            className="p-2.5 rounded-lg text-gray-600 dark:text-gray-400
+            className="p-2.5 rounded-lg text-gray-700 dark:text-gray-200
               hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            aria-label="Toggle dark/light mode"
+            title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
           >
-            {isDark ? <Sun size={20} /> : <Moon size={20} />}
+            {isDark ? <Sun size={20} className="text-yellow-500" /> : <Moon size={20} className="text-slate-600" />}
           </button>
 
           {/* Divider */}
@@ -308,7 +311,11 @@ const TopNavBar = ({ user, logout, unreadCount, onNotifications, isDark, toggle,
 
 // ─── Main Layout ────────────────────────────────────────────────────────────
 const PremiumDashboardLayout = () => {
-  const { isDark, toggle } = useTheme()
+  const { theme, switchTheme } = useThemeContext()
+  const isDark = theme === 'dark'
+  const toggle = () => {
+    switchTheme(isDark ? 'light' : 'dark')
+  }
   const { user, logout, isAuthenticated } = useAuth()
   const dispatch = useDispatch()
   const location = useLocation()

@@ -33,4 +33,11 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Lo
     default boolean isUserAdminOfProject(Long projectId, Long userId) {
         return isUserAdminOfProject(projectId, userId, Role.ADMIN);
     }
+
+    /**
+     * Delete all project members in a workspace
+     */
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM ProjectMember pm WHERE pm.project.workspace.id = :workspaceId")
+    int deleteByWorkspaceId(@Param("workspaceId") Long workspaceId);
 }

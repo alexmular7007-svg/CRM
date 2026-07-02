@@ -21,6 +21,7 @@ public class ChatRoomCreateRequest {
     @NotNull(message = "Chat room type is required")
     private ChatRoomType type;
 
+    @NotNull(message = "Workspace ID is required")
     private Long workspaceId;
     
     private Long projectId;

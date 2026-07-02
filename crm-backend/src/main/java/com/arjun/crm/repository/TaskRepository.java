@@ -1,6 +1,7 @@
 package com.arjun.crm.repository;
 
 import com.arjun.crm.entity.Task;
+import com.arjun.crm.entity.User;
 import com.arjun.crm.enums.TaskPriority;
 import com.arjun.crm.enums.TaskStatus;
 import org.springframework.data.domain.Page;
@@ -124,4 +125,73 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
 
     @Query("SELECT t FROM Task t WHERE t.workspace.id = :workspaceId AND t.dueDate < :today AND t.status NOT IN ('DONE', 'CANCELLED')")
     List<Task> findOverdueTasksInWorkspace(@Param("workspaceId") Long workspaceId, @Param("today") LocalDate today);
+    
+    /**
+     * Workspace-scoped analytics queries
+     */
+    @Query("SELECT COUNT(t) FROM Task t WHERE t.workspace.id = :workspaceId AND t.createdAt BETWEEN :startDate AND :endDate")
+    Long countTasksCreatedBetweenByWorkspace(@Param("workspaceId") Long workspaceId, @Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
+    
+    @Query("SELECT COUNT(t) FROM Task t WHERE t.workspace.id = :workspaceId AND t.status = 'DONE' AND t.updatedAt BETWEEN :startDate AND :endDate")
+    Long countTasksCompletedBetweenByWorkspace(@Param("workspaceId") Long workspaceId, @Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
+    
+    @Query("SELECT t FROM Task t WHERE t.workspace.id = :workspaceId AND t.dueDate < :today AND t.status NOT IN ('DONE', 'CANCELLED')")
+    List<Task> findOverdueTasksByWorkspace(@Param("workspaceId") Long workspaceId, @Param("today") LocalDate today);
+    
+    /**
+     * Delete all tasks for a workspace
+     */
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM Task t WHERE t.workspace.id = :workspaceId")
+    int deleteByWorkspaceId(@Param("workspaceId") Long workspaceId);
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // PHASE 3: Workspace-Scoped Assignee Methods (Active Member Validation)
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Find tasks assigned to a user ONLY in a specific workspace
+     * Prevents global task queries across all workspaces
+     * Used by: TaskService.getTasksByAssigneeInWorkspace()
+     */
+    @Query("SELECT t FROM Task t WHERE t.workspace.id = :workspaceId AND t.assignedTo.id = :assigneeId ORDER BY t.createdAt DESC")
+    Page<Task> findByWorkspaceIdAndAssignedToId(@Param("workspaceId") Long workspaceId,
+                                                  @Param("assigneeId") Long assigneeId,
+                                                  Pageable pageable);
+
+    /**
+     * Find unassigned tasks in a workspace
+     * Used for: Task assignment dropdown to show available tasks
+     */
+    @Query("SELECT t FROM Task t WHERE t.workspace.id = :workspaceId AND t.assignedTo IS NULL ORDER BY t.createdAt DESC")
+    Page<Task> findUnassignedByWorkspaceId(@Param("workspaceId") Long workspaceId, Pageable pageable);
+
+    /**
+     * Get active assignees in a workspace (excluding deleted members)
+     * Only returns users who are active members of the workspace
+     */
+    @Query("SELECT DISTINCT t.assignedTo FROM Task t WHERE t.workspace.id = :workspaceId AND t.assignedTo IS NOT NULL")
+    List<User> findDistinctAssigneesInWorkspace(@Param("workspaceId") Long workspaceId);
+
+    /**
+     * Count tasks assigned to a user in a workspace
+     */
+    @Query("SELECT COUNT(t) FROM Task t WHERE t.workspace.id = :workspaceId AND t.assignedTo.id = :assigneeId")
+    long countByWorkspaceIdAndAssigneeId(@Param("workspaceId") Long workspaceId, @Param("assigneeId") Long assigneeId);
+
+    /**
+     * Find active tasks (not DONE or CANCELLED) assigned to user in workspace
+     */
+    @Query("SELECT t FROM Task t WHERE t.workspace.id = :workspaceId AND t.assignedTo.id = :assigneeId AND t.status NOT IN ('DONE', 'CANCELLED')")
+    List<Task> findActiveTasksByAssigneeInWorkspace(@Param("workspaceId") Long workspaceId, @Param("assigneeId") Long assigneeId);
+
+    /**
+     * Get assignee dropdown options for a workspace (active members only)
+     * Returns distinct users who are assigned or could be assigned tasks in this workspace
+     * Integrates with WorkspaceMember to ensure only active members shown
+     */
+    @Query("SELECT DISTINCT wm.user FROM WorkspaceMember wm " +
+           "WHERE wm.workspace.id = :workspaceId AND wm.deletedAt IS NULL AND wm.status = 'ACTIVE' " +
+           "ORDER BY wm.user.fullName")
+    List<User> findAssignableUsersInWorkspace(@Param("workspaceId") Long workspaceId);
 }

@@ -34,8 +34,12 @@ class WebSocketService {
 
     this.client = new Client({
       webSocketFactory: () => {
-        const wsUrl = import.meta.env.VITE_WS_URL || 'http://localhost:8080/ws'
-        return new SockJS(wsUrl)
+        // ⚠️ SockJS expects HTTP URLs, not WS URLs
+        // It handles protocol conversion internally
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8081'
+        const sockJsUrl = `${baseUrl}/ws`
+        console.log('SockJS URL:', sockJsUrl)
+        return new SockJS(sockJsUrl)
       },
 
       connectHeaders: {
@@ -219,11 +223,36 @@ class WebSocketService {
     if (!user || !this.client || !this.connected) return
     if (this.subscriptions.has('notifications')) return
 
+    // Setup cross-tab sync channel
+    let broadcastChannel = null
+    if ('BroadcastChannel' in window) {
+      broadcastChannel = new BroadcastChannel('notifications')
+    }
+
     try {
       const subscription = this.client.subscribe('/user/queue/notifications', (message) => {
         try {
           const notification = JSON.parse(message.body)
           store.dispatch(addNotification(notification))
+
+          // Show browser notification for important types
+          if ('Notification' in window && Notification.permission === 'granted') {
+            const importantTypes = ['CHAT_MESSAGE', 'TASK_ASSIGNED', 'WORKSPACE_INVITATION', 'CRM_ASSIGNED', 'AI_INSIGHTS']
+            if (importantTypes.includes(notification.type)) {
+              new Notification(notification.title, {
+                body: notification.message,
+                icon: '/logo.png',
+              })
+            }
+          }
+
+          // Broadcast to other tabs
+          if (broadcastChannel) {
+            broadcastChannel.postMessage({
+              type: 'newNotification',
+              notification: notification,
+            })
+          }
         } catch (error) {
           console.error('Failed to parse notification message:', error)
         }

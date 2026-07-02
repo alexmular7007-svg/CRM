@@ -55,4 +55,11 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
            "FROM ChatParticipant p " +
            "WHERE p.chatRoom.id = :roomId AND p.user.id = :userId")
     boolean isUserParticipant(@Param("roomId") Long roomId, @Param("userId") Long userId);
+    
+    /**
+     * Delete all chat rooms for a workspace
+     */
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM ChatRoom cr WHERE cr.workspace.id = :workspaceId")
+    int deleteByWorkspaceId(@Param("workspaceId") Long workspaceId);
 }

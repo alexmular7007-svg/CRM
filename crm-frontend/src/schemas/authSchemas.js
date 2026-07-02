@@ -35,10 +35,7 @@ export const registerSchema = z.object({
     .max(100, 'Email must not exceed 100 characters'),
   password: z
     .string()
-    .min(8, 'Password must be at least 8 characters')
-    .regex(passwordPatterns.uppercase, 'Password must contain at least one uppercase letter')
-    .regex(passwordPatterns.lowercase, 'Password must contain at least one lowercase letter')
-    .regex(passwordPatterns.number, 'Password must contain at least one number'),
+    .min(8, 'Password must be at least 8 characters'),
   confirmPassword: z
     .string()
     .min(1, 'Please confirm your password'),
@@ -64,10 +61,7 @@ export const forgotPasswordSchema = z.object({
 export const resetPasswordSchema = z.object({
   password: z
     .string()
-    .min(8, 'Password must be at least 8 characters')
-    .regex(passwordPatterns.uppercase, 'Password must contain at least one uppercase letter')
-    .regex(passwordPatterns.lowercase, 'Password must contain at least one lowercase letter')
-    .regex(passwordPatterns.number, 'Password must contain at least one number'),
+    .min(8, 'Password must be at least 8 characters'),
   confirmPassword: z
     .string()
     .min(1, 'Please confirm your password'),

@@ -1,6 +1,7 @@
 package com.arjun.crm.repository;
 
 import com.arjun.crm.entity.Lead;
+import com.arjun.crm.entity.User;
 import com.arjun.crm.enums.LeadStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -56,4 +57,29 @@ public interface LeadRepository extends JpaRepository<Lead, Long> {
            "FROM Lead l WHERE l.workspace.id = :workspaceId AND l.assignedTo IS NOT NULL " +
            "GROUP BY l.assignedTo.id, l.assignedTo.fullName")
     List<Object[]> getPerformanceByAssignee(@Param("workspaceId") Long workspaceId);
+    
+    /**
+     * Delete all leads for a workspace
+     */
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM Lead l WHERE l.workspace.id = :workspaceId")
+    int deleteByWorkspaceId(@Param("workspaceId") Long workspaceId);
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // PHASE 6: CRM Lead Service Workspace Scoping Methods
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Find assignable leads for user in workspace (active members only)
+     */
+    @Query("SELECT l FROM Lead l WHERE l.workspace.id = :workspaceId AND l.assignedTo.id = :assigneeId ORDER BY l.createdAt DESC")
+    Page<Lead> findByWorkspaceIdAndAssigneeId(@Param("workspaceId") Long workspaceId, 
+                                               @Param("assigneeId") Long assigneeId, 
+                                               Pageable pageable);
+
+    /**
+     * Get assignable CRM members (active workspace members only)
+     */
+    @Query("SELECT DISTINCT wm.user FROM WorkspaceMember wm WHERE wm.workspace.id = :workspaceId AND wm.deletedAt IS NULL AND wm.status = 'ACTIVE' ORDER BY wm.user.fullName")
+    List<User> findAssignableCRMMembersInWorkspace(@Param("workspaceId") Long workspaceId);
 }

@@ -3,23 +3,39 @@ import api from './api'
 const unwrap = (response) => response?.data ?? response
 
 export const analyticsService = {
-  getDashboard: async () => {
-    const response = await api.get('/dashboard/overview')
+  getDashboard: async (workspaceId) => {
+    const response = await api.get('/dashboard/overview', {
+      params: { workspaceId }
+    })
     return unwrap(response)
   },
 
   getTaskAnalytics: async (params) => {
-    const response = await api.get('/analytics/tasks', { params })
+    const response = await api.get('/analytics/tasks', { 
+      params: { workspaceId: params.workspaceId, startDate: params.startDate, endDate: params.endDate } 
+    })
     return unwrap(response)
   },
 
   getTeamPerformance: async (params) => {
-    const response = await api.get('/analytics/team', { params })
+    const response = await api.get('/analytics/team', { 
+      params: { workspaceId: params.workspaceId, startDate: params.startDate, endDate: params.endDate } 
+    })
     return unwrap(response)
   },
 
   getActivityAnalytics: async (params) => {
-    const response = await api.get('/analytics/activity', { params })
+    const response = await api.get('/analytics/activity', { 
+      params: { workspaceId: params.workspaceId, startDate: params.startDate, endDate: params.endDate } 
+    })
+    return unwrap(response)
+  },
+
+  getRecentActivities: async (workspaceId, limit = 10) => {
+    const response = await api.get('/analytics/recent', { 
+      params: { workspaceId, limit },
+      silent: true 
+    })
     return unwrap(response)
   },
 

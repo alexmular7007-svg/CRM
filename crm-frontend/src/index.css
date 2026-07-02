@@ -12,101 +12,370 @@
   }
 }
 
+/* ── Theme Token CSS Variables (defaults - overridden by ThemeProvider) ──── */
+:root {
+  /* Backgrounds */
+  --theme-background: #0F172A;
+  --theme-surface: #1E293B;
+  --theme-surfaceSecondary: #334155;
+  --theme-card: #1E293B;
+  --theme-sidebar: #0F172A;
+  --theme-navbar: #0F172A;
+  
+  /* Text */
+  --theme-text: #F1F5F9;
+  --theme-textPrimary: #F1F5F9;
+  --theme-textSecondary: #94A3B8;
+  --theme-textMuted: #64748B;
+  --theme-heading: #F8FAFC;
+  
+  /* Borders */
+  --theme-border: #1E293B;
+  --theme-borderLight: #334155;
+  
+  /* Interactive */
+  --theme-primary: #3B82F6;
+  --theme-primaryHover: #2563EB;
+  --theme-secondary: #6366F1;
+  --theme-secondaryHover: #4F46E5;
+  
+  /* Status */
+  --theme-success: #10B981;
+  --theme-warning: #F59E0B;
+  --theme-danger: #EF4444;
+  --theme-info: #3B82F6;
+  
+  /* Input */
+  --theme-inputBackground: #0F172A;
+  --theme-inputBorder: #334155;
+  --theme-inputBorderFocus: #3B82F6;
+  --theme-inputText: #F1F5F9;
+  --theme-inputPlaceholder: #64748B;
+  
+  /* Button */
+  --theme-buttonPrimary: #3B82F6;
+  --theme-buttonPrimaryHover: #2563EB;
+  --theme-buttonPrimaryText: #FFFFFF;
+  --theme-buttonSecondary: #334155;
+  --theme-buttonSecondaryHover: #475569;
+  --theme-buttonSecondaryText: #F1F5F9;
+  
+  /* Icons */
+  --theme-icon: #94A3B8;
+  --theme-iconHover: #F1F5F9;
+  
+  /* Table */
+  --theme-tableHeader: #1E293B;
+  --theme-tableText: #F1F5F9;
+  --theme-tableBorder: #334155;
+  --theme-tableRowHover: #334155;
+  
+  /* Badge */
+  --theme-badge: #334155;
+  --theme-badgeText: #F1F5F9;
+  
+  /* Status badge backgrounds */
+  --theme-badgeSuccess: rgba(16, 185, 129, 0.1);
+  --theme-badgeWarning: rgba(245, 158, 11, 0.1);
+  --theme-badgeDanger: rgba(239, 68, 68, 0.1);
+  --theme-badgeInfo: rgba(59, 130, 246, 0.1);
+  
+  /* Status badge texts */
+  --theme-badgeSuccessText: #10B981;
+  --theme-badgeWarningText: #F59E0B;
+  --theme-badgeDangerText: #EF4444;
+  --theme-badgeInfoText: #3B82F6;
+  
+  /* Disabled state */
+  --theme-textDisabled: #64748B;
+  --theme-buttonDisabled: #475569;
+  
+  /* Links */
+  --theme-link: #3B82F6;
+  --theme-linkHover: #2563EB;
+  
+  /* Shadows */
+  --theme-shadow: rgba(0, 0, 0, 0.3);
+  --theme-shadowSm: rgba(0, 0, 0, 0.1);
+  
+  /* Focus */
+  --theme-focusRing: #3B82F6;
+}
+
+/* ── Apply theme colors to all elements ──── */
+* {
+  color: var(--theme-text);
+}
+
+body {
+  background-color: var(--theme-background);
+  color: var(--theme-text);
+}
+
+main {
+  background-color: var(--theme-background);
+  color: var(--theme-text);
+}
+
+/* ── Headings ──── */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--theme-heading);
+}
+
+/* ── Links ──── */
+a {
+  color: var(--theme-primary);
+}
+
+a:hover {
+  color: var(--theme-primaryHover);
+}
+
+/* ── Inputs ──── */
+input, textarea, select {
+  background-color: var(--theme-inputBackground);
+  color: var(--theme-inputText);
+  border-color: var(--theme-inputBorder);
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: var(--theme-inputBorderFocus);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--theme-focusRing);
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--theme-inputPlaceholder);
+}
+
+/* ── Buttons ──── */
+button {
+  color: inherit;
+}
+
+/* ── Tables ──── */
+table {
+  background-color: var(--theme-surface);
+  color: var(--theme-tableText);
+  border-color: var(--theme-tableBorder);
+}
+
+thead {
+  background-color: var(--theme-tableHeader);
+  color: var(--theme-tableText);
+}
+
+tbody tr:hover {
+  background-color: var(--theme-tableRowHover);
+}
+
+tbody td {
+  border-color: var(--theme-tableBorder);
+  color: var(--theme-tableText);
+}
+
+/* ── Cards ──---- */
+.card {
+  background-color: var(--theme-card);
+  border-color: var(--theme-border);
+  color: var(--theme-text);
+}
+
+/* ── Badges ──---- */
+.badge {
+  background-color: var(--theme-badge);
+  color: var(--theme-badgeText);
+}
+
 @layer components {
   /* ── Buttons ─────────────────────────────────────────────────────── */
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2
-           bg-[#7C3AED] hover:bg-[#6D28D9] active:bg-[#5B21B6]
-           text-white text-sm font-medium
+           text-sm font-medium
            px-4 py-2 rounded-md
-           border border-[#7C3AED]/50
+           border border-none
            transition-colors duration-150
-           focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7C3AED]
+           focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2
            disabled:opacity-50 disabled:cursor-not-allowed;
+    background-color: var(--theme-buttonPrimary);
+    color: var(--theme-buttonPrimaryText);
+  }
+
+  .btn-primary:hover {
+    background-color: var(--theme-buttonPrimaryHover);
   }
 
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-2
-           bg-transparent hover:bg-[#21262D] active:bg-[#30363D]
-           text-gray-700 dark:text-[#E6EDF3] text-sm font-medium
+           text-sm font-medium
            px-4 py-2 rounded-md
-           border border-gray-300 dark:border-[#30363D]
+           border border-none
            transition-colors duration-150
            disabled:opacity-50 disabled:cursor-not-allowed;
+    background-color: var(--theme-buttonSecondary);
+    color: var(--theme-buttonSecondaryText);
+  }
+
+  .btn-secondary:hover {
+    background-color: var(--theme-buttonSecondaryHover);
   }
 
   .btn-outline {
     @apply inline-flex items-center justify-center gap-2
-           bg-transparent hover:bg-gray-100 dark:hover:bg-[#21262D]
-           text-gray-700 dark:text-[#E6EDF3] text-sm font-medium
+           text-sm font-medium
            px-3 py-1.5 rounded-md
-           border border-gray-300 dark:border-[#30363D]
            transition-colors duration-150;
+    background-color: transparent;
+    color: var(--theme-textPrimary);
+    border: 1px solid var(--theme-border);
+  }
+
+  .btn-outline:hover {
+    background-color: var(--theme-surfaceSecondary);
   }
 
   .btn-danger {
     @apply inline-flex items-center justify-center gap-2
-           bg-transparent hover:bg-[#DA3633]/10
-           text-[#DA3633] dark:text-[#F85149] text-sm font-medium
+           text-sm font-medium
            px-4 py-2 rounded-md
-           border border-[#DA3633]/40
+           border border-none
            transition-colors duration-150;
+    background-color: transparent;
+    color: var(--theme-danger);
+  }
+
+  .btn-danger:hover {
+    background-color: var(--theme-danger);
+    opacity: 0.1;
   }
 
   /* ── Cards ───────────────────────────────────────────────────────── */
   .card {
-    @apply bg-white dark:bg-[#161B22]
-           border border-gray-200 dark:border-[#30363D]
-           rounded-lg p-5;
+    @apply rounded-lg p-5;
+    background-color: var(--theme-card);
+    border: 1px solid var(--theme-border);
+    color: var(--theme-text);
   }
 
   .card-flat {
-    @apply bg-white dark:bg-[#161B22]
-           border border-gray-200 dark:border-[#30363D]
-           rounded-md;
+    @apply rounded-md;
+    background-color: var(--theme-card);
+    border: 1px solid var(--theme-border);
+    color: var(--theme-text);
   }
 
   /* ── Inputs ──────────────────────────────────────────────────────── */
   .input {
-    @apply w-full px-3 py-2
-           bg-white dark:bg-[#0D1117]
-           border border-gray-300 dark:border-[#30363D]
-           rounded-md text-sm
-           text-gray-900 dark:text-[#E6EDF3]
-           placeholder:text-gray-400 dark:placeholder:text-[#6E7681]
-           focus:outline-none focus:border-[#7C3AED] focus:ring-2 focus:ring-[#7C3AED]/20
-           transition-colors duration-150
-           disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply w-full px-3 py-2 rounded-md text-sm transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
+    background-color: var(--theme-inputBackground);
+    border: 1px solid var(--theme-inputBorder);
+    color: var(--theme-inputText);
+  }
+
+  .input:focus {
+    outline: none;
+    border-color: var(--theme-inputBorderFocus);
+    box-shadow: 0 0 0 3px var(--theme-focusRing);
   }
 
   .label {
-    @apply block text-sm font-medium
-           text-gray-700 dark:text-[#E6EDF3]
-           mb-1.5;
+    @apply block text-sm font-medium mb-1.5;
+    color: var(--theme-textPrimary);
   }
 
   /* ── Sidebar nav item ────────────────────────────────────────────── */
   .nav-item {
-    @apply flex items-center gap-2.5 px-3 py-2 rounded-md
-           text-sm font-medium
-           text-gray-600 dark:text-[#8B949E]
-           hover:text-gray-900 dark:hover:text-[#E6EDF3]
-           hover:bg-gray-100 dark:hover:bg-[#21262D]
-           transition-colors duration-150;
+    @apply flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150;
+    color: var(--theme-textSecondary);
+  }
+
+  .nav-item:hover {
+    color: var(--theme-text);
+    background-color: var(--theme-surfaceSecondary);
   }
 
   .nav-item-active {
-    @apply bg-gray-100 dark:bg-[#21262D]
-           text-gray-900 dark:text-[#E6EDF3]
-           font-semibold;
+    @apply font-semibold;
+    background-color: var(--theme-surfaceSecondary);
+    color: var(--theme-text);
   }
 
   /* ── Badges ──────────────────────────────────────────────────────── */
-  .badge-success  { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 dark:bg-[#238636]/20 text-emerald-700 dark:text-[#3FB950] border border-emerald-200 dark:border-[#238636]/40; }
-  .badge-warning  { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 dark:bg-[#D29922]/15 text-amber-700 dark:text-[#D29922] border border-amber-200 dark:border-[#D29922]/40; }
-  .badge-danger   { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 dark:bg-[#DA3633]/15 text-red-700 dark:text-[#F85149] border border-red-200 dark:border-[#DA3633]/40; }
-  .badge-default  { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-[#21262D] text-gray-600 dark:text-[#8B949E] border border-gray-200 dark:border-[#30363D]; }
-  .badge-accent   { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-violet-50 dark:bg-[#7C3AED]/15 text-violet-700 dark:text-[#A78BFA] border border-violet-200 dark:border-[#7C3AED]/40; }
+  .badge-success {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border;
+    background-color: var(--theme-success);
+    opacity: 0.1;
+    color: var(--theme-success);
+    border-color: var(--theme-success);
+  }
+
+  .badge-warning {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border;
+    background-color: var(--theme-warning);
+    opacity: 0.1;
+    color: var(--theme-warning);
+    border-color: var(--theme-warning);
+  }
+
+  .badge-danger {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border;
+    background-color: var(--theme-danger);
+    opacity: 0.1;
+    color: var(--theme-danger);
+    border-color: var(--theme-danger);
+  }
+
+  .badge-default {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border;
+    background-color: var(--theme-badge);
+    color: var(--theme-badgeText);
+    border-color: var(--theme-border);
+  }
+
+  .badge-accent {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border;
+    background-color: var(--theme-primary);
+    opacity: 0.1;
+    color: var(--theme-primary);
+    border-color: var(--theme-primary);
+  }
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--theme-border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--theme-borderLight);
+}
+
+/* ── Skeleton ──────────────────────────────────────────────────────── */
+.skeleton {
+  @apply animate-pulse rounded;
+  background-color: var(--theme-surfaceSecondary);
+}
+
+/* ── Auth grid pattern (left panel) ───────────────────────────────── */
+.auth-grid {
+  background-image:
+    linear-gradient(to right, rgba(255,255,255,0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+.auth-spotlight {
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(124,58,237,0.18) 0%, transparent 70%);
 }
 
 /* ── Scrollbar ─────────────────────────────────────────────────────── */

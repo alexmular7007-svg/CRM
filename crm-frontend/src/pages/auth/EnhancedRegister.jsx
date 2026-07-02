@@ -28,7 +28,7 @@ const EnhancedRegister = () => {
   }, [password])
 
   const onSubmit = ({ confirmPassword, acceptTerms, ...data }) => {
-    registerUser({ ...data, role: 'USER' })
+    registerUser(data)  // Do NOT send role - it's assigned by backend
   }
 
   return (
@@ -51,7 +51,7 @@ const EnhancedRegister = () => {
         <FormInput
           label="Full name"
           type="text"
-          placeholder="Jane Smith"
+          placeholder="Enter your full name"
           icon={FiUser}
           error={errors.fullName?.message}
           autoComplete="name"
@@ -61,7 +61,7 @@ const EnhancedRegister = () => {
         <FormInput
           label="Work email"
           type="email"
-          placeholder="you@company.com"
+          placeholder="Enter your email address"
           icon={FiMail}
           error={errors.email?.message}
           autoComplete="email"

@@ -19,4 +19,11 @@ public interface AuthService {
      * @return authentication response with JWT token
      */
     AuthResponse login(LoginRequest request);
+    
+    /**
+     * Refresh JWT token using refresh token
+     * @param refreshToken the refresh token
+     * @return authentication response with new JWT token
+     */
+    AuthResponse refreshToken(String refreshToken);
 }

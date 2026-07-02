@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSelector } from 'react-redux'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { chatService } from '../../services/chatService'
 import clsx from 'clsx'
@@ -18,6 +19,8 @@ const ChatSidebar = ({ rooms, selectedRoom, onSelectRoom }) => {
   const [searchQuery, setSearchQuery] = useState('')
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const queryClient = useQueryClient()
+  const currentWorkspace = useSelector((state) => state.workspace.currentWorkspace)
+  const workspaceId = currentWorkspace?.id
 
   const filteredRooms = rooms.filter((room) =>
     room.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -139,7 +142,10 @@ const ChatSidebar = ({ rooms, selectedRoom, onSelectRoom }) => {
 
       {/* Create Room Modal */}
       {isCreateModalOpen && (
-        <CreateRoomModal onClose={() => setIsCreateModalOpen(false)} />
+        <CreateRoomModal 
+          onClose={() => setIsCreateModalOpen(false)} 
+          workspaceId={workspaceId}
+        />
       )}
     </div>
   )

@@ -10,7 +10,7 @@ const normalizeSuggestions = (response) => (
   response?.actionRecommendations?.length ? response.actionRecommendations : response?.suggestions || []
 )
 
-const TaskAIAssistant = ({ task, projectId }) => {
+const TaskAIAssistant = ({ task, projectId, workspaceId }) => {
   const queryClient = useQueryClient()
 
   const priorityPayload = useMemo(() => ({
@@ -62,6 +62,7 @@ const TaskAIAssistant = ({ task, projectId }) => {
       status: 'TODO',
       priority: task.priority || 'MEDIUM',
       projectId,
+      workspaceId: workspaceId,  // ← Include workspace ID from parent
     }))),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks', String(projectId)] })
@@ -81,6 +82,21 @@ const TaskAIAssistant = ({ task, projectId }) => {
     subtasks.length > 0 && `### Generated subtasks\n${subtasks.map((item) => `- ${item}`).join('\n')}`,
   ].filter(Boolean).join('\n\n')
 
+  const handleRegenerate = async () => {
+    try {
+      // Force refetch even if stale time hasn't passed
+      await Promise.all([
+        priorityQuery.refetch(),
+        deadlineQuery.refetch(),
+        subtaskQuery.refetch(),
+      ])
+      toast.success('AI suggestions regenerated')
+    } catch (error) {
+      console.error('Regenerate error:', error)
+      toast.error('Failed to regenerate suggestions')
+    }
+  }
+
   return (
     <AIResponseCard
       title="AI Task Assistant"
@@ -89,22 +105,25 @@ const TaskAIAssistant = ({ task, projectId }) => {
       error={priorityQuery.error?.message || deadlineQuery.error?.message || subtaskQuery.error?.message}
       markdown={markdown}
       confidence={deadline?.confidenceLevel}
-      onRetry={() => {
-        priorityQuery.refetch()
-        deadlineQuery.refetch()
-        subtaskQuery.refetch()
-      }}
+      onRetry={handleRegenerate}
       actions={(
         <>
           {priority?.suggestedPriority && (
             <button
               type="button"
               className="btn-secondary inline-flex items-center gap-2"
-              onClick={() => taskService.update(task.id, { priority: priority.suggestedPriority }).then(() => {
-                queryClient.invalidateQueries({ queryKey: ['task', task.id] })
-                queryClient.invalidateQueries({ queryKey: ['tasks', projectId] })
-                toast.success('AI priority applied')
-              })}
+              onClick={() => {
+                taskService.update(task.id, { priority: priority.suggestedPriority, workspaceId })
+                  .then(() => {
+                    queryClient.invalidateQueries({ queryKey: ['task', task.id] })
+                    queryClient.invalidateQueries({ queryKey: ['tasks', projectId] })
+                    toast.success('AI priority applied')
+                  })
+                  .catch((err) => {
+                    console.error('Priority update error:', err)
+                    toast.error(err.message || 'Failed to apply priority')
+                  })
+              }}
             >
               <FiShield />
               Apply priority
@@ -123,11 +142,16 @@ const TaskAIAssistant = ({ task, projectId }) => {
                 } else if (raw && raw.match(/^\d{4}-\d{2}-\d{2}/)) {
                   dateStr = raw.slice(0, 10)
                 }
-                taskService.update(task.id, { dueDate: dateStr }).then(() => {
-                  queryClient.invalidateQueries({ queryKey: ['task', task.id] })
-                  queryClient.invalidateQueries({ queryKey: ['tasks', projectId] })
-                  toast.success('AI deadline applied')
-                })
+                taskService.update(task.id, { dueDate: dateStr, workspaceId })
+                  .then(() => {
+                    queryClient.invalidateQueries({ queryKey: ['task', task.id] })
+                    queryClient.invalidateQueries({ queryKey: ['tasks', projectId] })
+                    toast.success('AI deadline applied')
+                  })
+                  .catch((err) => {
+                    console.error('Deadline update error:', err)
+                    toast.error(err.message || 'Failed to apply deadline')
+                  })
               }}
             >
               <FiCalendar />

@@ -34,7 +34,25 @@ public class WorkspaceMember {
     @Column(nullable = false, length = 20)
     private WorkspaceRole role;
 
+    // Member status: ACTIVE = direct member, PENDING_INVITATION = invited but not yet accepted
+    @Column(length = 20)
+    @Builder.Default
+    private String status = "ACTIVE";
+
+    // When invitation was sent (if member was added via invitation)
+    @Column
+    private LocalDateTime invitedAt;
+
+    // User who invited this member
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "invited_by_id")
+    private User invitedBy;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime joinedAt;
+
+    // Soft delete: timestamp when member was removed. NULL = active member, Non-null = removed
+    @Column
+    private LocalDateTime deletedAt;
 }

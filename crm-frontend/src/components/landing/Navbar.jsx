@@ -2,25 +2,53 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Sun, Moon, Menu, X, ArrowRight, Zap } from 'lucide-react'
-import { useTheme } from '../../hooks/useTheme'
+import { useThemeContext } from '../../contexts/ThemeContext'
 
 const NAV_LINKS = [
   { label: 'Features', href: '#features' },
   { label: 'How it works', href: '#workflow' },
   { label: 'AI', href: '#ai' },
-  { label: 'Pricing', href: '#pricing' },
+  { label: 'Plans', href: '#plans' },
 ]
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const { isDark, toggle: toggleTheme } = useTheme()
+  const [activeSection, setActiveSection] = useState('')
+  const { theme, switchTheme } = useThemeContext()
+  const isDark = theme === 'dark'
+  const toggleTheme = () => switchTheme(isDark ? 'light' : 'dark')
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 16)
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 16)
+      
+      // Detect active section
+      const sections = ['features', 'workflow', 'ai', 'plans']
+      for (const section of sections) {
+        const element = document.getElementById(section)
+        if (element) {
+          const rect = element.getBoundingClientRect()
+          if (rect.top <= 100 && rect.bottom >= 100) {
+            setActiveSection(section)
+            break
+          }
+        }
+      }
+    }
+    
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
+
+  const scrollToSection = (href) => {
+    const id = href.replace('#', '')
+    const element = document.getElementById(id)
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      setIsMobileMenuOpen(false)
+    }
+  }
 
   return (
     <motion.nav
@@ -49,13 +77,17 @@ const Navbar = () => {
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-1">
             {NAV_LINKS.map((link) => (
-              <a
+              <button
                 key={link.label}
-                href={link.href}
-                className="px-3 py-1.5 text-sm text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white transition-colors rounded-md hover:bg-gray-100 dark:hover:bg-zinc-800/60 font-medium"
+                onClick={() => scrollToSection(link.href)}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                  activeSection === link.href.replace('#', '')
+                    ? 'text-[#4F46E5] bg-indigo-50 dark:bg-indigo-950/30'
+                    : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-800/60'
+                }`}
               >
                 {link.label}
-              </a>
+              </button>
             ))}
           </div>
 
@@ -65,6 +97,7 @@ const Navbar = () => {
               onClick={toggleTheme}
               className="p-2 rounded-md text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
               aria-label="Toggle theme"
+              title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
             >
               {isDark ? <Sun size={16} /> : <Moon size={16} />}
             </button>
@@ -93,6 +126,8 @@ const Navbar = () => {
             <button
               onClick={toggleTheme}
               className="p-2 rounded-md text-gray-500 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
+              aria-label="Toggle theme"
+              title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
             >
               {isDark ? <Sun size={16} /> : <Moon size={16} />}
             </button>
@@ -118,14 +153,17 @@ const Navbar = () => {
           >
             <div className="px-4 py-4 space-y-1">
               {NAV_LINKS.map((link) => (
-                <a
+                <button
                   key={link.label}
-                  href={link.href}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="block py-2.5 px-3 text-sm font-medium text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-zinc-800/60 rounded-md transition-colors"
+                  onClick={() => scrollToSection(link.href)}
+                  className={`w-full text-left py-2.5 px-3 text-sm font-medium rounded-md transition-colors ${
+                    activeSection === link.href.replace('#', '')
+                      ? 'text-[#4F46E5] bg-indigo-50 dark:bg-indigo-950/30'
+                      : 'text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-zinc-800/60'
+                  }`}
                 >
                   {link.label}
-                </a>
+                </button>
               ))}
               <div className="pt-3 pb-1 border-t border-gray-100 dark:border-zinc-800 mt-2 space-y-2">
                 <Link

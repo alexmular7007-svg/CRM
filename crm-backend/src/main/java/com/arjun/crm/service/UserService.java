@@ -13,6 +13,12 @@ public interface UserService {
 
     Page<UserResponse> searchUsers(String query, Pageable pageable);
 
+    /**
+     * Search users in a specific workspace (multi-tenant isolation).
+     * Only returns members of the given workspace.
+     */
+    Page<UserResponse> searchWorkspaceUsers(Long workspaceId, String query, Pageable pageable);
+
     UserResponse updateProfile(UpdateProfileRequest request);
 
     void changePassword(ChangePasswordRequest request);

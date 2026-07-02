@@ -20,4 +20,6 @@ public class ChatSummarizationResponse {
     private List<String> keyPoints;
     private List<String> actionItems;
     private List<String> decisions;
+    @Builder.Default
+    private Boolean aiUnavailable = false;  // Flag indicating if AI service was unavailable
 }

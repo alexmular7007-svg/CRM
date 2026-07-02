@@ -3,15 +3,17 @@
 **/.env.*
 !**/.env.example
 
-# ─── YAML configs with secrets ───────────────────────────────────────────────
-**/application-dev.yml
-**/application-prod.yml
-**/application-test.yml
-# Keep application.yml (no secrets, only property references)
+# ─── YAML configs with secrets (only local development overrides) ─────────────
+**/application-dev-local.yml
+# Keep application.yml, application-dev.yml, application-prod.yml (no secrets, only property references)
 
 # ─── Markdown docs (internal only) ───────────────────────────────────────────
 **/*.md
 !README.md
+!🎉_GITHUB_UPLOAD_COMPLETE_GUIDE.md
+!📊_FINAL_STATUS_REPORT.md
+!✅_READY_FOR_GITHUB_PUSH.md
+!SECURITY_FIXES_APPLIED_COMPLETE.md
 
 # ─── OS / IDE ─────────────────────────────────────────────────────────────────
 .DS_Store

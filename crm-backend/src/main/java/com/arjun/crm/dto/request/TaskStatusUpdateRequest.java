@@ -9,6 +9,9 @@ import lombok.Setter;
 @Setter
 public class TaskStatusUpdateRequest {
 
+    @NotNull(message = "Workspace ID is required")
+    private Long workspaceId;
+
     @NotNull(message = "Status is required")
     private TaskStatus status;
 }

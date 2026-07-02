@@ -18,10 +18,13 @@ public class TaskCommentResponse {
     private Long userId;
     private String userName;
     private String userEmail;
-    private String message;
+    private String content;
     private List<MentionResponse> mentions;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    
+    // Also provide user object for frontend compatibility
+    private UserSummaryResponse user;
 
     public static TaskCommentResponse fromEntity(TaskComment comment) {
         return TaskCommentResponse.builder()
@@ -30,10 +33,15 @@ public class TaskCommentResponse {
                 .userId(comment.getUser().getId())
                 .userName(comment.getUser().getFullName())
                 .userEmail(comment.getUser().getEmail())
-                .message(comment.getMessage())
+                .content(comment.getMessage())
                 .mentions(comment.getMentions().stream()
                         .map(MentionResponse::fromEntity)
                         .collect(Collectors.toList()))
+                .user(UserSummaryResponse.builder()
+                        .id(comment.getUser().getId())
+                        .fullName(comment.getUser().getFullName())
+                        .email(comment.getUser().getEmail())
+                        .build())
                 .createdAt(comment.getCreatedAt())
                 .updatedAt(comment.getUpdatedAt())
                 .build();

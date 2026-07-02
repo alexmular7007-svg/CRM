@@ -6,6 +6,7 @@ import { chatService } from '../../services/chatService'
 import { userService } from '../../services/userService'
 import toast from 'react-hot-toast'
 import Spinner from '../common/Spinner'
+import { useAutoRefreshOnMemberRemoval } from '../../hooks/useAutoRefreshOnMemberRemoval'
 
 const CreateRoomModal = ({ isOpen, onClose, workspaceId = null }) => {
   const [roomType, setRoomType] = useState('PRIVATE')
@@ -13,6 +14,14 @@ const CreateRoomModal = ({ isOpen, onClose, workspaceId = null }) => {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedUsers, setSelectedUsers] = useState([])
   const queryClient = useQueryClient()
+
+  // PHASE 7: Auto-refresh when member is removed from workspace
+  useAutoRefreshOnMemberRemoval(workspaceId, queryClient)
+
+  // Validate workspace ID is available
+  if (isOpen && !workspaceId) {
+    console.warn('CreateRoomModal: workspaceId is required but not provided')
+  }
 
   // Fetch users for selection
   const { data: users, isLoading: usersLoading } = useQuery({
@@ -25,7 +34,7 @@ const CreateRoomModal = ({ isOpen, onClose, workspaceId = null }) => {
   const createRoomMutation = useMutation({
     mutationFn: ({ roomType, roomData, selectedUsers }) => {
       if (roomType === 'PRIVATE') {
-        return chatService.getOrCreatePrivateChat(selectedUsers[0].id)
+        return chatService.getOrCreatePrivateChat(selectedUsers[0].id, workspaceId)
       }
       return chatService.createRoom(roomData)
     },

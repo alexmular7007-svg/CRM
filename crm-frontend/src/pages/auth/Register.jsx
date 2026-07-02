@@ -9,7 +9,6 @@ const Register = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'USER', // Default role for new registrations
   })
 
   const { register, isRegistering } = useAuth()
@@ -72,9 +71,9 @@ const Register = () => {
             value={formData.password}
             onChange={handleChange}
             className="input"
-            placeholder="Enter your password"
+            placeholder="Enter your password (min 8 characters)"
             required
-            minLength={6}
+            minLength={8}
           />
         </div>
 
@@ -88,7 +87,7 @@ const Register = () => {
             className="input"
             placeholder="Confirm your password"
             required
-            minLength={6}
+            minLength={8}
           />
         </div>
 

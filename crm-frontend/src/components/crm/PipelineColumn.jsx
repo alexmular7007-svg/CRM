@@ -122,7 +122,7 @@ const PipelineColumn = ({
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="flex flex-col items-center justify-center h-32 text-gray-400 dark:text-gray-600"
+              className="flex flex-col items-center justify-center h-32 text-gray-600 dark:text-gray-400"
             >
               <p className="text-sm">No leads</p>
               <p className="text-xs mt-1">Drag leads here or click + to add</p>

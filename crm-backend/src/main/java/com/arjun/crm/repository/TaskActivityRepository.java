@@ -65,4 +65,24 @@ public interface TaskActivityRepository extends JpaRepository<TaskActivity, Long
            "GROUP BY a.task.project.id, a.task.project.name " +
            "ORDER BY COUNT(a) DESC")
     List<Object[]> findMostActiveProjects(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate, Pageable pageable);
+
+    /**
+     * Find activities by workspace and created date between timestamps
+     */
+    @Query("SELECT a FROM TaskActivity a WHERE a.task.workspace.id = :workspaceId AND a.createdAt BETWEEN :startDate AND :endDate")
+    List<TaskActivity> findByWorkspaceIdAndCreatedAtBetween(@Param("workspaceId") Long workspaceId, 
+            @Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
+
+    /**
+     * Find all task activities by workspace ordered by creation date descending
+     */
+    @Query("SELECT a FROM TaskActivity a WHERE a.task.workspace.id = :workspaceId ORDER BY a.createdAt DESC")
+    List<TaskActivity> findByWorkspaceIdOrderByCreatedAtDesc(@Param("workspaceId") Long workspaceId);
+
+    /**
+     * Delete all task activities in a workspace
+     */
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM TaskActivity ta WHERE ta.task.workspace.id = :workspaceId")
+    int deleteByWorkspaceId(@Param("workspaceId") Long workspaceId);
 }

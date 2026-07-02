@@ -1,6 +1,7 @@
 package com.arjun.crm.repository;
 
 import com.arjun.crm.entity.Notification;
+import com.arjun.crm.enums.NotificationType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -9,8 +10,19 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
+
 @Repository
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
+    
+    /**
+     * Find notifications by recipient ID and workspace with eager recipient loading
+     */
+    @Query("SELECT n FROM Notification n JOIN FETCH n.recipient WHERE n.recipient.id = :recipientId AND n.workspace.id = :workspaceId ORDER BY n.createdAt DESC")
+    Page<Notification> findByRecipientIdAndWorkspaceIdOrderByCreatedAtDesc(
+            @Param("recipientId") Long recipientId, 
+            @Param("workspaceId") Long workspaceId, 
+            Pageable pageable);
     
     /**
      * Find notifications by recipient ID with pagination
@@ -18,9 +30,16 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     Page<Notification> findByRecipientIdOrderByCreatedAtDesc(Long recipientId, Pageable pageable);
     
     /**
-     * Find unread notifications by recipient ID
+     * Find unread notifications by recipient ID with eager recipient loading
      */
-    Page<Notification> findByRecipientIdAndIsReadFalseOrderByCreatedAtDesc(Long recipientId, Pageable pageable);
+    @Query("SELECT n FROM Notification n JOIN FETCH n.recipient WHERE n.recipient.id = :recipientId AND n.isRead = false ORDER BY n.createdAt DESC")
+    Page<Notification> findByRecipientIdAndIsReadFalseOrderByCreatedAtDesc(@Param("recipientId") Long recipientId, Pageable pageable);
+    
+    /**
+     * Find notifications by type for current user with eager recipient loading
+     */
+    @Query("SELECT n FROM Notification n JOIN FETCH n.recipient WHERE n.recipient.id = :recipientId AND n.type = :type ORDER BY n.createdAt DESC")
+    Page<Notification> findByRecipientIdAndTypeOrderByCreatedAtDesc(@Param("recipientId") Long recipientId, @Param("type") NotificationType type, Pageable pageable);
     
     /**
      * Count unread notifications for a user
@@ -45,5 +64,12 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
      */
     @Modifying
     @Query("DELETE FROM Notification n WHERE n.isRead = true AND n.createdAt < :cutoffDate")
-    int deleteOldReadNotifications(@Param("cutoffDate") java.time.LocalDateTime cutoffDate);
+    int deleteOldReadNotifications(@Param("cutoffDate") LocalDateTime cutoffDate);
+    
+    /**
+     * Delete all notifications for a workspace
+     */
+    @Modifying
+    @Query("DELETE FROM Notification n WHERE n.workspace.id = :workspaceId")
+    int deleteByWorkspaceId(@Param("workspaceId") Long workspaceId);
 }

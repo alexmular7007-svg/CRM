@@ -46,11 +46,11 @@ public class ProjectServiceImpl implements ProjectService {
         Workspace workspace = workspaceRepository.findById(request.getWorkspaceId())
                 .orElseThrow(() -> new ResourceNotFoundException("Workspace not found with ID: " + request.getWorkspaceId()));
 
-        // Check if user has access to workspace using repository method
+        // PHASE 5: Check if user is ACTIVE member (Phase 2 soft delete validation)
         boolean isOwner = workspace.getOwner().getId().equals(currentUser.getId());
-        boolean isMember = workspaceMemberRepository.existsByWorkspaceIdAndUserId(request.getWorkspaceId(), currentUser.getId());
+        boolean isActiveMember = workspaceMemberRepository.existsActiveMember(request.getWorkspaceId(), currentUser.getId());
         
-        if (!isOwner && !isMember) {
+        if (!isOwner && !isActiveMember) {
             throw new AccessDeniedException("You don't have access to this workspace");
         }
 
@@ -59,7 +59,8 @@ public class ProjectServiceImpl implements ProjectService {
                 .description(request.getDescription())
                 .workspace(workspace)
                 .createdBy(currentUser)
-                .status(ProjectStatus.ACTIVE)
+                .color(request.getColor() != null ? request.getColor() : "#3b82f6")  // Default blue
+                .status(request.getStatus() != null ? ProjectStatus.valueOf(request.getStatus()) : ProjectStatus.ACTIVE)
                 .build();
 
         Project savedProject = projectRepository.save(project);
@@ -80,9 +81,9 @@ public class ProjectServiceImpl implements ProjectService {
         // Check if user has access to workspace using repository method
         Workspace workspace = project.getWorkspace();
         boolean isOwner = workspace.getOwner().getId().equals(currentUser.getId());
-        boolean isMember = workspaceMemberRepository.existsByWorkspaceIdAndUserId(workspace.getId(), currentUser.getId());
+        boolean isActiveMember = workspaceMemberRepository.existsActiveMember(workspace.getId(), currentUser.getId());
         
-        if (!isOwner && !isMember) {
+        if (!isOwner && !isActiveMember) {
             throw new AccessDeniedException("You don't have access to this project");
         }
 
@@ -90,6 +91,9 @@ public class ProjectServiceImpl implements ProjectService {
         project.setDescription(request.getDescription());
         if (request.getStatus() != null) {
             project.setStatus(request.getStatus());
+        }
+        if (request.getColor() != null) {
+            project.setColor(request.getColor());
         }
 
         Project updatedProject = projectRepository.save(project);
@@ -132,10 +136,10 @@ public class ProjectServiceImpl implements ProjectService {
         // Check if user has access to workspace or is project member
         Workspace workspace = project.getWorkspace();
         boolean isWorkspaceOwner = workspace.getOwner().getId().equals(currentUser.getId());
-        boolean isWorkspaceMember = workspaceMemberRepository.existsByWorkspaceIdAndUserId(workspace.getId(), currentUser.getId());
+        boolean isActiveMember = workspaceMemberRepository.existsActiveMember(workspace.getId(), currentUser.getId());
         boolean isProjectMember = projectMemberRepository.existsByProjectIdAndUserId(projectId, currentUser.getId());
         
-        if (!isWorkspaceOwner && !isWorkspaceMember && !isProjectMember) {
+        if (!isWorkspaceOwner && !isActiveMember && !isProjectMember) {
             throw new AccessDeniedException("You don't have access to this project");
         }
 
@@ -153,9 +157,9 @@ public class ProjectServiceImpl implements ProjectService {
 
         // Check if user has access to workspace using repository method
         boolean isOwner = workspace.getOwner().getId().equals(currentUser.getId());
-        boolean isMember = workspaceMemberRepository.existsByWorkspaceIdAndUserId(workspaceId, currentUser.getId());
+        boolean isActiveMember = workspaceMemberRepository.existsActiveMember(workspaceId, currentUser.getId());
         
-        if (!isOwner && !isMember) {
+        if (!isOwner && !isActiveMember) {
             throw new AccessDeniedException("You don't have access to this workspace");
         }
 
@@ -167,6 +171,56 @@ public class ProjectServiceImpl implements ProjectService {
         }
 
         return projects.map(ProjectResponse::fromEntity);
+    }
+
+    @Override
+    @Transactional
+    public ProjectResponse archiveProject(Long projectId) {
+        User currentUser = getAuthenticatedUser();
+        log.info("Archiving project ID: {} by user: {}", projectId, currentUser.getEmail());
+
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found with ID: " + projectId));
+
+        // Only workspace owner or project creator can archive
+        Workspace workspace = project.getWorkspace();
+        boolean canArchive = workspace.getOwner().getId().equals(currentUser.getId()) ||
+                project.getCreatedBy().getId().equals(currentUser.getId());
+
+        if (!canArchive) {
+            throw new AccessDeniedException("Only workspace owner or project creator can archive project");
+        }
+
+        project.setArchived(true);
+        Project archivedProject = projectRepository.save(project);
+        log.info("Project archived successfully: {}", projectId);
+
+        return ProjectResponse.fromEntity(archivedProject);
+    }
+
+    @Override
+    @Transactional
+    public ProjectResponse unarchiveProject(Long projectId) {
+        User currentUser = getAuthenticatedUser();
+        log.info("Unarchiving project ID: {} by user: {}", projectId, currentUser.getEmail());
+
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found with ID: " + projectId));
+
+        // Only workspace owner or project creator can unarchive
+        Workspace workspace = project.getWorkspace();
+        boolean canUnarchive = workspace.getOwner().getId().equals(currentUser.getId()) ||
+                project.getCreatedBy().getId().equals(currentUser.getId());
+
+        if (!canUnarchive) {
+            throw new AccessDeniedException("Only workspace owner or project creator can unarchive project");
+        }
+
+        project.setArchived(false);
+        Project unarchivedProject = projectRepository.save(project);
+        log.info("Project unarchived successfully: {}", projectId);
+
+        return ProjectResponse.fromEntity(unarchivedProject);
     }
 
     /**

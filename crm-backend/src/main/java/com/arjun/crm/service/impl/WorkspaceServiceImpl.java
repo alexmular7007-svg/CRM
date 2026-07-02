@@ -7,12 +7,11 @@ import com.arjun.crm.entity.User;
 import com.arjun.crm.entity.Workspace;
 import com.arjun.crm.exception.AccessDeniedException;
 import com.arjun.crm.exception.ResourceNotFoundException;
-import com.arjun.crm.repository.UserRepository;
-import com.arjun.crm.repository.WorkspaceRepository;
+import com.arjun.crm.repository.*;
 import com.arjun.crm.service.WorkspaceService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import com.arjun.crm.repository.WorkspaceMemberRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
@@ -29,6 +28,23 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     private final WorkspaceRepository workspaceRepository;
     private final UserRepository userRepository;
     private final WorkspaceMemberRepository workspaceMemberRepository;
+    
+    // Additional repositories for cascade deletion
+    private final TaskRepository taskRepository;
+    private final TaskAttachmentRepository taskAttachmentRepository;
+    private final TaskCommentRepository taskCommentRepository;
+    private final TaskActivityRepository taskActivityRepository;
+    private final TaskWatcherRepository taskWatcherRepository;
+    private final LeadRepository leadRepository;
+    private final LeadActivityRepository leadActivityRepository;
+    private final ProjectRepository projectRepository;
+    private final ProjectMemberRepository projectMemberRepository;
+    private final ChatRoomRepository chatRoomRepository;
+    private final ChatMessageRepository chatMessageRepository;
+    private final ChatParticipantRepository chatParticipantRepository;
+    private final NotificationRepository notificationRepository;
+    private final AIInsightSnapshotRepository aiInsightSnapshotRepository;
+    private final WorkspaceInvitationRepository workspaceInvitationRepository;
 
     @Override
     @Transactional
@@ -44,12 +60,12 @@ public class WorkspaceServiceImpl implements WorkspaceService {
 
         Workspace savedWorkspace = workspaceRepository.save(workspace);
         
-        // Auto-add the creator as a workspace member with ADMIN role
+        // Auto-add the creator as a workspace member with OWNER role
         // This is crucial because access validation checks the WorkspaceMember table
         com.arjun.crm.entity.WorkspaceMember member = com.arjun.crm.entity.WorkspaceMember.builder()
                 .workspace(savedWorkspace)
                 .user(currentUser)
-                .role(com.arjun.crm.enums.WorkspaceRole.ADMIN)
+                .role(com.arjun.crm.enums.WorkspaceRole.OWNER)
                 .build();
         workspaceMemberRepository.save(member);
 
@@ -95,8 +111,75 @@ public class WorkspaceServiceImpl implements WorkspaceService {
             throw new AccessDeniedException("Only workspace owner can delete workspace");
         }
 
-        workspaceRepository.delete(workspace);
-        log.info("Workspace deleted successfully: {}", workspaceId);
+        // Comprehensive cascade deletion in correct order
+        // This prevents foreign key constraint violations
+        log.info("Starting cascade delete for workspace ID: {}", workspaceId);
+        
+        try {
+            // 1. Delete all task-related data (leaf nodes first)
+            int deletedAttachments = taskAttachmentRepository.deleteByWorkspaceId(workspaceId);
+            log.debug("Deleted {} task attachments", deletedAttachments);
+            
+            int deletedWatchers = taskWatcherRepository.deleteByWorkspaceId(workspaceId);
+            log.debug("Deleted {} task watchers", deletedWatchers);
+            
+            int deletedComments = taskCommentRepository.deleteByWorkspaceId(workspaceId);
+            log.debug("Deleted {} task comments", deletedComments);
+            
+            int deletedActivities = taskActivityRepository.deleteByWorkspaceId(workspaceId);
+            log.debug("Deleted {} task activities", deletedActivities);
+            
+            int deletedTasks = taskRepository.deleteByWorkspaceId(workspaceId);
+            log.debug("Deleted {} tasks", deletedTasks);
+
+            // 2. Delete all lead-related data
+            int deletedLeadActivities = leadActivityRepository.deleteByWorkspaceId(workspaceId);
+            log.debug("Deleted {} lead activities", deletedLeadActivities);
+            
+            int deletedLeads = leadRepository.deleteByWorkspaceId(workspaceId);
+            log.debug("Deleted {} leads", deletedLeads);
+
+            // 3. Delete all chat-related data
+            int deletedChatMessages = chatMessageRepository.deleteByWorkspaceId(workspaceId);
+            log.debug("Deleted {} chat messages", deletedChatMessages);
+            
+            int deletedChatParticipants = chatParticipantRepository.deleteByWorkspaceId(workspaceId);
+            log.debug("Deleted {} chat participants", deletedChatParticipants);
+            
+            int deletedChatRooms = chatRoomRepository.deleteByWorkspaceId(workspaceId);
+            log.debug("Deleted {} chat rooms", deletedChatRooms);
+
+            // 4. Delete all project-related data
+            int deletedProjectMembers = projectMemberRepository.deleteByWorkspaceId(workspaceId);
+            log.debug("Deleted {} project members", deletedProjectMembers);
+            
+            int deletedProjects = projectRepository.deleteByWorkspaceId(workspaceId);
+            log.debug("Deleted {} projects", deletedProjects);
+
+            // 5. Delete analytics and AI insights
+            int deletedAIInsights = aiInsightSnapshotRepository.deleteByWorkspaceId(workspaceId);
+            log.debug("Deleted {} AI insights", deletedAIInsights);
+            
+            int deletedNotifications = notificationRepository.deleteByWorkspaceId(workspaceId);
+            log.debug("Deleted {} notifications", deletedNotifications);
+
+            // 6. Delete all invitations (NEW - was missing)
+            int deletedInvitations = workspaceInvitationRepository.deleteByWorkspaceId(workspaceId);
+            log.debug("Deleted {} workspace invitations", deletedInvitations);
+
+            // 7. Delete workspace members
+            int deletedMembers = workspaceMemberRepository.deleteByWorkspaceId(workspaceId);
+            log.debug("Deleted {} workspace members", deletedMembers);
+
+            // 8. Finally, delete the workspace itself
+            workspaceRepository.delete(workspace);
+            log.info("Workspace deleted successfully: {} (attachments: {}, comments: {}, tasks: {}, leads: {}, projects: {}, invitations: {}, members: {})", 
+                    workspaceId, deletedAttachments, deletedComments, deletedTasks, deletedLeads, deletedProjects, deletedInvitations, deletedMembers);
+            
+        } catch (Exception e) {
+            log.error("Error during workspace deletion for workspace ID: {}", workspaceId, e);
+            throw new RuntimeException("Failed to delete workspace: " + e.getMessage(), e);
+        }
     }
 
     @Override

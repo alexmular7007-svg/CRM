@@ -48,6 +48,21 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Page<UserResponse> searchWorkspaceUsers(Long workspaceId, String query, Pageable pageable) {
+        User currentUser = getAuthenticatedUser();
+        String safeQuery = query == null ? "" : query.trim();
+        
+        log.info("Searching workspace {} users for: '{}'", workspaceId, safeQuery);
+        
+        // Multi-tenant isolation: Only return workspace members
+        // Never return all application users
+        return userRepository
+                .searchWorkspaceActiveUsers(workspaceId, safeQuery, UserStatus.ACTIVE, currentUser.getId(), pageable)
+                .map(UserResponse::fromEntity);
+    }
+
+    @Override
     @Transactional
     public UserResponse updateProfile(UpdateProfileRequest request) {
         User user = getAuthenticatedUser();

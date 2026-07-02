@@ -18,4 +18,6 @@ public class SmartReplyResponse {
     private List<String> suggestions;
     private List<String> followUpQuestions;
     private List<String> actionRecommendations;
+    @Builder.Default
+    private Boolean aiUnavailable = false;  // Flag indicating if AI service was unavailable
 }

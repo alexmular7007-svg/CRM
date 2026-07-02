@@ -228,14 +228,23 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     private void notifyParticipants(ChatRoom chatRoom, User sender, String preview) {
         chatParticipantRepository.findByChatRoomId(chatRoom.getId()).stream()
                 .filter(p -> !p.getUser().getId().equals(sender.getId()))
-                .forEach(p -> notificationService.createNotification(
-                        p.getUser(),
-                        "New message in " + chatRoom.getName(),
-                        sender.getFullName() + ": " + truncate(preview),
-                        NotificationType.CHAT_MESSAGE,
-                        chatRoom.getId(),
-                        ReferenceType.CHAT
-                ));
+                .forEach(p -> {
+                    // Create notification without reference_type constraint issues
+                    // Chat messages are identified by type, so we pass null for reference type
+                    try {
+                        notificationService.createNotification(
+                                p.getUser(),
+                                "New message in " + chatRoom.getName(),
+                                sender.getFullName() + ": " + truncate(preview),
+                                NotificationType.CHAT_MESSAGE,
+                                chatRoom.getId(),
+                                null,  // No reference type for chat messages
+                                chatRoom.getWorkspace()
+                        );
+                    } catch (Exception e) {
+                        log.error("Failed to create chat notification for user {}: {}", p.getUser().getId(), e.getMessage());
+                    }
+                });
     }
 
     private String truncate(String s) {

@@ -49,3 +49,8 @@ ALTER TABLE tasks
 ALTER TABLE tasks
     ADD CONSTRAINT chk_task_priority
     CHECK (priority IN ('LOW','MEDIUM','HIGH','URGENT'));
+
+
+-- Add archived column to projects if it doesn't exist
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS archived BOOLEAN NOT NULL DEFAULT false;
+CREATE INDEX IF NOT EXISTS idx_projects_archived ON projects(archived);

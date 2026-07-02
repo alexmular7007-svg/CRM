@@ -44,6 +44,7 @@ import LeadModal from '../components/crm/LeadModal'
 import LeadDetailsDrawer from '../components/crm/LeadDetailsDrawer'
 import LeadCard from '../components/crm/LeadCard'
 import Spinner from '../components/common/Spinner'
+import { useAutoRefreshOnMemberRemoval } from '../hooks/useAutoRefreshOnMemberRemoval'
 
 const PIPELINE_STAGES = ['LEAD', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATION', 'WON', 'LOST']
 
@@ -64,6 +65,9 @@ const CRMPipeline = () => {
   const { activeLeadId, selectedWorkspaceId, sortBy, sortDir } = useSelector((state) => state.pipeline)
   const [modalState, setModalState] = useState({ isOpen: false, lead: null, initialStatus: 'LEAD' })
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+
+  // PHASE 7: Auto-refresh when member is removed from workspace
+  useAutoRefreshOnMemberRemoval(currentWorkspace?.id, queryClient)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),

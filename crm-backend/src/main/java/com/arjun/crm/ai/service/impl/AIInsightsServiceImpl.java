@@ -105,6 +105,7 @@ public class AIInsightsServiceImpl implements AIInsightsService {
                         overdue > 0 ? "Clear overdue tasks before taking on new work" : "Maintain your current pace"
                 ))
                 .trend("STABLE")
+                .aiUnavailable(true)
                 .build();
     }
 }

@@ -4,6 +4,10 @@ import com.arjun.crm.entity.User;
 import com.arjun.crm.enums.NotificationType;
 import com.arjun.crm.enums.ReferenceType;
 import com.arjun.crm.event.*;
+import com.arjun.crm.event.LeadAssignedEvent;
+import com.arjun.crm.event.LeadUpdatedEvent;
+import com.arjun.crm.event.RoleChangedEvent;
+import com.arjun.crm.event.AIInsightsEvent;
 import com.arjun.crm.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,7 +45,8 @@ public class NotificationEventListener {
                     message,
                     NotificationType.TASK_ASSIGNED,
                     event.getTask().getId(),
-                    ReferenceType.TASK
+                    ReferenceType.TASK,
+                    event.getTask().getProject().getWorkspace()
             );
         }
     }
@@ -72,7 +77,8 @@ public class NotificationEventListener {
                     message,
                     NotificationType.TASK_UPDATED,
                     event.getTask().getId(),
-                    ReferenceType.TASK
+                    ReferenceType.TASK,
+                    event.getTask().getProject().getWorkspace()
             );
         }
 
@@ -96,7 +102,8 @@ public class NotificationEventListener {
                     message,
                     NotificationType.TASK_UPDATED,
                     event.getTask().getId(),
-                    ReferenceType.TASK
+                    ReferenceType.TASK,
+                    event.getTask().getProject().getWorkspace()
             );
         }
     }
@@ -124,9 +131,10 @@ public class NotificationEventListener {
                     event.getTask().getAssignedTo(),
                     title,
                     message,
-                    NotificationType.COMMENT_ADDED,
+                    NotificationType.TASK_COMMENT,
                     event.getTask().getId(),
-                    ReferenceType.COMMENT
+                    ReferenceType.COMMENT,
+                    event.getTask().getProject().getWorkspace()
             );
         }
 
@@ -147,9 +155,10 @@ public class NotificationEventListener {
                     event.getTask().getCreatedBy(),
                     title,
                     message,
-                    NotificationType.COMMENT_ADDED,
+                    NotificationType.TASK_COMMENT,
                     event.getTask().getId(),
-                    ReferenceType.COMMENT
+                    ReferenceType.COMMENT,
+                    event.getTask().getProject().getWorkspace()
             );
         }
     }
@@ -176,9 +185,10 @@ public class NotificationEventListener {
                         mentionedUser,
                         title,
                         message,
-                        NotificationType.MENTION,
+                        NotificationType.TASK_MENTION,
                         event.getComment().getTask().getId(),
-                        ReferenceType.COMMENT
+                        ReferenceType.COMMENT,
+                        event.getComment().getTask().getProject().getWorkspace()
                 );
             }
         }
@@ -196,6 +206,9 @@ public class NotificationEventListener {
             String title = event.getReminderType().equals("OVERDUE") ?
                     "Task Overdue" : "Upcoming Deadline";
             
+            NotificationType type = event.getReminderType().equals("OVERDUE") ?
+                    NotificationType.TASK_OVERDUE : NotificationType.TASK_DUE;
+            
             String message = event.getReminderType().equals("OVERDUE") ?
                     String.format("Task '%s' is overdue! Due date was: %s",
                             event.getTask().getTitle(),
@@ -208,9 +221,10 @@ public class NotificationEventListener {
                     event.getTask().getAssignedTo(),
                     title,
                     message,
-                    NotificationType.DEADLINE_REMINDER,
+                    type,
                     event.getTask().getId(),
-                    ReferenceType.TASK
+                    ReferenceType.TASK,
+                    event.getTask().getProject().getWorkspace()
             );
         }
     }
@@ -234,9 +248,10 @@ public class NotificationEventListener {
                 event.getInvitedUser(),
                 title,
                 message,
-                NotificationType.WORKSPACE_INVITE,
+                NotificationType.WORKSPACE_INVITATION,
                 event.getWorkspace().getId(),
-                ReferenceType.WORKSPACE
+                ReferenceType.WORKSPACE,
+                event.getWorkspace()
         );
     }
 
@@ -261,7 +276,116 @@ public class NotificationEventListener {
                 message,
                 NotificationType.PROJECT_INVITE,
                 event.getProject().getId(),
-                ReferenceType.PROJECT
+                ReferenceType.PROJECT,
+                event.getProject().getWorkspace()
+        );
+    }
+
+    /**
+     * Handle lead assigned event
+     */
+    @Async
+    @TransactionalEventListener
+    public void handleLeadAssignedEvent(LeadAssignedEvent event) {
+        log.info("Handling LeadAssignedEvent for lead: {}", event.getLead().getId());
+
+        if (event.getAssignedTo() != null) {
+            String title = "Lead Assigned";
+            String message = String.format(
+                    "%s assigned you to lead: %s",
+                    event.getAssignedBy().getFullName(),
+                    event.getLead().getName()
+            );
+
+            notificationService.createNotification(
+                    event.getAssignedTo(),
+                    title,
+                    message,
+                    NotificationType.CRM_ASSIGNED,
+                    event.getLead().getId(),
+                    ReferenceType.LEAD,
+                    event.getLead().getWorkspace()
+            );
+        }
+    }
+
+    /**
+     * Handle lead updated event
+     */
+    @Async
+    @TransactionalEventListener
+    public void handleLeadUpdatedEvent(LeadUpdatedEvent event) {
+        log.info("Handling LeadUpdatedEvent for lead: {}", event.getLead().getId());
+
+        // Notify assignee if lead was assigned and updated by someone else
+        if (event.getLead().getAssignedTo() != null &&
+                !event.getLead().getAssignedTo().getId().equals(event.getUpdatedBy().getId())) {
+
+            String title = "Lead Updated";
+            String message = String.format(
+                    "%s updated lead: %s - %s",
+                    event.getUpdatedBy().getFullName(),
+                    event.getLead().getName(),
+                    event.getChangeDescription()
+            );
+
+            notificationService.createNotification(
+                    event.getLead().getAssignedTo(),
+                    title,
+                    message,
+                    NotificationType.CRM_UPDATED,
+                    event.getLead().getId(),
+                    ReferenceType.LEAD,
+                    event.getLead().getWorkspace()
+            );
+        }
+    }
+
+    /**
+     * Handle role changed event
+     */
+    @Async
+    @TransactionalEventListener
+    public void handleRoleChangedEvent(RoleChangedEvent event) {
+        log.info("Handling RoleChangedEvent for user: {} in workspace: {}", 
+                 event.getUser().getId(), event.getWorkspace().getId());
+
+        String title = "Role Updated";
+        String message = String.format(
+                "Your role in workspace '%s' has been changed from %s to %s",
+                event.getWorkspace().getName(),
+                event.getOldRole(),
+                event.getNewRole()
+        );
+
+        notificationService.createNotification(
+                event.getUser(),
+                title,
+                message,
+                NotificationType.ROLE_CHANGED,
+                event.getWorkspace().getId(),
+                ReferenceType.WORKSPACE,
+                event.getWorkspace()
+        );
+    }
+
+    /**
+     * Handle AI insights event
+     */
+    @Async
+    @TransactionalEventListener
+    public void handleAIInsightsEvent(AIInsightsEvent event) {
+        log.info("Handling AIInsightsEvent for user: {} in workspace: {}", 
+                 event.getRecipient().getId(), event.getWorkspace().getId());
+
+        notificationService.createNotification(
+                event.getRecipient(),
+                event.getInsightTitle(),
+                event.getInsightMessage(),
+                NotificationType.AI_INSIGHTS,
+                null,
+                ReferenceType.SYSTEM,
+                event.getWorkspace()
         );
     }
 }

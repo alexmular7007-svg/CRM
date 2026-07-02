@@ -3,12 +3,15 @@ import { Outlet, useLocation, Link } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import { FiBell, FiMenu, FiMoon, FiSun, FiLogOut, FiUser, FiSettings, FiChevronDown } from 'react-icons/fi'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useQuery } from '@tanstack/react-query'
 import { useTheme } from '../hooks/useTheme'
 import { useAuth } from '../hooks/useAuth'
 import { togglePanel } from '../store/slices/notificationSlice'
 import { toggleSidebar } from '../store/slices/sidebarSlice'
 import { setCopilotContext } from '../store/slices/copilotSlice'
+import { setCurrentWorkspace } from '../store/slices/workspaceSlice'
 import { websocketService } from '../services/websocketService'
+import { workspaceService } from '../services/workspaceService'
 import Sidebar from './Sidebar'
 import UserAvatar from '../components/common/UserAvatar'
 
@@ -136,6 +139,24 @@ const DashboardLayout = () => {
   const dispatch = useDispatch()
   const location = useLocation()
   const { unreadCount } = useSelector((state) => state.notifications)
+  const { currentWorkspace } = useSelector((state) => state.workspace)
+
+  // Fetch workspaces
+  const { data: workspacesData } = useQuery({
+    queryKey: ['workspaces'],
+    queryFn: workspaceService.getAll,
+    enabled: isAuthenticated,
+  })
+
+  // Initialize workspace on first load
+  useEffect(() => {
+    if (workspacesData && !currentWorkspace) {
+      const list = Array.isArray(workspacesData) ? workspacesData : workspacesData?.content ?? []
+      if (list.length > 0) {
+        dispatch(setCurrentWorkspace(list[0]))
+      }
+    }
+  }, [workspacesData, currentWorkspace, dispatch])
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -169,14 +190,6 @@ const DashboardLayout = () => {
               </button>
             </div>
             <div className="flex items-center gap-1.5">
-              <button
-                onClick={toggle}
-                aria-label="Toggle theme"
-                className="rounded-lg p-2 text-gray-500 dark:text-gray-400
-                  hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              >
-                {isDark ? <FiSun size={18} /> : <FiMoon size={18} />}
-              </button>
               <button
                 onClick={() => dispatch(togglePanel())}
                 aria-label="Notifications"

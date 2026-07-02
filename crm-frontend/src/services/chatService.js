@@ -19,8 +19,10 @@ export const chatService = {
     return unwrap(response)
   },
 
-  getOrCreatePrivateChat: async (userId) => {
-    const response = await api.post(`/chat/rooms/private/${userId}`)
+  getOrCreatePrivateChat: async (userId, workspaceId) => {
+    const response = await api.post(`/chat/rooms/private/${userId}`, null, { 
+      params: { workspaceId } 
+    })
     return unwrap(response)
   },
 

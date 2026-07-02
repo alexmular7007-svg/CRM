@@ -1,0 +1,88 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# Production Profile Configuration
+# ═══════════════════════════════════════════════════════════════════════════
+
+spring:
+  jpa:
+    show-sql: false
+    hibernate:
+      ddl-auto: update  # Using update to create missing tables
+    properties:
+      hibernate:
+        format_sql: false
+        generate_statistics: false
+
+  datasource:
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 10
+
+  # Redis auto-config: excluded only when REDIS_ENABLED=false (e.g. bare Render deploy).
+  # On AWS ECS/Docker where Redis IS available, set REDIS_ENABLED=true to skip exclusion.
+  autoconfigure:
+    exclude: ${SPRING_AUTOCONFIGURE_EXCLUDE:org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration}
+
+logging:
+  level:
+    root: WARN
+    com.arjun.crm: INFO
+    org.springframework.web: WARN
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
+
+server:
+  port: ${SERVER_PORT:8080}
+  address: 0.0.0.0
+  error:
+    include-stacktrace: never
+    include-exception: false
+  compression:
+    enabled: true
+
+# Restricted actuator endpoints in production
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+  health:
+    redis:
+      enabled: ${REDIS_ENABLED:false}
+
+# API Documentation disabled in production
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+# Strict CORS for production — must be set via env var
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS}
+  allow-credentials: true
+
+# Redis presence service: set REDIS_ENABLED=true when Redis is available
+redis:
+  enabled: ${REDIS_ENABLED:false}
+# Resend Email Configuration
+resend:
+  api-key: ${RESEND_API_KEY}
+  from-email: ${RESEND_FROM_EMAIL:onboarding@resend.dev}
+
+# OAuth2 Client Configuration - for production
+spring.security.oauth2.client.registration.google.client-id: ${GOOGLE_CLIENT_ID}
+spring.security.oauth2.client.registration.google.client-secret: ${GOOGLE_CLIENT_SECRET}
+spring.security.oauth2.client.registration.google.scope: openid,profile,email
+spring.security.oauth2.client.registration.google.redirect-uri: "{baseUrl}/login/oauth2/code/google"
+
+spring.security.oauth2.client.registration.github.client-id: ${GITHUB_CLIENT_ID}
+spring.security.oauth2.client.registration.github.client-secret: ${GITHUB_CLIENT_SECRET}
+spring.security.oauth2.client.registration.github.scope: read:user,user:email
+spring.security.oauth2.client.registration.github.redirect-uri: "{baseUrl}/login/oauth2/code/github"
+
+# OAuth2 redirect after login
+oauth2:
+  redirect-uri: ${OAUTH2_REDIRECT_URI:http://localhost:3000/oauth2/callback}

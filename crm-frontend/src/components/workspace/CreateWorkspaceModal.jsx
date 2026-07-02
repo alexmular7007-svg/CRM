@@ -69,7 +69,7 @@ const CreateWorkspaceModal = ({ isOpen, onClose }) => {
             {...register('description')}
             rows={4}
             placeholder="What's this workspace for?"
-            className="w-full px-4 py-3 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all resize-none"
+            className="w-full px-4 py-3 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-600 dark:placeholder-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all resize-none"
           />
           {errors.description && (
             <p className="text-sm text-red-600 dark:text-red-400">

@@ -5,23 +5,8 @@ import { loginSuccess } from '../../store/slices/authSlice'
 import toast from 'react-hot-toast'
 import Spinner from '../../components/common/Spinner'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
+const API_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:8081'}/api`
 
-/**
- * Landing page for /oauth2/callback?token=JWT
- *
- * Root cause of "Failed to load profile" error:
- *   api.js reads the token from Redux store (store.getState().auth.token).
- *   At this point Redux is still null — localStorage was written but Redux
- *   has not been updated yet. So the /api/users/me request fires with no
- *   Authorization header → anonymous context → 403 → profile load fails.
- *
- * Fix:
- *   Use a raw fetch() with the token directly in the header,
- *   bypassing the Axios instance entirely.
- *   Only after the profile is successfully loaded do we dispatch loginSuccess,
- *   which updates Redux AND localStorage atomically.
- */
 const OAuth2Callback = () => {
   const [params] = useSearchParams()
   const dispatch = useDispatch()
@@ -33,6 +18,7 @@ const OAuth2Callback = () => {
     handled.current = true
 
     const token = params.get('token')
+    const invitationToken = params.get('invitationToken')
     const error = params.get('error')
 
     if (error) {
@@ -47,8 +33,7 @@ const OAuth2Callback = () => {
       return
     }
 
-    // Fetch the user profile using the token directly in the header.
-    // We deliberately bypass api.js / Axios to avoid the Redux timing issue.
+    // Step 1: Load user profile
     fetch(`${API_BASE}/users/me`, {
       method: 'GET',
       headers: {
@@ -64,15 +49,20 @@ const OAuth2Callback = () => {
         return res.json()
       })
       .then((body) => {
-        // Backend wraps in { success, data, ... }
         const user = body?.data ?? body
 
         if (!user?.id) throw new Error('Invalid user data received')
 
-        // Now update Redux + localStorage atomically
+        // Step 2: Save auth state to Redux
         dispatch(loginSuccess({ token, user }))
         toast.success(`Welcome, ${user.displayName || user.fullName || 'User'}!`)
-        navigate('/dashboard', { replace: true })
+
+        // Step 3: If invitationToken present, auto-accept invitation
+        if (invitationToken) {
+          acceptInvitationAndRedirect(token, invitationToken)
+        } else {
+          navigate('/dashboard', { replace: true })
+        }
       })
       .catch((err) => {
         console.error('OAuth2 profile load failed:', err)
@@ -80,6 +70,51 @@ const OAuth2Callback = () => {
         navigate('/login', { replace: true })
       })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  /**
+   * Accept pending invitation and redirect to workspace
+   */
+  const acceptInvitationAndRedirect = async (jwtToken, invToken) => {
+    try {
+      console.log('Auto-accepting invitation with token:', invToken.substring(0, 10) + '...')
+      
+      const response = await fetch(
+        `${API_BASE}/workspaces/invitations/accept/${invToken}`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${jwtToken}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      )
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}))
+        console.error('Invitation acceptance failed:', body)
+        // If acceptance fails, still go to dashboard
+        navigate('/dashboard', { replace: true })
+        return
+      }
+
+      const body = await response.json()
+      const workspace = body?.data?.workspace ?? body?.data ?? body
+
+      console.log('✓ Invitation accepted successfully')
+      toast.success('Invitation accepted! Redirecting to workspace...')
+
+      // Redirect to the workspace dashboard
+      if (workspace?.id) {
+        navigate(`/workspaces/${workspace.id}`, { replace: true })
+      } else {
+        navigate('/dashboard', { replace: true })
+      }
+    } catch (err) {
+      console.error('Failed to auto-accept invitation:', err)
+      // If something goes wrong, still redirect to dashboard
+      navigate('/dashboard', { replace: true })
+    }
+  }
 
   return (
     <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-[#0D1117]">

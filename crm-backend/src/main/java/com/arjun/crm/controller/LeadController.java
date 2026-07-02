@@ -9,6 +9,7 @@ import com.arjun.crm.dto.response.LeadAnalyticsResponse;
 import com.arjun.crm.dto.response.LeadResponse;
 import com.arjun.crm.enums.LeadStatus;
 import com.arjun.crm.security.JwtService;
+import com.arjun.crm.security.WorkspaceAuthorizationService;
 import com.arjun.crm.service.LeadService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -34,12 +35,16 @@ public class LeadController {
     
     private final LeadService leadService;
     private final JwtService jwtService;
+    private final WorkspaceAuthorizationService workspaceAuthService;
     
     @PostMapping
     @Operation(summary = "Create a new lead", description = "Create a new lead in the CRM pipeline")
     public ResponseEntity<ApiResponse<LeadResponse>> createLead(
             @Valid @RequestBody CreateLeadRequest request,
             @RequestHeader("Authorization") String token) {
+        
+        // Validate workspace access
+        workspaceAuthService.validateWorkspaceAccess(request.getWorkspaceId());
         
         Long userId = jwtService.extractUserId(token.substring(7));
         LeadResponse lead = leadService.createLead(request, userId);
@@ -96,6 +101,9 @@ public class LeadController {
             @RequestParam(defaultValue = "DESC") String sortDir,
             @RequestHeader("Authorization") String token) {
         
+        // Validate workspace access
+        workspaceAuthService.validateWorkspaceAccess(workspaceId);
+        
         Long userId = jwtService.extractUserId(token.substring(7));
         Sort sort = sortDir.equalsIgnoreCase("ASC") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
         Pageable pageable = PageRequest.of(page, size, sort);
@@ -118,6 +126,9 @@ public class LeadController {
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "DESC") String sortDir,
             @RequestHeader("Authorization") String token) {
+        
+        // Validate workspace access
+        workspaceAuthService.validateWorkspaceAccess(workspaceId);
         
         Long userId = jwtService.extractUserId(token.substring(7));
         Sort sort = sortDir.equalsIgnoreCase("ASC") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
@@ -158,6 +169,9 @@ public class LeadController {
     public ResponseEntity<ApiResponse<LeadAnalyticsResponse>> getLeadAnalytics(
             @PathVariable Long workspaceId,
             @RequestHeader("Authorization") String token) {
+        
+        // Validate workspace access
+        workspaceAuthService.validateWorkspaceAccess(workspaceId);
         
         Long userId = jwtService.extractUserId(token.substring(7));
         LeadAnalyticsResponse analytics = leadService.getLeadAnalytics(workspaceId, userId);

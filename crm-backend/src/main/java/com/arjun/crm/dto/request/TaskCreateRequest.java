@@ -11,9 +11,14 @@ import lombok.Setter;
 
 import java.time.LocalDate;
 
+import jakarta.validation.constraints.NotNull;
+
 @Getter
 @Setter
 public class TaskCreateRequest {
+
+    @NotNull(message = "Workspace ID is required")
+    private Long workspaceId;
 
     @NotBlank(message = "Task title is required")
     @Size(min = 3, max = 255, message = "Title must be between 3 and 255 characters")

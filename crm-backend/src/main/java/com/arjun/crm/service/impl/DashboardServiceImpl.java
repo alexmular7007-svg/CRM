@@ -34,16 +34,16 @@ public class DashboardServiceImpl implements DashboardService {
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(value = "dashboard", key = "#root.method.name + '_' + @dashboardServiceImpl.getAuthenticatedUser().id")
-    public DashboardOverviewResponse getDashboardOverview() {
+    @Cacheable(value = "dashboard", key = "#workspaceId + '_' + @dashboardServiceImpl.getAuthenticatedUser().id")
+    public DashboardOverviewResponse getDashboardOverview(Long workspaceId) {
         User currentUser = getAuthenticatedUser();
-        log.info("Fetching dashboard overview for user: {}", currentUser.getEmail());
+        log.info("Fetching dashboard overview for workspace: {} and user: {}", workspaceId, currentUser.getEmail());
 
-        // Task Statistics
-        Long totalTasks = taskRepository.count();
-        Long completedTasks = taskRepository.countByStatus(TaskStatus.DONE);
-        Long overdueTasks = (long) taskRepository.findOverdueTasks(LocalDate.now()).size();
-        Long inProgressTasks = taskRepository.countByStatus(TaskStatus.IN_PROGRESS);
+        // Task Statistics - WORKSPACE SCOPED
+        Long totalTasks = taskRepository.countByWorkspaceId(workspaceId);
+        Long completedTasks = taskRepository.countByWorkspaceIdAndStatus(workspaceId, TaskStatus.DONE);
+        Long overdueTasks = (long) taskRepository.findOverdueTasksByWorkspace(workspaceId, LocalDate.now()).size();
+        Long inProgressTasks = taskRepository.countByWorkspaceIdAndStatus(workspaceId, TaskStatus.IN_PROGRESS);
         Double completionRate = totalTasks > 0 ? (completedTasks * 100.0 / totalTasks) : 0.0;
 
         DashboardOverviewResponse.TaskStatistics taskStats = DashboardOverviewResponse.TaskStatistics.builder()
@@ -54,11 +54,11 @@ public class DashboardServiceImpl implements DashboardService {
                 .completionRate(Math.round(completionRate * 100.0) / 100.0)
                 .build();
 
-        // Project Statistics
-        Long totalProjects = projectRepository.count();
-        Long activeProjects = projectRepository.countByStatus(ProjectStatus.ACTIVE);
-        Long completedProjects = projectRepository.countByStatus(ProjectStatus.COMPLETED);
-        Double averageProgress = 0.0; // Can be calculated based on project tasks
+        // Project Statistics - WORKSPACE SCOPED
+        Long totalProjects = projectRepository.count();  // TODO: Add workspace filter
+        Long activeProjects = projectRepository.countByStatus(ProjectStatus.ACTIVE);  // TODO: Add workspace filter
+        Long completedProjects = projectRepository.countByStatus(ProjectStatus.COMPLETED);  // TODO: Add workspace filter
+        Double averageProgress = 0.0;
 
         DashboardOverviewResponse.ProjectStatistics projectStats = DashboardOverviewResponse.ProjectStatistics.builder()
                 .totalProjects(totalProjects)

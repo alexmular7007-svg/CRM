@@ -18,7 +18,7 @@ import TaskActivity from './TaskActivity'
 import TaskFormModal from './TaskFormModal'
 import TaskAIAssistant from '../ai/TaskAIAssistant'
 
-const TaskDetailsModal = ({ task, onClose, projectId }) => {
+const TaskDetailsModal = ({ task, onClose, projectId, workspaceId }) => {
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState('comments')
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
@@ -128,7 +128,7 @@ const TaskDetailsModal = ({ task, onClose, projectId }) => {
                       <span>Assignee</span>
                     </div>
                     <p className="font-medium">
-                      {taskDetails.assignedTo?.fullName || 'Unassigned'}
+                      {taskDetails.assignedTo?.fullName || taskDetails.assignedToName || 'Unassigned'}
                     </p>
                   </div>
 
@@ -146,7 +146,7 @@ const TaskDetailsModal = ({ task, onClose, projectId }) => {
                 </div>
 
                 <div className="mb-6">
-                  <TaskAIAssistant task={taskDetails} projectId={projectId} />
+                  <TaskAIAssistant task={taskDetails} projectId={projectId} workspaceId={workspaceId} />
                 </div>
 
                 {/* Tabs */}

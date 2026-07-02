@@ -9,7 +9,6 @@ import com.arjun.crm.dto.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -18,6 +17,9 @@ import java.util.Collections;
 
 /**
  * Controller for AI-powered chat features
+ * 
+ * All endpoints gracefully handle AI service unavailability.
+ * AI failures never cause HTTP 500 errors - fallback responses are returned instead.
  */
 @RestController
 @RequestMapping("/api/ai/chat")
@@ -31,39 +33,60 @@ public class AIChatController {
     /**
      * Summarize chat conversation
      * POST /api/ai/chat/summarize
+     * 
+     * Returns HTTP 200 even if AI service is unavailable (with fallback response)
      */
     @PostMapping("/summarize")
     public ResponseEntity<ApiResponse<ChatSummarizationResponse>> summarizeChat(
             @Valid @RequestBody ChatSummarizationRequest request) {
         try {
+            log.info("Chat summarization request for chat room ID: {}", request.getChatRoomId());
             ChatSummarizationResponse response = aiChatService.summarizeChat(request);
-            return ResponseEntity.ok(ApiResponse.success(
-                    "Chat summarization completed successfully", response));
+            
+            String message = Boolean.TRUE.equals(response.getAiUnavailable())
+                    ? "AI service temporarily unavailable. Using fallback summary."
+                    : "Chat summarization completed successfully";
+            
+            return ResponseEntity.ok(ApiResponse.success(message, response));
         } catch (Exception e) {
-            log.error("AI chat summarization failed: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                    .body(ApiResponse.error("AI service is temporarily unavailable. Please try again later."));
+            log.error("Unexpected error in chat summarization: {}", e.getMessage(), e);
+            // Should not reach here due to service-level error handling, but just in case
+            ChatSummarizationResponse fallback = ChatSummarizationResponse.builder()
+                    .chatRoomId(request.getChatRoomId())
+                    .summary("AI service temporarily unavailable. Please try again later.")
+                    .keyPoints(Collections.emptyList())
+                    .aiUnavailable(true)
+                    .build();
+            return ResponseEntity.ok(ApiResponse.success("AI service temporarily unavailable", fallback));
         }
     }
 
     /**
      * Generate smart reply suggestions
      * POST /api/ai/chat/reply-suggestions
+     * 
+     * Returns HTTP 200 even if AI service is unavailable (with fallback response)
      */
     @PostMapping("/reply-suggestions")
     public ResponseEntity<ApiResponse<SmartReplyResponse>> generateSmartReplies(
             @Valid @RequestBody SmartReplyRequest request) {
         try {
+            log.info("Smart reply generation request");
             SmartReplyResponse response = aiChatService.generateSmartReplies(request);
-            return ResponseEntity.ok(ApiResponse.success(
-                    "Smart reply suggestions generated successfully", response));
+            
+            String message = Boolean.TRUE.equals(response.getAiUnavailable())
+                    ? "AI service temporarily unavailable. No suggestions generated."
+                    : "Smart reply suggestions generated successfully";
+            
+            return ResponseEntity.ok(ApiResponse.success(message, response));
         } catch (Exception e) {
-            log.error("AI smart reply generation failed: {}", e.getMessage(), e);
+            log.error("Unexpected error in smart reply generation: {}", e.getMessage(), e);
+            // Should not reach here due to service-level error handling, but just in case
             SmartReplyResponse fallback = SmartReplyResponse.builder()
                     .suggestions(Collections.emptyList())
+                    .aiUnavailable(true)
                     .build();
-            return ResponseEntity.ok(ApiResponse.success(
-                    "AI service is temporarily unavailable. No suggestions generated.", fallback));
+            return ResponseEntity.ok(ApiResponse.success("AI service temporarily unavailable", fallback));
         }
     }
 }

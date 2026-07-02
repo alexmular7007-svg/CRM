@@ -45,4 +45,18 @@ public interface ProjectService {
      * @return page of projects
      */
     Page<ProjectResponse> listProjectsByWorkspace(Long workspaceId, ProjectStatus status, Pageable pageable);
+    
+    /**
+     * Archive project
+     * @param projectId project ID to archive
+     * @return archived project response
+     */
+    ProjectResponse archiveProject(Long projectId);
+    
+    /**
+     * Unarchive project
+     * @param projectId project ID to unarchive
+     * @return unarchived project response
+     */
+    ProjectResponse unarchiveProject(Long projectId);
 }

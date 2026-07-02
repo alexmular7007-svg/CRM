@@ -48,4 +48,11 @@ public interface ChatParticipantRepository extends JpaRepository<ChatParticipant
      * Count participants in chat room
      */
     Long countByChatRoomId(Long chatRoomId);
+
+    /**
+     * Delete all participants in a workspace via chat rooms
+     */
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM ChatParticipant p WHERE p.chatRoom.workspace.id = :workspaceId")
+    int deleteByWorkspaceId(@Param("workspaceId") Long workspaceId);
 }

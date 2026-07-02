@@ -65,8 +65,8 @@ const Workspaces = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Workspaces</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
+          <h1 className="text-3xl font-bold" style={{ color: 'var(--theme-textPrimary)' }}>Workspaces</h1>
+          <p className="mt-1" style={{ color: 'var(--theme-textSecondary)' }}>
             Manage your team workspaces and projects
           </p>
         </div>
@@ -120,10 +120,10 @@ const Workspaces = () => {
           <div className="w-24 h-24 mx-auto mb-6 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
             <FiPlus size={40} className="text-gray-400" />
           </div>
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+          <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--theme-textPrimary)' }}>
             {searchQuery ? 'No workspaces found' : 'No workspaces yet'}
           </h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
+          <p className="mb-6" style={{ color: 'var(--theme-textSecondary)' }}>
             {searchQuery
               ? 'Try adjusting your search query'
               : 'Create your first workspace to get started'}

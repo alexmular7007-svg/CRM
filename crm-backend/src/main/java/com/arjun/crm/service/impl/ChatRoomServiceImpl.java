@@ -37,6 +37,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     private final ChatMessageRepository chatMessageRepository;
     private final UserRepository userRepository;
     private final WorkspaceRepository workspaceRepository;
+    private final WorkspaceMemberRepository workspaceMemberRepository;
     private final ProjectRepository projectRepository;
     private final OnlinePresenceService onlinePresenceService;
     private final BlockedUserRepository blockedUserRepository;
@@ -117,11 +118,32 @@ public class ChatRoomServiceImpl implements ChatRoomService {
 
     @Override
     @Transactional
-    public ChatRoomResponse getOrCreatePrivateChat(Long otherUserId) {
+    public ChatRoomResponse getOrCreatePrivateChat(Long otherUserId, Long workspaceId) {
         User currentUser = getAuthenticatedUser();
-        log.info("Getting or creating private chat between {} and {}", currentUser.getId(), otherUserId);
+        log.info("Getting or creating private chat between {} and {} in workspace {}", 
+                 currentUser.getId(), otherUserId, workspaceId);
 
-        // Check if private chat already exists
+        // Verify user has access to the workspace
+        workspaceRepository.findById(workspaceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
+
+        // Verify both users are members of this workspace
+        boolean currentUserInWorkspace = workspaceMemberRepository.existsByWorkspaceIdAndUserId(workspaceId, currentUser.getId());
+        boolean otherUserInWorkspace = workspaceMemberRepository.existsByWorkspaceIdAndUserId(workspaceId, otherUserId);
+
+        // Also check if either is the workspace owner
+        Workspace workspace = workspaceRepository.findById(workspaceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
+
+        if (!currentUserInWorkspace && !workspace.getOwner().getId().equals(currentUser.getId())) {
+            throw new AccessDeniedException("You are not a member of this workspace");
+        }
+
+        if (!otherUserInWorkspace && !workspace.getOwner().getId().equals(otherUserId)) {
+            throw new AccessDeniedException("Target user is not a member of this workspace");
+        }
+
+        // Check if private chat already exists between these users
         Optional<ChatRoom> existingRoom = chatRoomRepository.findPrivateChatRoom(currentUser.getId(), otherUserId);
         
         if (existingRoom.isPresent()) {
@@ -138,6 +160,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         ChatRoom chatRoom = ChatRoom.builder()
                 .name(chatName)
                 .type(ChatRoomType.PRIVATE)
+                .workspace(workspace)  // Associate with workspace
                 .createdBy(currentUser)
                 .build();
 
@@ -147,7 +170,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         addParticipantInternal(savedRoom, currentUser);
         addParticipantInternal(savedRoom, otherUser);
 
-        log.info("Private chat created with ID: {}", savedRoom.getId());
+        log.info("Private chat created with ID: {} in workspace {}", savedRoom.getId(), workspaceId);
         return mapToResponse(savedRoom);
     }
 

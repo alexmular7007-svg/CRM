@@ -4,12 +4,14 @@ import com.arjun.crm.dto.response.NotificationResponse;
 import com.arjun.crm.dto.response.NotificationSummaryResponse;
 import com.arjun.crm.entity.Notification;
 import com.arjun.crm.entity.User;
+import com.arjun.crm.entity.Workspace;
 import com.arjun.crm.enums.NotificationType;
 import com.arjun.crm.enums.ReferenceType;
 import com.arjun.crm.exception.AccessDeniedException;
 import com.arjun.crm.exception.ResourceNotFoundException;
 import com.arjun.crm.repository.NotificationRepository;
 import com.arjun.crm.repository.UserRepository;
+import com.arjun.crm.service.NotificationBuilder;
 import com.arjun.crm.service.NotificationService;
 import com.arjun.crm.service.WebSocketNotificationService;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -41,9 +44,16 @@ public class NotificationServiceImpl implements NotificationService {
             String message,
             NotificationType type,
             Long referenceId,
-            ReferenceType referenceType) {
+            ReferenceType referenceType,
+            Workspace workspace) {
         
-        log.info("Creating notification for user: {} of type: {}", recipient.getEmail(), type);
+        log.info("Creating notification for user: {} of type: {} in workspace: {}", 
+                 recipient.getEmail(), type, workspace.getId());
+
+        if (workspace == null) {
+            log.error("CRITICAL: workspace is NULL when creating notification");
+            throw new IllegalArgumentException("Workspace is required for notification");
+        }
 
         Notification notification = Notification.builder()
                 .recipient(recipient)
@@ -52,6 +62,7 @@ public class NotificationServiceImpl implements NotificationService {
                 .type(type)
                 .referenceId(referenceId)
                 .referenceType(referenceType)
+                .workspace(workspace)
                 .isRead(false)
                 .build();
 
@@ -61,10 +72,13 @@ public class NotificationServiceImpl implements NotificationService {
         // Send real-time notification via WebSocket
         webSocketNotificationService.sendNotificationToUser(recipient.getId(), response);
 
-        log.info("Notification created with ID: {}", savedNotification.getId());
+        log.info("Notification created with ID: {} in workspace: {}", savedNotification.getId(), workspace.getId());
         return response;
     }
 
+    /**
+     * Get all notifications for current user in a specific workspace
+     */
     @Override
     @Transactional(readOnly = true)
     public Page<NotificationResponse> getNotifications(Pageable pageable) {
@@ -75,6 +89,56 @@ public class NotificationServiceImpl implements NotificationService {
                 .findByRecipientIdOrderByCreatedAtDesc(currentUser.getId(), pageable);
 
         return notifications.map(NotificationResponse::fromEntity);
+    }
+
+    /**
+     * Get all notifications for current user filtered by workspace
+     */
+    @Transactional(readOnly = true)
+    public Page<NotificationResponse> getNotificationsByWorkspace(Long workspaceId, Pageable pageable) {
+        try {
+            log.info("=== getNotificationsByWorkspace CALLED ===");
+            log.info("WorkspaceId: {}", workspaceId);
+            log.info("Pageable: {}", pageable);
+            
+            User currentUser = getAuthenticatedUser();
+            log.info("Current user: ID={}, Email={}", currentUser.getId(), currentUser.getEmail());
+
+            log.info("Executing repository query...");
+            Page<Notification> notifications = notificationRepository
+                    .findByRecipientIdAndWorkspaceIdOrderByCreatedAtDesc(currentUser.getId(), workspaceId, pageable);
+            
+            log.info("Query executed successfully");
+            log.info("Notifications returned: {} total elements", notifications.getTotalElements());
+            
+            if (notifications.getTotalElements() > 0) {
+                log.info("Mapping {} notifications to DTO...", notifications.getContent().size());
+                for (int i = 0; i < notifications.getContent().size(); i++) {
+                    Notification n = notifications.getContent().get(i);
+                    log.info("  Notification[{}]: ID={}, Type={}, Recipient={}", 
+                        i, n.getId(), n.getType(), n.getRecipient().getId());
+                }
+            }
+
+            Page<NotificationResponse> response = notifications.map(notification -> {
+                try {
+                    log.debug("Mapping notification ID: {}", notification.getId());
+                    NotificationResponse resp = NotificationResponse.fromEntity(notification);
+                    log.debug("Successfully mapped notification ID: {}", notification.getId());
+                    return resp;
+                } catch (Exception mapEx) {
+                    log.error("ERROR MAPPING NOTIFICATION ID: {}", notification.getId(), mapEx);
+                    throw mapEx;
+                }
+            });
+            
+            log.info("DTO mapping complete");
+            return response;
+        } catch (Exception ex) {
+            log.error("=== getNotificationsByWorkspace ERROR ===", ex);
+            log.error("Exception: {} - {}", ex.getClass().getSimpleName(), ex.getMessage());
+            throw ex;
+        }
     }
 
     @Override
@@ -166,6 +230,42 @@ public class NotificationServiceImpl implements NotificationService {
         
         log.info("Deleted {} old notifications", deletedCount);
         return deletedCount;
+    }
+
+    @Override
+    @Transactional
+    public void sendBulkNotification(List<User> recipients, Workspace workspace, 
+                                    NotificationBuilder builder) {
+        log.info("Sending bulk notification to {} recipients in workspace: {}", 
+                 recipients.size(), workspace.getId());
+        
+        for (User recipient : recipients) {
+            try {
+                createNotification(
+                        recipient,
+                        builder.getTitle(),
+                        builder.getMessage(),
+                        builder.getType(),
+                        builder.getReferenceId(),
+                        builder.getReferenceType(),
+                        workspace
+                );
+            } catch (Exception e) {
+                log.error("Failed to send notification to user: {}", recipient.getId(), e);
+            }
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<NotificationResponse> getNotificationsByType(NotificationType type, Pageable pageable) {
+        User currentUser = getAuthenticatedUser();
+        log.info("Fetching notifications of type: {} for user: {}", type, currentUser.getEmail());
+
+        Page<Notification> notifications = notificationRepository
+                .findByRecipientIdAndTypeOrderByCreatedAtDesc(currentUser.getId(), type, pageable);
+
+        return notifications.map(NotificationResponse::fromEntity);
     }
 
     /**

@@ -27,36 +27,55 @@ public class CorsConfig {
     /**
      * CORS Configuration Source
      * Reads allowed origins from application config (cors.allowed-origins).
-     * Supports wildcard patterns via setAllowedOriginPatterns().
+     * Supports regex patterns via setAllowedOriginPatterns() for wildcard patterns.
      */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Parse comma-separated origins/patterns from config, then always add the
-        // common localhost variants and all Vercel preview URLs automatically.
+        // Parse comma-separated origins/patterns from config
         List<String> configOrigins = Arrays.stream(allowedOriginsRaw.split(","))
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .toList();
 
-        List<String> extraOrigins = List.of(
+        // Separate plain URLs from wildcard patterns
+        java.util.Set<String> plainUrls = new java.util.HashSet<>();
+        java.util.List<String> patterns = new java.util.ArrayList<>();
+        
+        for (String origin : configOrigins) {
+            if (origin.contains("*")) {
+                // Wildcard pattern - convert to regex
+                String regex = origin.replace(".", "\\.").replace("*", ".*");
+                patterns.add(regex);
+            } else {
+                plainUrls.add(origin);
+            }
+        }
+        
+        // Add fixed localhost and vercel patterns
+        plainUrls.addAll(List.of(
                 "http://localhost:3000",
                 "http://127.0.0.1:3000",
                 "http://localhost:3001",
                 "http://127.0.0.1:3001",
                 "http://localhost:5173",
-                "http://127.0.0.1:5173",
-                "https://*.vercel.app"   // covers all Vercel preview & production URLs
-        );
+                "http://127.0.0.1:5173"
+        ));
+        
+        patterns.addAll(List.of(
+                "https://.*\\.vercel\\.app"   // wildcard pattern for vercel
+        ));
 
-        List<String> allOrigins = java.util.stream.Stream
-                .concat(configOrigins.stream(), extraOrigins.stream())
-                .distinct()
-                .toList();
-
-        // setAllowedOriginPatterns supports wildcards AND works with credentials
-        configuration.setAllowedOriginPatterns(allOrigins);
+        // Set plain origins using setAllowedOrigins (no regex complications)
+        if (!plainUrls.isEmpty()) {
+            configuration.setAllowedOrigins(plainUrls.stream().toList());
+        }
+        
+        // Set patterns using setAllowedOriginPatterns (for wildcard support)
+        if (!patterns.isEmpty()) {
+            configuration.setAllowedOriginPatterns(patterns);
+        }
 
         configuration.setAllowedMethods(Arrays.asList(
                 "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"

@@ -9,17 +9,22 @@ import java.time.LocalDate;
 public interface AnalyticsService {
     
     /**
-     * Get task analytics
+     * Get task analytics for a specific workspace
      */
-    TaskAnalyticsResponse getTaskAnalytics(LocalDate startDate, LocalDate endDate);
+    TaskAnalyticsResponse getTaskAnalytics(Long workspaceId, LocalDate startDate, LocalDate endDate);
     
     /**
-     * Get team performance analytics
+     * Get team performance analytics for a specific workspace
      */
-    TeamPerformanceResponse getTeamPerformance(LocalDate startDate, LocalDate endDate);
+    TeamPerformanceResponse getTeamPerformance(Long workspaceId, LocalDate startDate, LocalDate endDate);
     
     /**
-     * Get activity analytics
+     * Get activity analytics for a specific workspace
      */
-    ActivityAnalyticsResponse getActivityAnalytics(LocalDate startDate, LocalDate endDate);
+    ActivityAnalyticsResponse getActivityAnalytics(Long workspaceId, LocalDate startDate, LocalDate endDate);
+    
+    /**
+     * Get recent activities for a specific workspace
+     */
+    Object getRecentActivities(Long workspaceId, int limit);
 }

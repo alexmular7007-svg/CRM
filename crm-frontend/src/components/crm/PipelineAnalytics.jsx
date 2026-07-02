@@ -4,17 +4,20 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend 
 } from 'recharts'
 import { FiTrendingUp, FiDollarSign, FiUsers, FiAward } from 'react-icons/fi'
-
-const COLORS = {
-  LEAD: '#6B7280',
-  QUALIFIED: '#3B82F6',
-  PROPOSAL: '#8B5CF6',
-  NEGOTIATION: '#F59E0B',
-  WON: '#10B981',
-  LOST: '#EF4444'
-}
+import { useThemeContext } from '../../contexts/ThemeContext'
 
 const PipelineAnalytics = ({ analytics }) => {
+  const { currentTheme } = useThemeContext()
+  
+  const COLORS = {
+    LEAD: currentTheme.colors.textMuted,
+    QUALIFIED: currentTheme.colors.info,
+    PROPOSAL: currentTheme.colors.primary,
+    NEGOTIATION: currentTheme.colors.warning,
+    WON: currentTheme.colors.success,
+    LOST: currentTheme.colors.danger
+  }
+
   if (!analytics) return null
 
   const formatCurrency = (value) => {
@@ -170,9 +173,10 @@ const PipelineAnalytics = ({ analytics }) => {
               <Tooltip 
                 formatter={(value) => formatCurrency(value)}
                 contentStyle={{ 
-                  backgroundColor: '#1F2937', 
-                  border: '1px solid #374151',
-                  borderRadius: '8px'
+                  backgroundColor: currentTheme.colors.surface, 
+                  border: `1px solid ${currentTheme.colors.border}`,
+                  borderRadius: '8px',
+                  color: currentTheme.colors.text
                 }}
               />
               <Bar dataKey="value" radius={[8, 8, 0, 0]}>

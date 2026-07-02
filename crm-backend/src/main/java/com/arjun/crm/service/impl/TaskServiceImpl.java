@@ -6,17 +6,22 @@ import com.arjun.crm.dto.request.TaskStatusUpdateRequest;
 import com.arjun.crm.dto.request.TaskUpdateRequest;
 import com.arjun.crm.dto.response.TaskCommentResponse;
 import com.arjun.crm.dto.response.TaskResponse;
+import com.arjun.crm.dto.response.UserSummaryResponse;
 import com.arjun.crm.entity.Project;
 import com.arjun.crm.entity.Task;
 import com.arjun.crm.entity.TaskComment;
 import com.arjun.crm.entity.User;
+import com.arjun.crm.entity.Workspace;
 import com.arjun.crm.enums.TaskPriority;
 import com.arjun.crm.enums.TaskStatus;
+import com.arjun.crm.exception.AccessDeniedException;
 import com.arjun.crm.exception.ResourceNotFoundException;
 import com.arjun.crm.repository.ProjectRepository;
 import com.arjun.crm.repository.TaskCommentRepository;
 import com.arjun.crm.repository.TaskRepository;
 import com.arjun.crm.repository.UserRepository;
+import com.arjun.crm.repository.WorkspaceMemberRepository;
+import com.arjun.crm.repository.WorkspaceRepository;
 import com.arjun.crm.service.TaskActivityService;
 import com.arjun.crm.service.TaskService;
 import lombok.RequiredArgsConstructor;
@@ -48,6 +53,8 @@ public class TaskServiceImpl implements TaskService {
     private final TaskCommentRepository taskCommentRepository;
     private final UserRepository userRepository;
     private final ProjectRepository projectRepository;
+    private final WorkspaceMemberRepository workspaceMemberRepository;
+    private final WorkspaceRepository workspaceRepository;
     private final TaskActivityService taskActivityService;
 
     @Override
@@ -55,11 +62,30 @@ public class TaskServiceImpl implements TaskService {
         User currentUser = getAuthenticatedUser();
         log.info("Creating task with title: {} by user: {}", request.getTitle(), currentUser.getEmail());
 
+        // Get workspace and validate it exists
+        Long workspaceId = request.getWorkspaceId();
+        if (workspaceId == null) {
+            throw new ResourceNotFoundException("Workspace ID is required");
+        }
+        
+        Workspace workspace = workspaceRepository.findById(workspaceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Workspace not found with ID: " + workspaceId));
+
+        // Verify current user is active member of workspace
+        if (!workspaceMemberRepository.existsActiveMember(workspaceId, currentUser.getId())) {
+            throw new AccessDeniedException("You are not an active member of this workspace");
+        }
+
         // Fetch assigned user if provided
         User assignedTo = null;
         if (request.getAssignedToId() != null) {
             assignedTo = userRepository.findById(request.getAssignedToId())
                     .orElseThrow(() -> new ResourceNotFoundException("Assigned user not found with ID: " + request.getAssignedToId()));
+            
+            // PHASE 3: Validate assignee is active member of workspace (not soft-deleted)
+            if (!workspaceMemberRepository.existsActiveMember(workspaceId, request.getAssignedToId())) {
+                throw new AccessDeniedException("Assignee is not an active member of this workspace");
+            }
         }
 
         // Fetch project if provided
@@ -67,6 +93,11 @@ public class TaskServiceImpl implements TaskService {
         if (request.getProjectId() != null) {
             project = projectRepository.findById(request.getProjectId())
                     .orElseThrow(() -> new ResourceNotFoundException("Project not found with ID: " + request.getProjectId()));
+            
+            // Verify project belongs to same workspace
+            if (!project.getWorkspace().getId().equals(workspaceId)) {
+                throw new AccessDeniedException("Project does not belong to this workspace");
+            }
         }
 
         Task task = Task.builder()
@@ -80,7 +111,7 @@ public class TaskServiceImpl implements TaskService {
                 .assignedBy(currentUser)
                 .createdBy(currentUser)
                 .project(project)
-                .workspace(project != null ? project.getWorkspace() : null)
+                .workspace(workspace)
                 .build();
 
         Task savedTask = taskRepository.save(task);
@@ -121,6 +152,29 @@ public class TaskServiceImpl implements TaskService {
                 .map(this::mapToResponse);
     }
 
+    /**
+     * PHASE 3: Get tasks assigned to user in a SPECIFIC workspace only
+     * Prevents global task queries across all workspaces
+     * Validates assignee is active member of workspace
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public Page<TaskResponse> getTasksByAssigneeInWorkspace(Long workspaceId, Long assignedToId, Pageable pageable) {
+        // Verify workspace exists
+        if (!workspaceRepository.existsById(workspaceId)) {
+            throw new ResourceNotFoundException("Workspace not found with ID: " + workspaceId);
+        }
+        
+        // Verify assignee is active member (not deleted) of this workspace
+        if (!workspaceMemberRepository.existsActiveMember(workspaceId, assignedToId)) {
+            log.warn("User {} is not an active member of workspace {}", assignedToId, workspaceId);
+            return Page.empty(pageable);
+        }
+        
+        return taskRepository.findByWorkspaceIdAndAssignedToId(workspaceId, assignedToId, pageable)
+                .map(this::mapToResponse);
+    }
+
     @Override
     @Transactional(readOnly = true)
     public Page<TaskResponse> getTasksByProject(Long projectId, Pageable pageable) {
@@ -149,6 +203,12 @@ public class TaskServiceImpl implements TaskService {
         log.info("Updating task id: {} by user: {}", id, currentUser.getEmail());
         
         Task task = findTaskOrThrow(id);
+        Long workspaceId = task.getWorkspace().getId();
+
+        // Verify current user is active member of workspace
+        if (!workspaceMemberRepository.existsActiveMember(workspaceId, currentUser.getId())) {
+            throw new AccessDeniedException("You are not an active member of this workspace");
+        }
 
         // Track changes for activity logging
         String oldStatus = task.getStatus() != null ? task.getStatus().name() : null;
@@ -176,7 +236,13 @@ public class TaskServiceImpl implements TaskService {
             task.setDueDate(request.getDueDate());
         }
         
+        // PHASE 3: Validate assignee is active member before assignment
         if (request.getAssignedToId() != null) {
+            // Verify assignee is active member (not deleted) of this workspace
+            if (!workspaceMemberRepository.existsActiveMember(workspaceId, request.getAssignedToId())) {
+                throw new AccessDeniedException("Assignee is not an active member of this workspace");
+            }
+            
             User assignedTo = userRepository.findById(request.getAssignedToId())
                     .orElseThrow(() -> new ResourceNotFoundException("Assigned user not found with ID: " + request.getAssignedToId()));
             task.setAssignedTo(assignedTo);
@@ -186,6 +252,12 @@ public class TaskServiceImpl implements TaskService {
         if (request.getProjectId() != null) {
             Project project = projectRepository.findById(request.getProjectId())
                     .orElseThrow(() -> new ResourceNotFoundException("Project not found with ID: " + request.getProjectId()));
+            
+            // Verify project belongs to same workspace
+            if (!project.getWorkspace().getId().equals(workspaceId)) {
+                throw new AccessDeniedException("Project does not belong to this workspace");
+            }
+            
             task.setProject(project);
             task.setWorkspace(project.getWorkspace());
         }
@@ -336,6 +408,13 @@ public class TaskServiceImpl implements TaskService {
         
         Long assignedToId = task.getAssignedTo() != null ? task.getAssignedTo().getId() : null;
         String assignedToName = task.getAssignedTo() != null ? task.getAssignedTo().getFullName() : null;
+        UserSummaryResponse assignedToUser = task.getAssignedTo() != null ?
+                UserSummaryResponse.builder()
+                        .id(task.getAssignedTo().getId())
+                        .fullName(task.getAssignedTo().getFullName())
+                        .email(task.getAssignedTo().getEmail())
+                        .build()
+                : null;
         
         Long createdById = task.getCreatedBy() != null ? task.getCreatedBy().getId() : null;
         String createdByName = task.getCreatedBy() != null ? task.getCreatedBy().getFullName() : null;
@@ -349,6 +428,7 @@ public class TaskServiceImpl implements TaskService {
                 .dueDate(task.getDueDate())
                 .assignedToId(assignedToId)
                 .assignedToName(assignedToName)
+                .assignedTo(assignedToUser)
                 .createdById(createdById)
                 .createdByName(createdByName)
                 .projectId(projectId)

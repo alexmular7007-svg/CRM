@@ -30,15 +30,25 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success("User fetched", userService.getCurrentUser()));
     }
 
-    /** GET /api/users/search */
+    /** GET /api/users/search?workspaceId={id} */
     @GetMapping("/search")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Page<UserResponse>>> searchUsers(
+            @RequestParam(required = false) Long workspaceId,
             @RequestParam(defaultValue = "") String query,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return ResponseEntity.ok(ApiResponse.success("Users retrieved", userService.searchUsers(query, pageable)));
+        
+        // If workspaceId is provided, search within workspace members only
+        // If workspaceId is null, search ALL registered users (for adding new members)
+        if (workspaceId != null) {
+            return ResponseEntity.ok(ApiResponse.success("Workspace users retrieved", 
+                    userService.searchWorkspaceUsers(workspaceId, query, pageable)));
+        } else {
+            return ResponseEntity.ok(ApiResponse.success("All users retrieved", 
+                    userService.searchUsers(query, pageable)));
+        }
     }
 
     /** PUT /api/users/profile */

@@ -28,13 +28,37 @@ public class GlobalExceptionHandler {
             MethodArgumentNotValidException ex) {
 
         Map<String, String> errors = new HashMap<>();
+        
+        // Log detailed validation information
+        log.error("╔════════════════════════════════════════════════════════════╗");
+        log.error("║ VALIDATION ERROR - REQUEST VALIDATION FAILED              ║");
+        log.error("╚════════════════════════════════════════════════════════════╝");
+        log.error("Endpoint: {}", ex.getBindingResult().getObjectName());
+        log.error("Total Validation Errors: {}", ex.getBindingResult().getErrorCount());
+        log.error("");
+        log.error("DETAILED FIELD VALIDATION FAILURES:");
+        log.error("─────────────────────────────────────");
+        
         ex.getBindingResult().getAllErrors().forEach(error -> {
             String fieldName = ((FieldError) error).getField();
             String errorMessage = error.getDefaultMessage();
+            Object rejectedValue = ((FieldError) error).getRejectedValue();
+            String fieldType = ((FieldError) error).getField();
+            
             errors.put(fieldName, errorMessage);
+            
+            log.error("  Field: {}", fieldName);
+            log.error("    Message: {}", errorMessage);
+            log.error("    Rejected Value: {}", rejectedValue);
+            log.error("    Constraint Type: {}", error.getCode());
+            log.error("");
         });
-
-        log.error("Validation failed: {}", errors);
+        
+        log.error("SUMMARY:");
+        log.error("─────────────────────────────────────");
+        log.error("Error Map: {}", errors);
+        log.error("╔════════════════════════════════════════════════════════════╗");
+        
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.<Map<String, String>>builder()
                         .success(false)

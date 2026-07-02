@@ -187,8 +187,22 @@ const MessageInput = ({ onSendMessage, onTyping, roomId, disabled = false }) => 
             placeholder={uploading ? 'Uploading...' : 'Type a message...'}
             disabled={disabled || uploading}
             rows={1}
-            className="w-full px-4 py-3 pr-12 bg-gray-100 dark:bg-gray-700 border-0 rounded-xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 resize-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ minHeight: '48px', maxHeight: '120px' }}
+            className="w-full px-4 py-3 pr-12 border-0 rounded-xl focus:ring-2 focus:ring-blue-500 resize-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              minHeight: '48px',
+              maxHeight: '120px',
+              backgroundColor: 'rgb(243, 244, 246)',
+              color: 'rgb(17, 24, 39)',
+              caretColor: 'rgb(59, 130, 246)',
+            }}
+            onFocus={(e) => {
+              e.target.style.backgroundColor = 'rgb(249, 250, 251)'
+              e.target.style.color = 'rgb(17, 24, 39)'
+            }}
+            onBlur={(e) => {
+              e.target.style.backgroundColor = 'rgb(243, 244, 246)'
+              e.target.style.color = 'rgb(17, 24, 39)'
+            }}
           />
           <div className="absolute right-3 bottom-3">
             <motion.button

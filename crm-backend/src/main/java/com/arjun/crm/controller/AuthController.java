@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
-@Slf4j
+@Slf4j 
 public class AuthController {
 
     private final AuthService authService;
@@ -41,5 +41,21 @@ public class AuthController {
         log.info("Login request received for email: {}", request.getEmail());
         AuthResponse response = authService.login(request);
         return ResponseEntity.ok(ApiResponse.success("Login successful", response));
+    }
+
+    /**
+     * Refresh JWT token using refresh token
+     * POST /api/auth/refresh
+     */
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<AuthResponse>> refreshToken(@RequestBody RefreshTokenRequest request) {
+        log.info("Refresh token request received");
+        AuthResponse response = authService.refreshToken(request.getRefreshToken());
+        return ResponseEntity.ok(ApiResponse.success("Token refreshed successfully", response));
+    }
+
+    @lombok.Data
+    public static class RefreshTokenRequest {
+        private String refreshToken;
     }
 }

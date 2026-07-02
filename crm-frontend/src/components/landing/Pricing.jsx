@@ -39,10 +39,11 @@ const PLANS = [
       '100 GB storage',
       'Priority support',
     ],
-    cta: 'Start free trial',
+    cta: 'Coming Soon',
     ctaIcon: Zap,
     highlighted: true,
     badge: 'Most popular',
+    comingSoon: true,
   },
   {
     id: 'enterprise',
@@ -61,10 +62,11 @@ const PLANS = [
       'Custom integrations',
       'SLA guarantee',
     ],
-    cta: 'Contact sales',
+    cta: 'Coming Soon',
     ctaIcon: MessageSquare,
     highlighted: false,
     badge: null,
+    comingSoon: true,
   },
 ]
 
@@ -129,7 +131,7 @@ const Pricing = () => {
   const [yearly, setYearly] = useState(false)
 
   return (
-    <section id="pricing" className="py-24 px-4 sm:px-6 border-t border-gray-100 dark:border-zinc-800/60">
+    <section id="plans" className="py-24 px-4 sm:px-6 border-t border-gray-100 dark:border-zinc-800/60">
       <div className="max-w-5xl mx-auto">
 
         {/* Header */}
@@ -141,7 +143,7 @@ const Pricing = () => {
           className="mb-14 text-center"
         >
           <div className="inline-flex items-center gap-2 border border-[#4F46E5]/25 bg-[#4F46E5]/5 text-[#4F46E5] dark:text-indigo-400 px-3 py-1 rounded-full text-xs font-semibold tracking-wide mb-4">
-            Pricing
+            Plans
           </div>
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900 dark:text-white mb-3">
             Simple, transparent pricing
@@ -215,20 +217,26 @@ const Pricing = () => {
                 </div>
 
                 {/* CTA */}
-                <Link to={plan.id === 'enterprise' ? '/login' : '/register'} className="mb-6">
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                      plan.highlighted
-                        ? 'bg-[#4F46E5] hover:bg-[#4338CA] text-white shadow-md shadow-indigo-500/20'
-                        : 'border border-gray-200 dark:border-zinc-700 text-gray-700 dark:text-zinc-300 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:border-gray-300 dark:hover:border-zinc-600'
-                    }`}
-                  >
+                {plan.comingSoon ? (
+                  <button disabled className="mb-6 w-full py-2.5 px-4 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-75">
                     {plan.cta}
-                    <CtaIcon size={14} />
-                  </motion.button>
-                </Link>
+                  </button>
+                ) : (
+                  <Link to={plan.id === 'enterprise' ? '/login' : '/register'} className="mb-6">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                        plan.highlighted
+                          ? 'bg-[#4F46E5] hover:bg-[#4338CA] text-white shadow-md shadow-indigo-500/20'
+                          : 'border border-gray-200 dark:border-zinc-700 text-gray-700 dark:text-zinc-300 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:border-gray-300 dark:hover:border-zinc-600'
+                      }`}
+                    >
+                      {plan.cta}
+                      <CtaIcon size={14} />
+                    </motion.button>
+                  </Link>
+                )}
 
                 {/* Divider */}
                 <div className="border-t border-gray-100 dark:border-zinc-800 mb-5" />

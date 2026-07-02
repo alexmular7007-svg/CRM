@@ -5,7 +5,7 @@ const unwrap = (response) => response?.data ?? response
 export const projectService = {
   // Get all projects for a workspace
   getAll: async (workspaceId) => {
-    const response = await api.get(`/workspaces/${workspaceId}/projects`)
+    const response = await api.get(`/projects/workspace/${workspaceId}`)
     return unwrap(response)
   },
 

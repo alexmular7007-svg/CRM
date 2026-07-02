@@ -5,7 +5,7 @@ import com.arjun.crm.dto.response.DashboardOverviewResponse;
 public interface DashboardService {
     
     /**
-     * Get dashboard overview with all statistics
+     * Get dashboard overview with all statistics for a specific workspace
      */
-    DashboardOverviewResponse getDashboardOverview();
+    DashboardOverviewResponse getDashboardOverview(Long workspaceId);
 }

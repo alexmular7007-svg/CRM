@@ -29,6 +29,10 @@ public class Project {
     @Column(length = 500)
     private String description;
 
+    @Column(length = 7)
+    @Builder.Default
+    private String color = "#3b82f6";
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "workspace_id", nullable = false)
     private Workspace workspace;
@@ -41,6 +45,10 @@ public class Project {
     @Column(nullable = false, length = 20)
     @Builder.Default
     private ProjectStatus status = ProjectStatus.ACTIVE;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean archived = false;
 
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

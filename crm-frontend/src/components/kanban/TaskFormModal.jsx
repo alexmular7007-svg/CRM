@@ -10,6 +10,7 @@ import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import { useState } from 'react'
 import { useSelector } from 'react-redux'
+import { useAutoRefreshOnMemberRemoval } from '../../hooks/useAutoRefreshOnMemberRemoval'
 
 const unwrap = (r) => r?.data ?? r
 
@@ -18,6 +19,24 @@ const TaskFormModal = ({ task, projectId, onClose }) => {
   const isEditMode = !!task
   const [showAISuggestion, setShowAISuggestion] = useState(false)
   const currentUser = useSelector((s) => s.auth.user)
+  const { currentWorkspace } = useSelector((s) => s.workspace)
+
+  // PHASE 7: Auto-refresh when member is removed from workspace
+  useAutoRefreshOnMemberRemoval(currentWorkspace?.id, queryClient)
+
+  // DEBUG: Log workspace context
+  console.warn('═══════════════════════════════════════════════════════════')
+  console.warn('TaskFormModal MOUNTED')
+  console.warn('currentWorkspace from Redux:', currentWorkspace)
+  console.warn('currentWorkspace?.id:', currentWorkspace?.id)
+  console.warn('currentUser:', currentUser)
+  if (!currentWorkspace) {
+    console.error('⚠️  WARNING: currentWorkspace is NULL or UNDEFINED!')
+    console.error('   This will cause workspaceId to be null in payload')
+    console.error('   Backend validation will fail with 400 Bad Request')
+  }
+  console.warn('═══════════════════════════════════════════════════════════')
+  console.warn('')
 
   const {
     register,
@@ -88,10 +107,21 @@ const TaskFormModal = ({ task, projectId, onClose }) => {
 
       const payload = {
         ...data,
+        workspaceId: currentWorkspace?.id,  // ← Include workspace ID from Redux
         assignedToId,
         dueDate,
         projectId: projectId ? Number(projectId) : undefined,
       }
+
+      // Log the payload being sent
+      console.log('═══════════════════════════════════════════════════════════')
+      console.log('TASK FORM MUTATION - PAYLOAD BEING SENT')
+      console.log('═══════════════════════════════════════════════════════════')
+      console.log('Mode:', isEditMode ? 'UPDATE' : 'CREATE')
+      console.log('Payload:', JSON.stringify(payload, null, 2))
+      console.log('currentWorkspace:', currentWorkspace)
+      console.log('workspaceId:', currentWorkspace?.id)
+      console.log('═══════════════════════════════════════════════════════════')
 
       if (isEditMode) return taskService.update(task.id, payload)
       return taskService.create(payload)
@@ -103,6 +133,8 @@ const TaskFormModal = ({ task, projectId, onClose }) => {
       onClose()
     },
     onError: (error) => {
+      console.error('Task mutation error:', error)
+      console.error('Error response:', error.response)
       toast.error(error.message || 'Failed to save task')
     },
   })

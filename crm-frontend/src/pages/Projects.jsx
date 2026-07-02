@@ -9,6 +9,7 @@ import { projectService } from '../services/projectService'
 import { workspaceService } from '../services/workspaceService'
 import ProjectCard from '../components/project/ProjectCard'
 import CreateProjectModal from '../components/project/CreateProjectModal'
+import EditProjectModal from '../components/project/EditProjectModal'
 import Spinner from '../components/common/Spinner'
 
 const Projects = () => {
@@ -18,8 +19,11 @@ const Projects = () => {
   const { currentWorkspace } = useSelector((state) => state.workspace)
 
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editingProject, setEditingProject] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [viewMode, setViewMode] = useState('grid') // 'grid' or 'list'
+  const [showArchived, setShowArchived] = useState(false) // Toggle between active and archived
 
   // Fetch workspace details
   const { data: workspace } = useQuery({
@@ -64,6 +68,18 @@ const Projects = () => {
     },
   })
 
+  // Unarchive project mutation
+  const unarchiveMutation = useMutation({
+    mutationFn: projectService.unarchive,
+    onSuccess: () => {
+      queryClient.invalidateQueries(['projects', workspaceId])
+      toast.success('Project unarchived successfully')
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to unarchive project')
+    },
+  })
+
   const handleDelete = (project) => {
     if (window.confirm(`Are you sure you want to delete "${project.name}"?`)) {
       deleteMutation.mutate(project.id)
@@ -76,15 +92,23 @@ const Projects = () => {
     }
   }
 
-  const handleEdit = (project) => {
-    // TODO: Implement edit modal
-    toast.info('Edit functionality coming soon')
+  const handleUnarchive = (project) => {
+    if (window.confirm(`Unarchive "${project.name}"?`)) {
+      unarchiveMutation.mutate(project.id)
+    }
   }
 
-  // Filter projects by search query
-  const filteredProjects = projects.filter((project) =>
-    (project.name ?? '').toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const handleEdit = (project) => {
+    setEditingProject(project)
+    setShowEditModal(true)
+  }
+
+  // Filter projects by search query and archived status
+  const filteredProjects = projects.filter((project) => {
+    const matchesSearch = (project.name ?? '').toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesArchiveFilter = showArchived ? project.archived : !project.archived
+    return matchesSearch && matchesArchiveFilter
+  })
 
   const workspaceName = currentWorkspace?.name || workspace?.name || 'Workspace'
 
@@ -108,10 +132,10 @@ const Projects = () => {
             <FiArrowLeft size={20} />
           </button>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-3xl font-bold" style={{ color: 'var(--theme-textPrimary)' }}>
               {workspaceName} Projects
             </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
+            <p className="mt-1" style={{ color: 'var(--theme-textSecondary)' }}>
               Manage projects and track progress
             </p>
           </div>
@@ -153,6 +177,16 @@ const Projects = () => {
             <FiList size={20} />
           </button>
         </div>
+        <button
+          onClick={() => setShowArchived(!showArchived)}
+          className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+            showArchived
+              ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-2 border-red-300'
+              : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-2 border-gray-300'
+          }`}
+        >
+          {showArchived ? 'Showing Archived' : 'Show Archived'}
+        </button>
       </div>
 
       {/* Projects Grid/List */}
@@ -170,6 +204,7 @@ const Projects = () => {
                 onEdit={handleEdit}
                 onDelete={handleDelete}
                 onArchive={handleArchive}
+                onUnarchive={handleUnarchive}
               />
             </motion.div>
           ))}
@@ -183,15 +218,17 @@ const Projects = () => {
           <div className="w-24 h-24 mx-auto mb-6 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
             <FiPlus size={40} className="text-gray-400" />
           </div>
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-            {searchQuery ? 'No projects found' : 'No projects yet'}
+          <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--theme-textPrimary)' }}>
+            {searchQuery ? 'No projects found' : showArchived ? 'No archived projects' : 'No projects yet'}
           </h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
+          <p className="mb-6" style={{ color: 'var(--theme-textSecondary)' }}>
             {searchQuery
               ? 'Try adjusting your search query'
+              : showArchived
+              ? 'Archive projects using the three-dot menu to see them here'
               : 'Create your first project to get started'}
           </p>
-          {!searchQuery && (
+          {!searchQuery && !showArchived && (
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -208,6 +245,17 @@ const Projects = () => {
       <CreateProjectModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
+        workspaceId={workspaceId}
+      />
+
+      {/* Edit Project Modal */}
+      <EditProjectModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false)
+          setEditingProject(null)
+        }}
+        project={editingProject}
         workspaceId={workspaceId}
       />
     </div>

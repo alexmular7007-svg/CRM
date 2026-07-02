@@ -40,6 +40,7 @@ export const useAuth = () => {
       navigate('/dashboard')
     },
     onError: (error) => {
+      dispatch(loginFailure(error.message || 'Registration failed'))
       toast.error(error.message || 'Registration failed')
     },
   })

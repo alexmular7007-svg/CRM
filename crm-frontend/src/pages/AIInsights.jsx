@@ -109,7 +109,8 @@ const AIInsights = () => {
           title: taskDetails.title,
           status: taskDetails.status,
           priority: taskDetails.priority,
-          assignedToId: assigneeId
+          assignedToId: assigneeId,
+          workspaceId: currentWorkspace?.id
         })
         toast.success(`Task reassigned to ${targetUserName || 'new member'}`)
       } else if (actionType === 'FOLLOW_UP') {
@@ -125,7 +126,8 @@ const AIInsights = () => {
           status: 'TODO',
           priority: 'HIGH',
           dueDate: new Date(Date.now() + 86400000).toISOString().split('T')[0], // Tomorrow
-          projectId: targetProject.id
+          projectId: targetProject.id,
+          workspaceId: currentWorkspace?.id  // ← Include workspace ID from Redux
         })
         toast.success(`Follow-up task created in project "${targetProject.name}"`)
       } else if (actionType === 'VIEW_TASK') {

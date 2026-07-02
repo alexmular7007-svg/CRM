@@ -14,7 +14,7 @@ services:
     environment:
       POSTGRES_DB: ${DATABASE_NAME:-crm_db}
       POSTGRES_USER: ${DATABASE_USERNAME:-postgres}
-      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
       - "${DATABASE_PORT:-5432}:5432"

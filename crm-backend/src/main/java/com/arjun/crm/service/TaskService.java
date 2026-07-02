@@ -26,6 +26,12 @@ public interface TaskService {
 
     Page<TaskResponse> getTasksByAssignee(Long assignedToId, Pageable pageable);
 
+    /**
+     * PHASE 3: Get tasks assigned to user in a SPECIFIC workspace only
+     * Validates assignee is active member of workspace
+     */
+    Page<TaskResponse> getTasksByAssigneeInWorkspace(Long workspaceId, Long assignedToId, Pageable pageable);
+
     Page<TaskResponse> getTasksByProject(Long projectId, Pageable pageable);
 
     Page<TaskResponse> getTasksByPriority(TaskPriority priority, Pageable pageable);

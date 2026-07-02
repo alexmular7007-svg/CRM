@@ -24,7 +24,17 @@ const SocialAuthButtons = ({ mode = 'login' }) => {
 
   const handleOAuth = (provider) => {
     setLoading(provider)
-    window.location.href = `${BACKEND}/oauth2/authorization/${provider}`
+    
+    // Preserve invitationToken if present in URL (for pending invitations)
+    const params = new URLSearchParams(window.location.search)
+    const invitationToken = params.get('invitationToken')
+    
+    let oauthUrl = `${BACKEND}/oauth2/authorization/${provider}`
+    if (invitationToken) {
+      oauthUrl += `?invitationToken=${encodeURIComponent(invitationToken)}`
+    }
+    
+    window.location.href = oauthUrl
   }
 
   return (

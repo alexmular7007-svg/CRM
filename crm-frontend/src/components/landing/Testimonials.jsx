@@ -8,6 +8,7 @@ const TESTIMONIALS = [
     company: 'TechCorp',
     initials: 'SJ',
     color: 'bg-violet-500',
+    image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
     quote: 'TaskFlow AI has transformed how our team collaborates. The AI prioritization feature alone saves us hours every week. It actually works — no gimmicks.',
     metric: '+40% productivity in month one',
   },
@@ -17,6 +18,7 @@ const TESTIMONIALS = [
     company: 'StartupXYZ',
     initials: 'MC',
     color: 'bg-sky-500',
+    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop',
     quote: 'The real-time chat and task management integration is seamless. Our team productivity increased by 40% in the first month. I recommend it to every founder I meet.',
     metric: '40% team productivity increase',
   },
@@ -26,6 +28,7 @@ const TESTIMONIALS = [
     company: 'SalesForce Pro',
     initials: 'ER',
     color: 'bg-emerald-500',
+    image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop',
     quote: 'The CRM pipeline with AI insights helped us close 30% more deals. The analytics dashboard gives us exactly what we need — nothing more, nothing less.',
     metric: '30% more deals closed',
   },
@@ -35,6 +38,7 @@ const TESTIMONIALS = [
     company: 'InnovateLabs',
     initials: 'DK',
     color: 'bg-rose-500',
+    image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop',
     quote: 'Best project management tool we\'ve used. The AI features are not gimmicks — they actually work and save real time. We shipped our product two weeks early.',
     metric: 'Shipped 2 weeks ahead of schedule',
   },
@@ -44,6 +48,7 @@ const TESTIMONIALS = [
     company: 'GlobalTech',
     initials: 'LA',
     color: 'bg-amber-500',
+    image: 'https://images.unsplash.com/photo-1507876466836-bc7706f854ec?w=100&h=100&fit=crop',
     quote: 'Managing multiple teams across time zones is now effortless. The smart notifications keep everyone in sync without the noise.',
     metric: 'Reduced meeting time by 60%',
   },
@@ -53,6 +58,7 @@ const TESTIMONIALS = [
     company: 'DevStudio',
     initials: 'JW',
     color: 'bg-indigo-500',
+    image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop',
     quote: 'The deadline prediction AI is surprisingly accurate. It\'s helped us set realistic timelines and eliminate project delays entirely.',
     metric: 'Zero missed deadlines this quarter',
   },
@@ -91,7 +97,16 @@ const TestimonialCard = ({ t, index }) => {
 
       {/* Author */}
       <div className="flex items-center gap-3 pt-4 border-t border-gray-100 dark:border-zinc-800">
-        <div className={`w-9 h-9 rounded-full ${t.color} flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0`}>
+        <img
+          src={t.image}
+          alt={t.name}
+          className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+          onError={(e) => {
+            e.target.style.display = 'none'
+            e.target.nextElementSibling.style.display = 'flex'
+          }}
+        />
+        <div className={`w-9 h-9 rounded-full ${t.color} flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0 hidden`}>
           {t.initials}
         </div>
         <div>

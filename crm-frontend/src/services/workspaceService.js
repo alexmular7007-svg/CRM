@@ -42,4 +42,9 @@ export const workspaceService = {
     const response = await api.delete(`/workspaces/${workspaceId}/members/${memberId}`)
     return unwrap(response)
   },
+
+  getMyRole: async (id) => {
+    const response = await api.get(`/workspaces/${id}/members/role`)
+    return unwrap(response)
+  },
 }

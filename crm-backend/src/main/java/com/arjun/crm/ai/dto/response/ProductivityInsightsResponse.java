@@ -21,4 +21,6 @@ public class ProductivityInsightsResponse {
     private List<String> improvements;
     private List<String> recommendations;
     private String trend;
+    @Builder.Default
+    private Boolean aiUnavailable = false;  // Flag indicating if AI service was unavailable
 }

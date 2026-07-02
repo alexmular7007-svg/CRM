@@ -1,9 +1,7 @@
 package com.arjun.crm.dto.request;
 
-import com.arjun.crm.enums.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
@@ -27,6 +25,7 @@ public class RegisterRequest {
     @Size(min = 8, message = "Password must be at least 8 characters")
     private String password;
 
-    @NotNull(message = "Role is required")
-    private Role role;
+    // NOTE: Role is NOT required during registration. 
+    // It will be assigned by the backend, always defaulting to USER for new accounts.
+    // Roles belong to workspace membership, not account creation.
 }

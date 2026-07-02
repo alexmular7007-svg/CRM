@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useSelector } from 'react-redux'
 import { DndContext, DragOverlay, closestCorners, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { taskService } from '../services/taskService'
 import { websocketService } from '../services/websocketService'
@@ -12,6 +13,7 @@ import KanbanFilters from '../components/kanban/KanbanFilters'
 import Spinner from '../components/common/Spinner'
 import toast from 'react-hot-toast'
 import { FiPlus, FiFilter } from 'react-icons/fi'
+import { useAutoRefreshOnMemberRemoval } from '../hooks/useAutoRefreshOnMemberRemoval'
 
 const COLUMNS = [
   { id: 'TODO', title: 'To Do', color: 'bg-gray-500' },
@@ -22,6 +24,7 @@ const COLUMNS = [
 
 const KanbanBoard = () => {
   const { projectId } = useParams()
+  const { currentWorkspace } = useSelector((state) => state.workspace)
   const queryClient = useQueryClient()
   const [activeTask, setActiveTask] = useState(null)
   const [selectedTask, setSelectedTask] = useState(null)
@@ -33,6 +36,9 @@ const KanbanBoard = () => {
     assignee: '',
   })
 
+  // PHASE 7: Auto-refresh when member is removed from workspace
+  useAutoRefreshOnMemberRemoval(currentWorkspace?.id, queryClient)
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -43,9 +49,12 @@ const KanbanBoard = () => {
 
   // Fetch tasks — unwrap paginated response to array
   const { data: rawTasks, isLoading } = useQuery({
-    queryKey: ['tasks', projectId, filters],
-    queryFn: () => taskService.getByProject(projectId, filters),
-    enabled: !!projectId,
+    queryKey: ['tasks', projectId, filters, currentWorkspace?.id],
+    queryFn: () => taskService.getByProject(projectId, { 
+      ...filters,
+      workspaceId: currentWorkspace?.id 
+    }),
+    enabled: !!projectId && !!currentWorkspace?.id,
   })
 
   const tasks = Array.isArray(rawTasks)
@@ -83,7 +92,7 @@ const KanbanBoard = () => {
 
   // WebSocket real-time updates
   useEffect(() => {
-    if (!projectId) return
+    if (!projectId || !websocketService.connected) return
 
     const handleTaskUpdate = (message) => {
       queryClient.invalidateQueries(['tasks', projectId])
@@ -91,13 +100,17 @@ const KanbanBoard = () => {
     }
 
     // Subscribe to project task updates
-    const subscription = websocketService.client?.subscribe(
-      `/topic/project/${projectId}/tasks`,
-      handleTaskUpdate
-    )
+    try {
+      const subscription = websocketService.client?.subscribe?.(
+        `/topic/project/${projectId}/tasks`,
+        handleTaskUpdate
+      )
 
-    return () => {
-      subscription?.unsubscribe()
+      return () => {
+        subscription?.unsubscribe()
+      }
+    } catch (error) {
+      console.warn('WebSocket subscription failed:', error)
     }
   }, [projectId, queryClient])
 
@@ -201,6 +214,7 @@ const KanbanBoard = () => {
           task={selectedTask}
           onClose={() => setSelectedTask(null)}
           projectId={projectId}
+          workspaceId={currentWorkspace?.id}
         />
       )}
 

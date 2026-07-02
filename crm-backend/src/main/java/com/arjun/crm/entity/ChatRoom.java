@@ -34,7 +34,7 @@ public class ChatRoom {
     private ChatRoomType type;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "workspace_id")
+    @JoinColumn(name = "workspace_id", nullable = false)
     private Workspace workspace;
 
     @ManyToOne(fetch = FetchType.LAZY)

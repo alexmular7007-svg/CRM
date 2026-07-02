@@ -14,7 +14,7 @@ const statusColors = {
   CANCELLED: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
 }
 
-const ProjectCard = ({ project, onEdit, onDelete, onArchive }) => {
+const ProjectCard = ({ project, onEdit, onDelete, onArchive, onUnarchive }) => {
   const [showMenu, setShowMenu] = useState(false)
   const navigate = useNavigate()
   const dispatch = useDispatch()
@@ -45,6 +45,12 @@ const ProjectCard = ({ project, onEdit, onDelete, onArchive }) => {
     e.stopPropagation()
     setShowMenu(false)
     onArchive(project)
+  }
+
+  const handleUnarchive = (e) => {
+    e.stopPropagation()
+    setShowMenu(false)
+    if (onUnarchive) onUnarchive(project)
   }
 
   return (
@@ -96,20 +102,33 @@ const ProjectCard = ({ project, onEdit, onDelete, onArchive }) => {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-2 z-10"
               >
-                <button
-                  onClick={handleEdit}
-                  className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
-                >
-                  <FiEdit2 size={16} />
-                  <span>Edit</span>
-                </button>
-                <button
-                  onClick={handleArchive}
-                  className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
-                >
-                  <FiArchive size={16} />
-                  <span>Archive</span>
-                </button>
+                {!project.archived && (
+                  <>
+                    <button
+                      onClick={handleEdit}
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
+                    >
+                      <FiEdit2 size={16} />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      onClick={handleArchive}
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
+                    >
+                      <FiArchive size={16} />
+                      <span>Archive</span>
+                    </button>
+                  </>
+                )}
+                {project.archived && (
+                  <button
+                    onClick={handleUnarchive}
+                    className="w-full px-4 py-2 text-left text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center space-x-2"
+                  >
+                    <FiArchive size={16} />
+                    <span>Unarchive</span>
+                  </button>
+                )}
                 <button
                   onClick={handleDelete}
                   className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center space-x-2"

@@ -90,13 +90,14 @@ public abstract class BaseIntegrationTest {
 
     /**
      * Create register request
+     * Note: Role is not set here - it defaults to USER on the backend
      */
     protected RegisterRequest createRegisterRequest(String email, String fullName, String password) {
         RegisterRequest request = new RegisterRequest();
         request.setEmail(email);
         request.setFullName(fullName);
         request.setPassword(password);
-        request.setRole(Role.USER);
+        // Role is NOT set during registration - backend always defaults to USER
         return request;
     }
 

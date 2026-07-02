@@ -39,19 +39,30 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        log.info("Registering new user with email: {}", request.getEmail());
+        String email = request.getEmail();
+        String normalizedEmail = email.trim().toLowerCase();
+        
+        log.info("Registering new user with email: {}", email);
+        log.debug("Normalized email for checking: {}", normalizedEmail);
 
-        // Check if email already exists
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new DuplicateEmailException("Email already registered: " + request.getEmail());
+        // Check if email already exists (case-insensitive)
+        boolean exists = userRepository.existsByEmailCaseInsensitive(normalizedEmail);
+        log.debug("Email exists in database: {}", exists);
+        
+        if (exists) {
+            log.warn("Duplicate email registration attempt: {}", email);
+            throw new DuplicateEmailException("Email already registered: " + email);
         }
+        
+        log.debug("Email check passed, proceeding with user creation");
 
-        // Create new user
+        // Create new user with default USER role
+        // Workspace roles are assigned separately when users join/create workspaces
         User user = User.builder()
                 .fullName(request.getFullName())
-                .email(request.getEmail())
+                .email(normalizedEmail)  // Store normalized email
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role(request.getRole())
+                .role(com.arjun.crm.enums.Role.USER)  // Always default to USER for new registrations
                 .status(UserStatus.ACTIVE)
                 .build();
 
@@ -68,19 +79,20 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest request) {
-        log.info("User login attempt: {}", request.getEmail());
+        String email = request.getEmail().trim().toLowerCase();
+        log.info("User login attempt: {}", email);
 
         try {
-            // Authenticate user
+            // Authenticate user (Spring Security handles case-sensitivity)
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
-                            request.getEmail(),
+                            email,
                             request.getPassword()
                     )
             );
 
             // Get user details
-            User user = userRepository.findByEmail(request.getEmail())
+            User user = userRepository.findByEmail(email)
                     .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password"));
 
             // Check if user is active
@@ -92,12 +104,49 @@ public class AuthServiceImpl implements AuthService {
             UserDetails userDetails = (UserDetails) authentication.getPrincipal();
             String token = jwtService.generateToken(Map.of("userId", user.getId()), userDetails);
 
-            log.info("User logged in successfully: {}", request.getEmail());
+            log.info("User logged in successfully: {}", email);
             return AuthResponse.of(token, UserResponse.fromEntity(user));
 
         } catch (AuthenticationException e) {
-            log.error("Authentication failed for user: {}", request.getEmail());
+            log.error("Authentication failed for user: {}", email);
             throw new InvalidCredentialsException("Invalid email or password");
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AuthResponse refreshToken(String refreshToken) {
+        log.info("Refresh token request received");
+        
+        try {
+            // Extract user ID from token
+            Long userId = jwtService.extractUserId(refreshToken);
+            
+            // Get user from database
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new InvalidCredentialsException("User not found"));
+            
+            // Check if user is active
+            if (user.getStatus() == UserStatus.INACTIVE) {
+                throw new InvalidCredentialsException("User account is inactive");
+            }
+            
+            // Validate token with user details
+            UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
+            if (!jwtService.isTokenValid(refreshToken, userDetails)) {
+                log.warn("Refresh token validation failed");
+                throw new InvalidCredentialsException("Refresh token is invalid or expired");
+            }
+            
+            // Generate new JWT token
+            String newToken = jwtService.generateToken(Map.of("userId", user.getId()), userDetails);
+            
+            log.info("Token refreshed successfully for user: {}", user.getEmail());
+            return AuthResponse.of(newToken, UserResponse.fromEntity(user));
+            
+        } catch (Exception e) {
+            log.error("Token refresh failed: {}", e.getMessage());
+            throw new InvalidCredentialsException("Failed to refresh token: " + e.getMessage());
         }
     }
 }

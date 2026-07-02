@@ -252,17 +252,6 @@ const EnhancedAuthLayout = () => {
                       px-6 pt-12 pb-12 relative"
            style={{ background: isDark ? '#0D1117' : '#F6F8FA' }}>
 
-        {/* Theme toggle */}
-        <button onClick={toggle} aria-label="Toggle theme"
-                className="fixed top-5 right-5 z-20 p-2 rounded-md transition-colors"
-                style={{
-                  background: isDark ? '#161B22' : '#ffffff',
-                  border: `1px solid ${isDark ? '#30363D' : '#D0D7DE'}`,
-                  color: isDark ? '#8B949E' : '#57606A',
-                }}>
-          {isDark ? <Sun size={15} /> : <Moon size={15} />}
-        </button>
-
         {/* Mobile logo */}
         <div className="md:hidden self-start mb-8 flex items-center gap-2">
           <div className="w-7 h-7 rounded-md flex items-center justify-center"

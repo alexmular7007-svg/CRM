@@ -11,7 +11,8 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "notifications", indexes = {
         @Index(name = "idx_recipient_created", columnList = "recipient_id,created_at"),
-        @Index(name = "idx_recipient_read", columnList = "recipient_id,is_read")
+        @Index(name = "idx_recipient_read", columnList = "recipient_id,is_read"),
+        @Index(name = "idx_recipient_type", columnList = "recipient_id,type")
 })
 @Getter
 @Setter
@@ -27,6 +28,10 @@ public class Notification {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "recipient_id", nullable = false)
     private User recipient;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "workspace_id", nullable = false)
+    private Workspace workspace;
 
     @Column(nullable = false, length = 255)
     private String title;
@@ -48,6 +53,14 @@ public class Notification {
     @Enumerated(EnumType.STRING)
     @Column(name = "reference_type", length = 50)
     private ReferenceType referenceType;
+
+    /**
+     * Action URL for deep linking to the related entity.
+     * Can be dynamically generated or pre-computed.
+     * Example: "/tasks/123", "/projects/45/tasks", "/chat/room/789"
+     */
+    @Column(name = "action_url", length = 500)
+    private String actionUrl;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

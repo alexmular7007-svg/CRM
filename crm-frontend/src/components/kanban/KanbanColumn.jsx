@@ -43,7 +43,7 @@ const KanbanColumn = ({ column, tasks, onTaskClick }) => {
         >
           <div className="space-y-3">
             {tasks.length === 0 ? (
-              <div className="text-center py-8 text-gray-400 dark:text-gray-600">
+              <div className="text-center py-8 text-gray-600 dark:text-gray-400">
                 <p className="text-sm">No tasks</p>
               </div>
             ) : (

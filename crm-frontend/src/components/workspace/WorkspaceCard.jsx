@@ -38,6 +38,13 @@ const WorkspaceCard = ({ workspace, onEdit, onDelete }) => {
     dispatch(setCurrentWorkspace(workspace))
     navigate(`/workspaces/${workspace.id}/settings`)
   }
+  
+  // Members icon also opens Settings page
+  const handleMembers = (e) => {
+    e.stopPropagation()
+    dispatch(setCurrentWorkspace(workspace))
+    navigate(`/workspaces/${workspace.id}/settings`)
+  }
 
   return (
     <motion.div
@@ -112,15 +119,20 @@ const WorkspaceCard = ({ workspace, onEdit, onDelete }) => {
           </p>
         )}
 
-        {/* Stats */}
-        <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-          <div className="flex items-center space-x-1">
-            <FiFolderPlus size={16} />
-            <span>{workspace.projectCount || 0} projects</span>
-          </div>
-          <div className="flex items-center space-x-1">
-            <FiUsers size={16} />
-            <span>{workspace.memberCount || 0} members</span>
+        {/* Stats and Members Button */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
+            <div className="flex items-center space-x-1">
+              <FiFolderPlus size={16} />
+              <span>{workspace.projectCount || 0} projects</span>
+            </div>
+            <button
+              onClick={handleMembers}
+              className="flex items-center space-x-1 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
+            >
+              <FiUsers size={16} />
+              <span>{workspace.memberCount || 0} members</span>
+            </button>
           </div>
         </div>
 

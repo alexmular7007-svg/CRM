@@ -32,7 +32,7 @@ export const aiService = {
   },
 
   getWorkspaceInsights: async (workspaceId, forceRefresh = false) => {
-    const response = await api.get(`/ai-insights/dashboard/${workspaceId}`, {
+    const response = await api.get(`/ai/insights/dashboard/${workspaceId}`, {
       params: { refresh: forceRefresh }
     })
     return unwrap(response)

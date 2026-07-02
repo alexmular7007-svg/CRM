@@ -20,10 +20,15 @@ public class WorkspaceMemberResponse {
     private LocalDateTime joinedAt;
 
     public static WorkspaceMemberResponse fromEntity(WorkspaceMember member) {
+        // Use fullName if available, fallback to email if fullName is null
+        String displayName = member.getUser().getFullName() != null && !member.getUser().getFullName().trim().isEmpty()
+                ? member.getUser().getFullName()
+                : member.getUser().getEmail();
+        
         return WorkspaceMemberResponse.builder()
                 .id(member.getId())
                 .userId(member.getUser().getId())
-                .userName(member.getUser().getFullName())
+                .userName(displayName)
                 .userEmail(member.getUser().getEmail())
                 .role(member.getRole())
                 .joinedAt(member.getJoinedAt())

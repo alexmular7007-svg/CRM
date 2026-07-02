@@ -38,16 +38,15 @@ public class WorkspaceMemberController {
     }
 
     /**
-     * Remove member from workspace
-     * DELETE /api/workspaces/{workspaceId}/members/{userId}
+     * Get current user's role in workspace
+     * GET /api/workspaces/{workspaceId}/members/role
      */
-    @DeleteMapping("/{userId}")
-    public ResponseEntity<ApiResponse<Void>> removeMember(
-            @PathVariable Long workspaceId,
-            @PathVariable Long userId) {
-        log.info("Remove member request received for workspace ID: {} and user ID: {}", workspaceId, userId);
-        workspaceMemberService.removeMember(workspaceId, userId);
-        return ResponseEntity.ok(ApiResponse.success("Member removed successfully", null));
+    @GetMapping("/role")
+    public ResponseEntity<ApiResponse<WorkspaceMemberResponse>> getMyRole(
+            @PathVariable Long workspaceId) {
+        log.info("Get my role request received for workspace ID: {}", workspaceId);
+        WorkspaceMemberResponse response = workspaceMemberService.getMyRole(workspaceId);
+        return ResponseEntity.ok(ApiResponse.success("Role fetched successfully", response));
     }
 
     /**
@@ -69,5 +68,18 @@ public class WorkspaceMemberController {
         
         Page<WorkspaceMemberResponse> response = workspaceMemberService.listMembers(workspaceId, pageable);
         return ResponseEntity.ok(ApiResponse.success("Members fetched successfully", response));
+    }
+
+    /**
+     * Remove member from workspace
+     * DELETE /api/workspaces/{workspaceId}/members/{userId}
+     */
+    @DeleteMapping("/{userId}")
+    public ResponseEntity<ApiResponse<Void>> removeMember(
+            @PathVariable Long workspaceId,
+            @PathVariable Long userId) {
+        log.info("Remove member request received for workspace ID: {} and user ID: {}", workspaceId, userId);
+        workspaceMemberService.removeMember(workspaceId, userId);
+        return ResponseEntity.ok(ApiResponse.success("Member removed successfully", null));
     }
 }

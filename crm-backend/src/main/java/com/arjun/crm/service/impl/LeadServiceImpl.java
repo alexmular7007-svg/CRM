@@ -15,6 +15,8 @@ import com.arjun.crm.enums.LeadStatus;
 import com.arjun.crm.exception.AccessDeniedException;
 import com.arjun.crm.exception.DuplicateEmailException;
 import com.arjun.crm.exception.ResourceNotFoundException;
+import com.arjun.crm.event.LeadAssignedEvent;
+import com.arjun.crm.event.LeadUpdatedEvent;
 import com.arjun.crm.repository.LeadActivityRepository;
 import com.arjun.crm.repository.LeadRepository;
 import com.arjun.crm.repository.UserRepository;
@@ -23,6 +25,7 @@ import com.arjun.crm.repository.WorkspaceRepository;
 import com.arjun.crm.service.LeadService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -47,6 +50,7 @@ public class LeadServiceImpl implements LeadService {
     private final UserRepository userRepository;
     private final WorkspaceRepository workspaceRepository;
     private final WorkspaceMemberRepository workspaceMemberRepository;
+    private final ApplicationEventPublisher eventPublisher;
     
     @Override
     public LeadResponse createLead(CreateLeadRequest request, Long userId) {
@@ -99,6 +103,8 @@ public class LeadServiceImpl implements LeadService {
         if (assignedTo != null) {
             createActivity(lead, user, "ASSIGNED", "Lead assigned to " + assignedTo.getFullName(), 
                           null, assignedTo.getFullName());
+            // Publish lead assigned event for notification
+            eventPublisher.publishEvent(new LeadAssignedEvent(this, lead, assignedTo, user));
         }
         
         log.info("Lead created successfully: {}", lead.getId());
@@ -170,6 +176,9 @@ public class LeadServiceImpl implements LeadService {
             createActivity(lead, user, "ASSIGNED", "Lead reassigned", 
                           oldAssignee, newAssignee.getFullName());
             lead.setAssignedTo(newAssignee);
+            
+            // Publish lead assigned event for notification
+            eventPublisher.publishEvent(new LeadAssignedEvent(this, lead, newAssignee, user));
         }
         
         if (request.getTags() != null) {
@@ -186,6 +195,9 @@ public class LeadServiceImpl implements LeadService {
         
         lead.setLastActivityAt(LocalDateTime.now());
         lead = leadRepository.save(lead);
+        
+        // Publish lead updated event for notification
+        eventPublisher.publishEvent(new LeadUpdatedEvent(this, lead, user, "Lead updated"));
         
         log.info("Lead updated successfully: {}", leadId);
         return mapToResponse(lead);
@@ -353,8 +365,10 @@ public class LeadServiceImpl implements LeadService {
     }
     
     private void validateWorkspaceAccess(Long userId, Long workspaceId) {
-        WorkspaceMember member = workspaceMemberRepository.findByWorkspaceIdAndUserId(workspaceId, userId)
-                .orElseThrow(() -> new AccessDeniedException("You don't have access to this workspace"));
+        // PHASE 6: Check if user is ACTIVE member (Phase 2 soft delete validation)
+        if (!workspaceMemberRepository.existsActiveMember(workspaceId, userId)) {
+            throw new AccessDeniedException("You don't have access to this workspace");
+        }
     }
     
     private void createActivity(Lead lead, User user, String activityType, String description, 

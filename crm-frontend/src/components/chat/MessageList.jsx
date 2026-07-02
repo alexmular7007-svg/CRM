@@ -85,7 +85,7 @@ const MessageList = ({ messages, roomDetails }) => {
 
   if (messages.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center text-gray-500">
+      <div className="flex-1 flex items-center justify-center text-gray-700 dark:text-gray-400">
         <div className="text-center">
           <p className="text-lg mb-2">No messages yet</p>
           <p className="text-sm">Start the conversation!</p>

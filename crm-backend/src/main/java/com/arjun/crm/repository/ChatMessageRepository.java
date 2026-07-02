@@ -43,4 +43,11 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     @Query("SELECT COUNT(m) FROM ChatMessage m WHERE m.createdAt BETWEEN :startDate AND :endDate")
     Long countMessagesInDateRange(@Param("startDate") Instant startDate,
                                   @Param("endDate") Instant endDate);
+
+    /**
+     * Delete all chat messages in a workspace via chat rooms
+     */
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM ChatMessage m WHERE m.chatRoom.workspace.id = :workspaceId")
+    int deleteByWorkspaceId(@Param("workspaceId") Long workspaceId);
 }

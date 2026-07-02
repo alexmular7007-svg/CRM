@@ -76,20 +76,33 @@ api.interceptors.response.use(
         url.includes('/ai-insights') ||
         url.includes('/ai/insights') ||
         (url.includes('/leads') && url.includes('/analytics')) ||
-        (url.includes('/workspaces') && url.includes('/members')) ||
         (url.includes('/workspaces') && url.includes('/projects'))
 
       if (!silent && !isSilentEndpoint) {
-        const message = data?.message || 'An error occurred'
+        // For validation errors (400 status with nested error map), show first field error
+        if (status === 400 && data?.data && typeof data.data === 'object' && !Array.isArray(data.data)) {
+          const fieldErrors = data.data
+          const firstError = Object.values(fieldErrors)[0]
+          if (firstError) {
+            toast.error(firstError)
+          } else {
+            toast.error(data?.message || 'Validation failed')
+          }
+        } else {
+          const message = data?.message || 'An error occurred'
 
-        if (status === 403) {
-          toast.error(message !== 'An error occurred' ? message : 'Access denied')
-        } else if (status === 404) {
-          toast.error('Resource not found')
-        } else if (status === 500) {
-          toast.error('Server error. Please try again later.')
-        } else if (status !== 401) {
-          toast.error(message)
+          if (status === 403) {
+            toast.error(message !== 'An error occurred' ? message : 'Access denied')
+          } else if (status === 404) {
+            toast.error('Resource not found')
+          } else if (status === 409) {
+            // Conflict errors (e.g., duplicate email)
+            toast.error(message !== 'An error occurred' ? message : 'Resource already exists')
+          } else if (status === 500) {
+            toast.error('Server error. Please try again later.')
+          } else if (status !== 401) {
+            toast.error(message)
+          }
         }
       }
 

@@ -31,6 +31,16 @@ const EnhancedLogin = () => {
         </p>
       </div>
 
+      {/* Demo Credentials Hint */}
+      <div className="p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+        <p className="text-xs font-semibold text-blue-900 dark:text-blue-200 mb-1.5">📝 Demo Credentials:</p>
+        <div className="text-xs text-blue-800 dark:text-blue-300 space-y-0.5">
+          <p><strong>Email:</strong> test1@example.com</p>
+          <p><strong>Password:</strong> password123</p>
+          <p className="text-blue-700 dark:text-blue-400 text-[11px] mt-1">Or: test2@example.com, admin@example.com</p>
+        </div>
+      </div>
+
       {/* Social buttons */}
       <SocialAuthButtons mode="sign in" />
 

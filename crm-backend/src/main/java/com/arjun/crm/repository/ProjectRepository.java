@@ -1,6 +1,7 @@
 package com.arjun.crm.repository;
 
 import com.arjun.crm.entity.Project;
+import com.arjun.crm.entity.User;
 import com.arjun.crm.enums.ProjectStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -44,4 +45,41 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
      */
     @Query("SELECT COUNT(p) FROM Project p WHERE p.status = 'COMPLETED' AND p.updatedAt BETWEEN :startDate AND :endDate")
     Long countProjectsCompletedBetween(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+    
+    /**
+     * Delete all projects in a workspace
+     */
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM Project p WHERE p.workspace.id = :workspaceId")
+    int deleteByWorkspaceId(@Param("workspaceId") Long workspaceId);
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // PHASE 5: Project Service Workspace Scoping Methods
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Find projects by workspace and active creator (excluding archived)
+     */
+    @Query("SELECT p FROM Project p WHERE p.workspace.id = :workspaceId AND p.archived = false ORDER BY p.createdAt DESC")
+    Page<Project> findActiveByWorkspaceId(@Param("workspaceId") Long workspaceId, Pageable pageable);
+
+    /**
+     * Find projects by workspace, status, and active (not archived)
+     */
+    @Query("SELECT p FROM Project p WHERE p.workspace.id = :workspaceId AND p.status = :status AND p.archived = false ORDER BY p.createdAt DESC")
+    Page<Project> findActiveByWorkspaceIdAndStatus(@Param("workspaceId") Long workspaceId,
+                                                    @Param("status") ProjectStatus status,
+                                                    Pageable pageable);
+
+    /**
+     * Count active projects in workspace
+     */
+    @Query("SELECT COUNT(p) FROM Project p WHERE p.workspace.id = :workspaceId AND p.archived = false")
+    long countActiveByWorkspaceId(@Param("workspaceId") Long workspaceId);
+
+    /**
+     * Get assignable project members (active workspace members only)
+     */
+    @Query("SELECT DISTINCT wm.user FROM WorkspaceMember wm WHERE wm.workspace.id = :workspaceId AND wm.deletedAt IS NULL AND wm.status = 'ACTIVE' ORDER BY wm.user.fullName")
+    java.util.List<User> findAssignableProjectMembersInWorkspace(@Param("workspaceId") Long workspaceId);
 }

@@ -30,4 +30,11 @@ public interface TaskCommentRepository extends JpaRepository<TaskComment, Long> 
      */
     @Query("SELECT COUNT(c) FROM TaskComment c WHERE c.createdAt BETWEEN :startDate AND :endDate")
     Long countCommentsInDateRange(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
+
+    /**
+     * Delete all task comments in a workspace
+     */
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM TaskComment tc WHERE tc.task.workspace.id = :workspaceId")
+    int deleteByWorkspaceId(@Param("workspaceId") Long workspaceId);
 }
