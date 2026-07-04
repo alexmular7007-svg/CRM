@@ -43,10 +43,104 @@ Most teams use three or four separate tools — a task tracker, a CRM, a chat ap
 
 **Infrastructure**
 
-- PostgreSQL 15 for persistent data storage
+- PostgreSQL 15 (Supabase) for persistent data storage
 - Redis 7 for presence heartbeats, session caching, and AI snapshot caching
 - Docker and Docker Compose for local and production deployment
 - Groq API (llama-3.3-70b-versatile) for all AI features
+
+---
+
+## Database Architecture (Supabase PostgreSQL)
+
+The application uses **Supabase PostgreSQL** as the primary data store, providing a fully managed PostgreSQL 15 database with SSL/TLS encryption and automatic backups.
+
+**Why Supabase?**
+
+- **Fully Managed**: No need to manage database infrastructure, backups, or patches
+- **SSL/TLS Encrypted**: All connections are encrypted in transit
+- **Scalable**: Handles millions of rows efficiently with built-in indexing and optimization
+- **Reliable**: Automatic backups, replication, and disaster recovery
+- **Easy Integration**: Works seamlessly with Hibernate JPA through standard PostgreSQL JDBC drivers
+- **Free Tier**: Suitable for development and small production workloads
+- **Real-time Capabilities**: Native PostgreSQL with support for advanced features
+
+**Supabase Connection Configuration**
+
+The backend connects to Supabase PostgreSQL using:
+
+```yaml
+# In application.yml
+datasource:
+  url: jdbc:postgresql://<YOUR_SUPABASE_HOST>:5432/postgres?sslmode=require
+  username: postgres
+  password: ${DATABASE_PASSWORD}
+  driver-class-name: org.postgresql.Driver
+```
+
+**Environment Variables** (from `.env`):
+
+```bash
+DATABASE_URL=jdbc:postgresql://db.xkzpzcvwzqjavftrnxjl.supabase.co:5432/postgres?sslmode=require
+DATABASE_USERNAME=postgres
+DATABASE_PASSWORD=your_supabase_password
+DATABASE_NAME=postgres
+DATABASE_PORT=5432
+```
+
+**Key Features Implemented**
+
+- **Connection Pooling**: HikariCP manages 10 database connections by default with SSL enabled
+- **Automatic Schema Generation**: Hibernate's `ddl-auto=update` automatically creates all tables on startup
+- **Full-Text Search**: PostgreSQL native FTS on task descriptions, lead notes, and chat messages
+- **JSON Columns**: Using PostgreSQL JSON types for flexible metadata storage
+- **Advanced Indexing**: Automatic indexes on frequently queried fields (workspace_id, user_id, created_at)
+- **Row-Level Security (Optional)**: Can be enabled on Supabase for multi-tenant isolation
+- **Backup & Recovery**: Supabase handles automated daily backups with 30-day retention
+
+**Database Schema Highlights**
+
+All entities are mapped to PostgreSQL tables with JPA/Hibernate:
+
+- **Core Entities**: Users, Workspaces, Projects, Tasks, Leads, ChatMessages, Notifications
+- **Relationships**: Foreign keys with cascading delete where appropriate
+- **Timestamps**: All entities have `created_at` and `updated_at` timestamps (auto-managed by JPA)
+- **Performance**: Strategic indexes on `workspace_id`, `user_id`, `status`, `priority` for fast queries
+- **Soft Deletes**: Some entities like `WorkspaceMembers` use `deleted_at` field for soft deletion
+
+**Supabase Setup Steps**
+
+1. Create a Supabase account at https://supabase.com
+2. Create a new project (choose a region closest to your users)
+3. Copy the **Connection String** from Supabase Dashboard → Settings → Database
+4. Extract and set the environment variables:
+   - Host: `db.xkzpzcvwzqjavftrnxjl.supabase.co` (example)
+   - Password: Found in Supabase Dashboard
+5. Add to your `.env`:
+   ```bash
+   DATABASE_URL=jdbc:postgresql://db.xkzpzcvwzqjavftrnxjl.supabase.co:5432/postgres?sslmode=require
+   DATABASE_PASSWORD=your_password_here
+   ```
+6. Start the backend — Hibernate will auto-create all tables
+
+**Connecting with pgAdmin (Optional)**
+
+To inspect the Supabase database:
+
+1. Download pgAdmin from https://www.pgadmin.org/download/
+2. Create a new server connection:
+   - Host: `db.xkzpzcvwzqjavftrnxjl.supabase.co`
+   - Port: `5432`
+   - Username: `postgres`
+   - Password: Your Supabase password
+3. View all tables and run SQL queries
+
+**Data Migration**
+
+When deploying to production with a new Supabase database:
+
+1. Keep `HIBERNATE_DDL_AUTO=update` in the dev environment
+2. Change to `HIBERNATE_DDL_AUTO=validate` in production to prevent accidental schema changes
+3. Use Flyway or Liquibase for version-controlled migrations in production
 
 ---
 
