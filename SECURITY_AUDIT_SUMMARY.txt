@@ -1,0 +1,222 @@
+================================================================================
+PRE-GITHUB SECURITY AUDIT - EXECUTIVE SUMMARY
+================================================================================
+
+DATE: 2026-07-01
+STATUS: 🔴 DO NOT PUSH TO GITHUB YET
+SEVERITY: CRITICAL
+
+================================================================================
+KEY FINDINGS
+================================================================================
+
+CRITICAL ISSUES FOUND: 3
+- Gmail credentials exposed in application-dev-local.yml (STAGED FOR COMMIT)
+- JWT_SECRET hardcoded as fallback in application.yml
+- Resend API key hardcoded as fallback in application-prod.yml
+
+HIGH ISSUES FOUND: 3
+- Database password fallback is default "postgres"
+- OAuth2 credentials hardcoded in application-dev.yml
+- Test credentials logged in DataLoader
+
+MEDIUM ISSUES FOUND: 2
+- EmailTestController exposed in production
+- Test data creation not restricted to development
+
+================================================================================
+BLOCKING ISSUES - MUST FIX BEFORE PUSHING
+================================================================================
+
+1. STAGED FILE WITH SECRETS
+   File: crm-backend/src/main/resources/application-dev-local.yml
+   Status: CURRENTLY STAGED FOR COMMIT
+   Secrets: Gmail credentials (xsde790@gmail.com / eprlmvhlvehhkppy)
+   
+   Action:
+   git restore --staged crm-backend/src/main/resources/application-dev-local.yml
+   del crm-backend\src\main\resources\application-dev-local.yml
+
+2. HARDCODED JWT_SECRET FALLBACK
+   File: crm-backend/src/main/resources/application.yml (Line 264)
+   Problem: Uses hardcoded secret if JWT_SECRET env var not set
+   Value: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+   
+   Action: Remove fallback value - use only ${JWT_SECRET}
+
+3. HARDCODED RESEND API KEY FALLBACK
+   File: crm-backend/src/main/resources/application-prod.yml (Line 72)
+   Problem: Uses hardcoded API key if RESEND_API_KEY env var not set
+   Value: re_eTydEUNa_FiZ1FZodWgjVnhuprwCBf1w8
+   
+   Action: Remove fallback value - use only ${RESEND_API_KEY}
+
+4. DEFAULT DATABASE PASSWORD
+   Files: application.yml (Line 43), docker-compose.yml (Lines 17, 69)
+   Problem: Fallback value is default PostgreSQL password "postgres"
+   
+   Action: Remove fallback value - use only ${DATABASE_PASSWORD}
+
+5. MISSING FROM .gitignore
+   File: .gitignore
+   Problem: application-dev-local.yml not listed
+   
+   Action: Add "**/application-dev-local.yml" to .gitignore
+
+================================================================================
+SECURITY ISSUES - SHOULD FIX
+================================================================================
+
+6. TEST DATA CONTROLLER EXPOSED
+   File: EmailTestController.java
+   Issue: Test email endpoint available in production
+   Fix: Add @Profile("dev") annotation
+
+7. TEST DATA CREATION NOT RESTRICTED
+   File: DataLoader.java
+   Issue: Creates test users on every startup
+   Fix: Add @Profile("dev") annotation
+
+8. TEST CREDENTIALS LOGGED
+   File: DataLoader.java
+   Issue: Logs password123 credentials to console
+   Fix: Remove/mask password from logs
+
+================================================================================
+WHAT WILL BE EXPOSED IF YOU PUSH NOW
+================================================================================
+
+1. GMAIL ACCOUNT ACCESS
+   - Anyone cloning repo gets email/password
+   - Can send emails from your account
+   - Can change Gmail settings
+
+2. JWT TOKENS FORGED
+   - Anyone can create valid JWT tokens
+   - Can access any user account
+   - Can bypass authentication
+
+3. EMAIL SERVICE ABUSE
+   - Resend API key exposed
+   - Anyone can send emails from your domain
+   - Potential billing abuse
+
+4. DATABASE COMPROMISE
+   - Database password is well-known default
+   - Combined with username "postgres" = full access
+   - All customer data accessible
+
+5. OAUTH2 ACCOUNT TAKEOVER
+   - Google/GitHub secrets exposed
+   - Can intercept OAuth2 authentication
+   - Can create fake login links
+
+================================================================================
+ESTIMATED FIX TIME
+================================================================================
+
+Blocking Issues (5 items):    10 minutes
+Security Issues (3 items):    5 minutes
+Verification:                 3 minutes
+Review:                        2 minutes
+                              -----------
+TOTAL:                        ~20 minutes
+
+================================================================================
+STEP-BY-STEP FIX PROCESS
+================================================================================
+
+1. Unstage problematic file
+   git restore --staged crm-backend/src/main/resources/application-dev-local.yml
+
+2. Delete the file
+   del crm-backend\src\main\resources\application-dev-local.yml
+
+3. Update .gitignore - add line:
+   **/application-dev-local.yml
+
+4. Edit application.yml (Line 264)
+   Change: secret: ${JWT_SECRET:404E...}
+   To:     secret: ${JWT_SECRET}
+
+5. Edit application-prod.yml (Line 72)
+   Change: api-key: ${RESEND_API_KEY:re_eTyd...}
+   To:     api-key: ${RESEND_API_KEY}
+
+6. Edit application.yml (Line 43) - 2 places
+   Change: password: ${DATABASE_PASSWORD:postgres}
+   To:     password: ${DATABASE_PASSWORD}
+
+7. Edit docker-compose.yml (Lines 17, 69) - 2 places
+   Same as above
+
+8. Add @Profile("dev") to:
+   - DataLoader.java (line before @Configuration)
+   - EmailTestController.java (line before @RestController)
+
+9. Remove password logging from DataLoader.java (lines 78-80, 138-141)
+
+10. Verify and push
+    git status
+    git add .
+    git commit -m "Security: Remove exposed secrets and test credentials"
+    git push origin main
+
+================================================================================
+VERIFICATION CHECKLIST
+================================================================================
+
+Before pushing, verify:
+
+[ ] application-dev-local.yml is NOT in git status output
+[ ] JWT_SECRET has no hardcoded fallback value
+[ ] RESEND_API_KEY has no hardcoded fallback value
+[ ] DATABASE_PASSWORD has no hardcoded fallback value
+[ ] DataLoader has @Profile("dev")
+[ ] EmailTestController has @Profile("dev")
+[ ] No test passwords in log.info statements
+[ ] .env and .env.* files NOT in git log history
+[ ] .gitignore includes all sensitive files
+
+================================================================================
+IF YOU NEED HELP
+================================================================================
+
+1. Full audit report: PRE_GITHUB_SECURITY_AUDIT_REPORT.md
+2. Detailed checklist: PRE_GITHUB_SECURITY_CHECKLIST.md
+3. Each document has step-by-step instructions
+
+================================================================================
+IMPORTANT NOTES
+================================================================================
+
+1. These are REAL credentials - they MUST be regenerated after fixing
+   - Email account compromised (revoke app password)
+   - API keys exposed (invalidate in service dashboards)
+   - Generate new credentials for production
+
+2. Git history cleanup may be needed
+   - Use BFG Repo-Cleaner to remove from history
+   - Or rewrite git history (advanced)
+
+3. This is blocking production deployment
+   - Cannot safely push to GitHub with these exposures
+   - Will compromise security of all users
+   - Violates security best practices
+
+================================================================================
+FINAL STATUS
+================================================================================
+
+Current Status:  🔴 NOT READY FOR GITHUB
+Blocking Issues: 5 CRITICAL
+Security Issues: 3 HIGH/MEDIUM
+Estimated Fix:   20 MINUTES
+
+Next Step: Follow the checklist above
+Expected Result: ✅ READY FOR GITHUB PUSH
+
+================================================================================
+Generated: 2026-07-01
+Audit Type: Pre-GitHub Security Review
+Confidence: HIGH
