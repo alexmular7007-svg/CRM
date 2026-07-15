@@ -16,6 +16,6 @@ public interface WorkspaceRepository extends JpaRepository<Workspace, Long> {
     
     @Query("SELECT DISTINCT w FROM Workspace w " +
            "LEFT JOIN w.members m " +
-           "WHERE w.owner.id = :userId OR m.user.id = :userId")
+           "WHERE w.owner.id = :userId OR (m.user.id = :userId AND m.deletedAt IS NULL)")
     Page<Workspace> findAllByUserIdAsOwnerOrMember(@Param("userId") Long userId, Pageable pageable);
 }

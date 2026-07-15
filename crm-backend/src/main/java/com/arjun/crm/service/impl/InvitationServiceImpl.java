@@ -65,8 +65,9 @@ public class InvitationServiceImpl implements InvitationService {
         // Normalize email
         String email = request.getEmail().toLowerCase().trim();
 
-        // Check if already invited to same workspace
-        if (invitationRepository.existsByWorkspaceIdAndEmail(workspaceId, email)) {
+        // Check if already invited to same workspace (only PENDING invitations block re-invite)
+        // REVOKED or EXPIRED invitations can be re-sent
+        if (invitationRepository.existsByWorkspaceIdAndEmailAndStatus(workspaceId, email, InvitationStatus.PENDING)) {
             throw new DuplicateMemberException("User is already invited to this workspace");
         }
 

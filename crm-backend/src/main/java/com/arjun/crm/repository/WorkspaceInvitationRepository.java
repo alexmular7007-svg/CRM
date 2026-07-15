@@ -42,6 +42,12 @@ public interface WorkspaceInvitationRepository extends JpaRepository<WorkspaceIn
     boolean existsByWorkspaceIdAndEmail(Long workspaceId, String email);
 
     /**
+     * Check if email has a PENDING invitation to workspace
+     * Used to allow re-inviting after revoke/expire
+     */
+    boolean existsByWorkspaceIdAndEmailAndStatus(Long workspaceId, String email, InvitationStatus status);
+
+    /**
      * Check if email is already invited to workspace with pending status
      */
     @Query("SELECT COUNT(wi) > 0 FROM WorkspaceInvitation wi WHERE wi.workspace.id = :workspaceId AND wi.email = :email AND wi.status = 'PENDING'")
