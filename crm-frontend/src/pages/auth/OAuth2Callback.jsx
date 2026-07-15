@@ -78,10 +78,7 @@ const OAuth2Callback = () => {
       })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  /**
-   * Accept pending invitation and redirect to workspace
-   */
-  const acceptInvitationAndRedirect = async (jwtToken, invToken, apiBase) => {
+      const acceptInvitationAndRedirect = async (jwtToken, invToken, apiBase) => {
     try {
       console.log('OAuth2Callback: Auto-accepting invitation with token:', invToken.substring(0, 10) + '...')
       
@@ -105,14 +102,18 @@ const OAuth2Callback = () => {
       }
 
       const body = await response.json()
-      const workspace = body?.data?.workspace ?? body?.data ?? body
+      console.log('OAuth2Callback: Invitation acceptance response:', body)
+      
+      // New response structure: { data: { member: {...}, workspace: {...} } }
+      const workspaceData = body?.data?.workspace ?? body?.workspace
+      const memberData = body?.data?.member ?? body?.member
 
       console.log('✓ Invitation accepted successfully')
       toast.success('Invitation accepted! Redirecting to workspace...')
 
-      // Redirect to the workspace dashboard
-      if (workspace?.id) {
-        navigate(`/workspaces/${workspace.id}`, { replace: true })
+      // Redirect to the workspace dashboard using workspace ID from response
+      if (workspaceData?.id) {
+        navigate(`/workspaces/${workspaceData.id}`, { replace: true })
       } else {
         navigate('/dashboard', { replace: true })
       }

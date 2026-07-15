@@ -2,7 +2,7 @@ package com.arjun.crm.service.impl;
 
 import com.arjun.crm.dto.request.InviteNewUserRequest;
 import com.arjun.crm.dto.response.WorkspaceInvitationResponse;
-import com.arjun.crm.dto.response.WorkspaceMemberResponse;
+import com.arjun.crm.dto.response.InvitationAcceptResponse;
 import com.arjun.crm.entity.User;
 import com.arjun.crm.entity.Workspace;
 import com.arjun.crm.entity.WorkspaceInvitation;
@@ -122,7 +122,7 @@ public class InvitationServiceImpl implements InvitationService {
 
     @Override
     @Transactional
-    public WorkspaceMemberResponse acceptInvitation(String token) {
+    public InvitationAcceptResponse acceptInvitation(String token) {
         User currentUser = getAuthenticatedUser();
         log.info("User {} attempting to accept invitation with token", currentUser.getEmail());
 
@@ -177,7 +177,7 @@ public class InvitationServiceImpl implements InvitationService {
 
         log.info("Invitation accepted for {}, member created in workspace {}", currentUser.getEmail(), invitation.getWorkspace().getId());
 
-        return WorkspaceMemberResponse.fromEntity(savedMember);
+        return InvitationAcceptResponse.fromEntity(savedMember);
     }
 
     @Override

@@ -5,7 +5,7 @@ import com.arjun.crm.dto.request.RevokeInvitationRequest;
 import com.arjun.crm.dto.request.InviteNewUserRequest;
 import com.arjun.crm.dto.response.ApiResponse;
 import com.arjun.crm.dto.response.WorkspaceInvitationResponse;
-import com.arjun.crm.dto.response.WorkspaceMemberResponse;
+import com.arjun.crm.dto.response.InvitationAcceptResponse;
 import com.arjun.crm.service.InvitationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -84,11 +84,13 @@ public class InvitationController {
     /**
      * Accept invitation (user-facing endpoint - no workspace ID required)
      * POST /api/workspaces/invitations/accept/{token}
+     * 
+     * Response includes both member info and workspace info so frontend can redirect properly
      */
     @PostMapping("/api/workspaces/invitations/accept/{token}")
-    public ResponseEntity<ApiResponse<WorkspaceMemberResponse>> acceptInvitation(@PathVariable String token) {
+    public ResponseEntity<ApiResponse<InvitationAcceptResponse>> acceptInvitation(@PathVariable String token) {
         log.info("Accept invitation request for token: {}", token.substring(0, Math.min(10, token.length())) + "...");
-        WorkspaceMemberResponse response = invitationService.acceptInvitation(token);
+        InvitationAcceptResponse response = invitationService.acceptInvitation(token);
         return ResponseEntity.ok(ApiResponse.success("Invitation accepted successfully", response));
     }
 }

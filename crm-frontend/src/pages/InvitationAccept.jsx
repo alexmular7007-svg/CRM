@@ -63,13 +63,14 @@ const InvitationAccept = () => {
       }
 
       const body = await response.json()
-      const workspace = body?.data?.workspace ?? body?.data ?? body
+      // New response structure: { data: { member: {...}, workspace: {...} } }
+      const workspaceData = body?.data?.workspace ?? body?.workspace
 
       toast.success('Invitation accepted! Joining workspace...')
 
       // Redirect to the workspace dashboard
-      if (workspace?.id) {
-        navigate(`/workspaces/${workspace.id}`, { replace: true })
+      if (workspaceData?.id) {
+        navigate(`/workspaces/${workspaceData.id}`, { replace: true })
       } else {
         navigate('/dashboard', { replace: true })
       }

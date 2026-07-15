@@ -2,7 +2,7 @@ package com.arjun.crm.service;
 
 import com.arjun.crm.dto.request.InviteNewUserRequest;
 import com.arjun.crm.dto.response.WorkspaceInvitationResponse;
-import com.arjun.crm.dto.response.WorkspaceMemberResponse;
+import com.arjun.crm.dto.response.InvitationAcceptResponse;
 
 import java.util.List;
 import java.util.Optional;
@@ -23,9 +23,9 @@ public interface InvitationService {
     /**
      * Accept invitation for existing registered user
      * @param token unique invitation token
-     * @return created workspace member
+     * @return created workspace member with workspace info
      */
-    WorkspaceMemberResponse acceptInvitation(String token);
+    InvitationAcceptResponse acceptInvitation(String token);
 
     /**
      * Resend invitation to pending member
