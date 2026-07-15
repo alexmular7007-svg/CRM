@@ -196,12 +196,24 @@ public class InvitationServiceImpl implements InvitationService {
         // Normalize email
         String normalizedEmail = email.toLowerCase().trim();
         
-        // Find PENDING invitation only (not REVOKED, EXPIRED, or ACCEPTED)
-        WorkspaceInvitation invitation = invitationRepository
-            .findByWorkspaceIdAndEmailAndStatus(workspaceId, normalizedEmail, InvitationStatus.PENDING)
-            .stream()
-            .findFirst()
-            .orElseThrow(() -> new ResourceNotFoundException("No pending invitation found for this email"));
+        // Find PENDING invitations for this email
+        List<WorkspaceInvitation> pendingInvitations = invitationRepository
+            .findByWorkspaceIdAndEmailAndStatus(workspaceId, normalizedEmail, InvitationStatus.PENDING);
+        
+        if (pendingInvitations.isEmpty()) {
+            throw new ResourceNotFoundException("No pending invitation found for this email");
+        }
+        
+        // If multiple PENDING invitations exist (shouldn't happen but handle it), 
+        // delete duplicates and keep the first one
+        WorkspaceInvitation invitation = pendingInvitations.get(0);
+        if (pendingInvitations.size() > 1) {
+            log.warn("Found {} PENDING invitations for {} in workspace {}. Deleting duplicates.", 
+                pendingInvitations.size(), normalizedEmail, workspaceId);
+            for (int i = 1; i < pendingInvitations.size(); i++) {
+                invitationRepository.delete(pendingInvitations.get(i));
+            }
+        }
 
         // Update expiry and send new email
         LocalDateTime newExpiresAt = tokenService.generateExpiryTime();
@@ -250,17 +262,21 @@ public class InvitationServiceImpl implements InvitationService {
         // Normalize email
         String normalizedEmail = email.toLowerCase().trim();
         
-        // Find PENDING invitation only
-        WorkspaceInvitation invitation = invitationRepository
-            .findByWorkspaceIdAndEmailAndStatus(workspaceId, normalizedEmail, InvitationStatus.PENDING)
-            .stream()
-            .findFirst()
-            .orElseThrow(() -> new ResourceNotFoundException("No pending invitation found for this email"));
-
-        // Revoke
-        invitation.setStatus(InvitationStatus.REVOKED);
-        invitationRepository.save(invitation);
-        log.info("Invitation revoked for {}", normalizedEmail);
+        // Find PENDING invitations for this email
+        List<WorkspaceInvitation> pendingInvitations = invitationRepository
+            .findByWorkspaceIdAndEmailAndStatus(workspaceId, normalizedEmail, InvitationStatus.PENDING);
+        
+        if (pendingInvitations.isEmpty()) {
+            throw new ResourceNotFoundException("No pending invitation found for this email");
+        }
+        
+        // Revoke all pending invitations for this email
+        pendingInvitations.forEach(invitation -> {
+            invitation.setStatus(InvitationStatus.REVOKED);
+            invitationRepository.save(invitation);
+        });
+        
+        log.info("Revoked {} pending invitations for {}", pendingInvitations.size(), normalizedEmail);
     }
 
     @Override
