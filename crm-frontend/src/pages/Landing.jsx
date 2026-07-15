@@ -19,14 +19,22 @@ const Landing = () => {
     <div className={`min-h-screen ${theme === 'dark' ? 'dark' : ''} bg-white dark:bg-gray-900 antialiased`}>
       <Navbar />
       <HeroSection />
-      <ScrollableFeatures />
-      <WorkflowTimeline />
+      <div id="features">
+        <ScrollableFeatures />
+      </div>
+      <div id="workflow">
+        <WorkflowTimeline />
+      </div>
       <CRMEducationSection />
       <ProjectsEducationSection />
       <CollaborationEducationSection />
-      <AIEducationSection />
+      <div id="ai">
+        <AIEducationSection />
+      </div>
       <Testimonials />
-      <Pricing />
+      <div id="plans">
+        <Pricing />
+      </div>
       <Footer />
       <FloatingCopilot />
     </div>

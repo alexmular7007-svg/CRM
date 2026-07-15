@@ -15,18 +15,10 @@ const HeroSection = () => {
       <div className="relative max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-8 lg:gap-20 items-center">
         
         {/* LEFT COLUMN */}
-        <div className="max-w-2xl order-2 sm:order-1">
-          {/* Badge */}
-          <motion.div {...fadeUp(0)} className="flex mb-6 sm:mb-8">
-            <div className="inline-flex items-center gap-2 border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-semibold">
-              <span className="w-2 h-2 bg-indigo-600 dark:bg-indigo-400 rounded-full animate-pulse" />
-              AI-Powered Workspace
-            </div>
-          </motion.div>
-
+        <div className="max-w-2xl">
           {/* Main Headline */}
           <motion.h1
-            {...fadeUp(0.1)}
+            {...fadeUp(0)}
             className="text-3xl sm:text-5xl lg:text-6xl xl:text-[3.5rem] font-black tracking-tight text-gray-950 dark:text-white leading-[1.2] sm:leading-[1.15] mb-6 sm:mb-8 space-y-1 sm:space-y-2"
           >
             <span className="block">Manage Projects,</span>
@@ -39,14 +31,14 @@ const HeroSection = () => {
 
           {/* Description */}
           <motion.p
-            {...fadeUp(0.15)}
+            {...fadeUp(0.05)}
             className="text-base sm:text-lg text-gray-600 dark:text-gray-300 mb-8 sm:mb-12 leading-relaxed max-w-xl font-medium"
           >
             TaskFlow AI helps teams plan projects, track leads, collaborate in real time, and gain AI-powered insights to deliver exceptional results.
           </motion.p>
 
           {/* CTA Buttons */}
-          <motion.div {...fadeUp(0.2)} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mb-12 sm:mb-16">
+          <motion.div {...fadeUp(0.1)} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mb-12 sm:mb-16">
             <Link to="/register" className="w-full sm:w-auto">
               <motion.button
                 whileHover={{ scale: 1.02 }}
@@ -68,7 +60,7 @@ const HeroSection = () => {
           </motion.div>
 
           {/* Statistics Row */}
-          <motion.div {...fadeUp(0.3)} className="grid grid-cols-3 gap-3 sm:gap-6 pt-8 sm:pt-12 border-t border-gray-200 dark:border-gray-800">
+          <motion.div {...fadeUp(0.15)} className="grid grid-cols-3 gap-3 sm:gap-6 pt-8 sm:pt-12 border-t border-gray-200 dark:border-gray-800">
             <div>
               <div className="text-2xl sm:text-3xl font-black text-gray-950 dark:text-white mb-1 sm:mb-2">50+</div>
               <div className="text-xs sm:text-sm font-semibold text-gray-500 dark:text-gray-400">Active Teams</div>
@@ -84,12 +76,12 @@ const HeroSection = () => {
           </motion.div>
         </div>
 
-        {/* RIGHT COLUMN - INTERACTIVE DASHBOARD - HIDDEN ON MOBILE */}
+        {/* RIGHT COLUMN - INTERACTIVE DASHBOARD */}
         <motion.div
           initial={{ opacity: 0, x: 40 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8, delay: 0.3 }}
-          className="hidden lg:flex relative w-full rounded-2xl border-2 border-gray-300 dark:border-gray-700 bg-gradient-to-br from-white dark:from-[#1A1A1D] via-gray-50 dark:via-[#13131A] to-gray-100 dark:to-[#09090B] shadow-2xl dark:shadow-xl overflow-hidden flex-col h-[700px]"
+          className="relative w-full rounded-xl sm:rounded-2xl border border-sm:border-2 border-gray-300 dark:border-gray-700 bg-gradient-to-br from-white dark:from-[#1A1A1D] via-gray-50 dark:via-[#13131A] to-gray-100 dark:to-[#09090B] shadow-xl sm:shadow-2xl dark:shadow-lg overflow-hidden flex flex-col h-80 sm:h-96 lg:h-[700px]"
           style={{
             boxShadow: 'inset 0 1px 0 0 rgba(255, 255, 255, 0.5), 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05)'
           }}
@@ -107,8 +99,8 @@ const HeroSection = () => {
           </div>
 
           <div className="flex flex-1 overflow-hidden">
-            {/* Sidebar - HIDDEN ON MOBILE */}
-            <div className="hidden sm:flex w-48 bg-gradient-to-b from-slate-900 to-slate-800 border-r border-slate-700 p-4 flex-col gap-6 shrink-0">
+            {/* Sidebar */}
+            <div className="w-32 sm:w-48 bg-gradient-to-b from-slate-900 to-slate-800 border-r border-slate-700 p-2 sm:p-4 flex flex-col gap-4 sm:gap-6 shrink-0">
               <div className="flex items-center gap-2 text-white">
                 <div className="w-7 h-7 rounded bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center text-xs font-bold">✓</div>
                 <span className="font-bold text-sm">TaskFlow</span>
