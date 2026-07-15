@@ -1,0 +1,356 @@
+================================================================================
+                  CACHE INVALIDATION FIX - VERIFICATION GUIDE
+             How to Test That Invitation Workflow Now Works End-to-End
+================================================================================
+
+DATE: July 15, 2026
+FIX APPLIED: Added handleInvitationAccepted() to CacheEvictionListener.java
+STATUS: ✅ Backend compiles successfully
+
+================================================================================
+                    WHAT WAS FIXED
+================================================================================
+
+PROBLEM:
+  When user accepted invitation and logged in, the workspace didn't appear
+  in their sidebar/dashboard. Everything worked on the backend, but the
+  cache wasn't being invalidated.
+
+ROOT CAUSE:
+  CacheEvictionListener.java was missing a handler for InvitationAcceptedEvent.
+  When invitation was accepted, the event was published but no cache
+  invalidation occurred. User saw stale workspace list.
+
+FIX APPLIED:
+  Added new method handleInvitationAccepted() to CacheEvictionListener.java
+  This method:
+    1. Listens for InvitationAcceptedEvent
+    2. Evicts dashboard cache
+    3. Evicts analytics cache
+    4. Evicts all caches (to be thorough)
+  
+  Result: Next time user queries workspaces, they get fresh list including
+  the newly joined workspace.
+
+FILE CHANGED:
+  crm-backend/src/main/java/com/arjun/crm/listener/CacheEvictionListener.java
+
+LINES ADDED: ~25 lines (1 method + comments + logging)
+
+================================================================================
+                    HOW TO VERIFY THE FIX WORKS
+================================================================================
+
+REQUIREMENT: Two test accounts + access to email
+
+SETUP:
+  1. Create account: owner@test.com (password: password123)
+  2. Create account: testuser@test.com (password: password123)
+  3. Start backend: mvn spring-boot:run
+  4. Start frontend: npm run dev
+
+TEST SCENARIO: Email/Password Flow (Fastest)
+
+STEP 1: Login as owner@test.com
+  - Email: owner@test.com
+  - Password: password123
+  - Click "Log In"
+
+STEP 2: Create Workspace
+  - Click "Create New Workspace" or similar
+  - Name: "Test Workspace"
+  - Click "Create"
+
+STEP 3: Invite testuser@test.com
+  - In workspace, find Settings/Members tab
+  - Click "Invite Member" or similar
+  - Email: testuser@test.com
+  - Role: MEMBER
+  - Click "Send Invite"
+
+STEP 4: Check Email
+  - Check email inbox for invitation (testuser@test.com)
+  - Open the email
+  - Click the "Accept Invitation" link
+  - Should redirect to login page (not already logged in)
+
+STEP 5: Login as testuser@test.com (DIFFERENT BROWSER/INCOGNITO)
+  - Email: testuser@test.com
+  - Password: password123
+  - Click "Log In"
+
+EXPECTED BEHAVIOR AFTER LOGIN:
+  🎯 AUTO-ACCEPT (no manual "Accept" button click needed)
+  🎯 Redirect to workspace dashboard
+  🎯 "Test Workspace" appears in sidebar
+  🎯 Can navigate into workspace
+  🎯 Can see projects, tasks, chat, etc.
+
+IF WORKSPACE APPEARS:
+  ✅ FIX IS WORKING!
+
+IF WORKSPACE DOES NOT APPEAR:
+  ❌ See TROUBLESHOOTING section below
+
+================================================================================
+                    ADVANCED VERIFICATION (Optional)
+================================================================================
+
+After basic test passes, verify with Google/GitHub OAuth:
+
+TEST 2: Google OAuth Flow
+  1. Create Google account: testgoogle@gmail.com
+  2. Login as owner@test.com
+  3. Create workspace: "Google Test"
+  4. Invite: testgoogle@gmail.com as ADMIN
+  5. In different browser, click email link
+  6. Click "Login with Google"
+  7. Authenticate with testgoogle@gmail.com
+  8. Verify workspace appears and role is ADMIN
+
+TEST 3: GitHub OAuth Flow
+  1. Create GitHub account or use existing
+  2. Login as owner with GitHub
+  3. Create workspace: "GitHub Test"
+  4. Invite GitHub user
+  5. Same flow as Google OAuth
+  6. Verify workspace appears
+
+================================================================================
+                    DATABASE VERIFICATION (Optional)
+================================================================================
+
+After successful test, verify database state to confirm everything worked:
+
+QUERY 1: Check Invitation Accepted
+  SELECT status, accepted_by, accepted_at 
+  FROM workspace_invitations 
+  WHERE email = 'testuser@test.com'
+  LIMIT 1;
+  
+  Expected Result:
+    status = ACCEPTED
+    accepted_by = (testuser@test.com's user ID)
+    accepted_at = (current timestamp)
+
+QUERY 2: Check WorkspaceMember Created
+  SELECT role, status 
+  FROM workspace_members 
+  WHERE workspace_id = (SELECT id FROM workspaces WHERE name = 'Test Workspace')
+  AND user_id = (SELECT id FROM users WHERE email = 'testuser@test.com');
+  
+  Expected Result:
+    role = MEMBER
+    status = ACTIVE
+
+QUERY 3: Check Notifications Created
+  SELECT title, message, user_id, created_at 
+  FROM notifications 
+  WHERE created_at > NOW() - INTERVAL 5 MINUTE
+  ORDER BY created_at DESC
+  LIMIT 10;
+  
+  Expected Result:
+    Should see 2 notifications:
+    1. For owner: "testuser@test.com accepted your invitation to workspace: Test Workspace as MEMBER"
+    2. For testuser: "You joined workspace: Test Workspace"
+
+If all database queries return expected results:
+  ✅ DATABASE STATE CONFIRMS FIX WORKS
+
+================================================================================
+                    TROUBLESHOOTING
+================================================================================
+
+ISSUE: Workspace still doesn't appear after login
+
+CHECK:
+  1. Backend logs - Look for:
+     - "Invitation accepted event received for user"
+     - "All caches evicted for user"
+     
+     If you see these messages → Fix is working at backend level
+     If you don't see them → Event not being published
+  
+  2. Frontend logs (Browser F12 → Console):
+     - Any JavaScript errors?
+     - Can you see the API call: POST /api/workspaces/invitations/accept/...?
+     - Did it return success (200)?
+  
+  3. Network tab (Browser F12 → Network):
+     - Look for GET /api/workspaces call
+     - Response status: 200?
+     - Response body contains the workspace?
+
+COMMON CAUSES:
+
+Cause 1: Email doesn't match
+  - Check: Invitation sent to testuser@test.com
+  - Check: You logged in as testuser@test.com
+  - Must match exactly (case-insensitive)
+
+Cause 2: Invitation already accepted
+  - Check: Don't accept the same invitation twice
+  - Create a fresh invitation for testing
+
+Cause 3: User already a member
+  - Check: Don't invite same user to same workspace twice
+  - Create fresh workspace for testing
+
+Cause 4: Token expired
+  - Check: Invitation token expiration (usually 7 days)
+  - Create fresh invitation if expired
+
+Cause 5: Different email in OAuth
+  - Check: Google email vs invited email
+  - Gmail: john@gmail.com - must match exactly
+  - Can't be john@example.com if invited to john@gmail.com
+
+FIX: Clear browser cache
+  If you're seeing old results:
+  1. Open DevTools (F12)
+  2. Right-click refresh button
+  3. Select "Empty cache and hard refresh"
+  4. Try test again
+
+================================================================================
+                    VERIFICATION CHECKLIST
+================================================================================
+
+Run through this after applying fix:
+
+Step 1: Backend Compiles
+  [ ] mvn clean compile -DskipTests → BUILD SUCCESS
+  
+Step 2: Frontend Builds
+  [ ] npm run build → SUCCESS
+
+Step 3: Backend Logs Show Cache Eviction
+  [ ] See: "Invitation accepted event received for user"
+  [ ] See: "All caches evicted for user"
+
+Step 4: Frontend Receives Success
+  [ ] Invitation acceptance API returns 200 OK
+  [ ] Response contains member and workspace data
+
+Step 5: Workspace Appears in Sidebar
+  [ ] After login, workspace visible in sidebar
+  [ ] No manual refresh needed
+  [ ] Can click and navigate
+
+Step 6: Notifications Appear
+  [ ] Owner receives notification
+  [ ] Invited user receives notification
+  [ ] Both see in notification panel
+
+Step 7: Database Reflects Changes
+  [ ] workspace_invitations status = ACCEPTED
+  [ ] workspace_members has new entry with correct role
+  [ ] notifications table has 2 new entries
+
+If ALL checked:
+  ✅ FIX VERIFIED AND WORKING!
+
+================================================================================
+                    NEXT STEPS
+================================================================================
+
+After verification:
+
+1. If test PASSES (workspace appears):
+   [ ] Mark fix as VERIFIED
+   [ ] Push code to GitHub
+   [ ] Feature is PRODUCTION READY
+
+2. If test FAILS (workspace doesn't appear):
+   [ ] Check logs for error messages
+   [ ] Check database for actual state
+   [ ] Run additional troubleshooting
+   [ ] Create new bug report if needed
+
+3. Deploy to staging/production:
+   [ ] Push to main branch
+   [ ] Deploy to staging first
+   [ ] Verify in staging environment
+   [ ] Deploy to production
+   [ ] Monitor for 24 hours
+
+================================================================================
+                    SUCCESS CRITERIA
+================================================================================
+
+The fix is considered SUCCESSFUL when:
+
+✅ User accepts invitation
+✅ User logs in (any auth method)
+✅ Workspace appears in sidebar IMMEDIATELY
+✅ No manual page refresh needed
+✅ No manual "Accept" button click needed
+✅ Both parties receive notifications
+✅ Database shows correct data
+✅ No errors in logs
+
+When all above are true:
+  → Invitation workflow is COMPLETE
+  → Feature is PRODUCTION READY
+
+================================================================================
+                    TECHNICAL DETAILS (For Developers)
+================================================================================
+
+What Changed:
+  File: CacheEvictionListener.java
+  Method: handleInvitationAccepted(InvitationAcceptedEvent event)
+  
+  The method:
+  1. @EventListener - Listens for InvitationAcceptedEvent
+  2. @Async - Runs asynchronously (doesn't block invitation acceptance)
+  3. Calls: cacheEvictionService.evictDashboardCache()
+  4. Calls: cacheEvictionService.evictAnalyticsCache()
+  5. Calls: cacheEvictionService.evictAllCaches() - Extra safety net
+  
+  Spring Flow:
+  1. InvitationServiceImpl.acceptInvitation() creates member
+  2. eventPublisher.publishEvent(new InvitationAcceptedEvent(...))
+  3. Spring finds CacheEvictionListener (has @Component)
+  4. Spring finds handleInvitationAccepted() (has @EventListener)
+  5. Spring calls handleInvitationAccepted() asynchronously
+  6. Cache entries are cleared
+  7. Next GET /api/workspaces call gets fresh data from database
+
+Why It Works:
+  - @Cacheable annotations on dashboard methods are cleared
+  - Next time dashboard is accessed, it recalculates
+  - WorkspaceServiceImpl.listUserWorkspaces() hits database again
+  - Database query returns workspace with new membership
+  - Frontend receives workspace in response
+  - Sidebar renders the workspace
+  - User sees workspace immediately
+
+================================================================================
+                    RELATED FILES
+================================================================================
+
+Files involved in fix:
+  1. CacheEvictionListener.java - NEW METHOD ADDED HERE
+  2. InvitationAcceptedEvent.java - Event definition (no change)
+  3. InvitationServiceImpl.java - Publishes event (no change)
+  4. NotificationEventListener.java - Creates notifications (no change)
+  5. CacheEvictionService.java - Interface (no change)
+  6. CacheEvictionServiceImpl.java - Implementation (no change)
+
+Frontend files (no changes needed):
+  - OAuth2Callback.jsx - Already invalidates frontend cache
+  - useAuth.js - Already invalidates frontend cache
+  - Both try to use window.__queryClient
+  - Now backend cache is also cleared, so double invalidation
+
+================================================================================
+
+Ready to test? Follow "HOW TO VERIFY THE FIX WORKS" section above.
+
+Questions? Check "TROUBLESHOOTING" section.
+
+Good luck! 🚀
+
+================================================================================

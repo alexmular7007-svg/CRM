@@ -50,4 +50,28 @@ public class CacheEvictionListener {
         cacheEvictionService.evictAnalyticsCache();
         cacheEvictionService.evictDashboardCache();
     }
+
+    /**
+     * Evict dashboard cache when invitation is accepted
+     * This ensures the new workspace membership is visible in the user's workspace list
+     */
+    @EventListener
+    @Async
+    public void handleInvitationAccepted(InvitationAcceptedEvent event) {
+        log.info("Invitation accepted event received for user: {}, evicting dashboard caches", 
+                 event.getAcceptedBy().getEmail());
+        
+        // Clear dashboard cache for the accepted user
+        // This ensures their workspace list is refreshed
+        cacheEvictionService.evictDashboardCache();
+        
+        // Also clear analytics cache in case they're on analytics page
+        cacheEvictionService.evictAnalyticsCache();
+        
+        // Clear all workspace-related caches to be safe
+        cacheEvictionService.evictAllCaches();
+        
+        log.debug("All caches evicted for user: {} after invitation acceptance", 
+                  event.getAcceptedBy().getEmail());
+    }
 }
