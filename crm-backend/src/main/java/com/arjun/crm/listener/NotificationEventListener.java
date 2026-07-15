@@ -9,6 +9,7 @@ import com.arjun.crm.event.LeadUpdatedEvent;
 import com.arjun.crm.event.RoleChangedEvent;
 import com.arjun.crm.event.AIInsightsEvent;
 import com.arjun.crm.event.MemberRemovedEvent;
+import com.arjun.crm.event.InvitationAcceptedEvent;
 import com.arjun.crm.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -415,5 +416,53 @@ public class NotificationEventListener {
                 ReferenceType.SYSTEM,
                 event.getWorkspace()
         );
+    }
+
+    /**
+     * Handle invitation accepted event
+     */
+    @Async
+    @TransactionalEventListener
+    public void handleInvitationAcceptedEvent(InvitationAcceptedEvent event) {
+        log.info("Handling InvitationAcceptedEvent for user: {} accepting invitation to workspace: {}", 
+                 event.getAcceptedBy().getId(), event.getWorkspace().getId());
+
+        // Notify the accepted user (user who accepted the invitation)
+        String userTitle = "Joined Workspace";
+        String userMessage = String.format(
+                "You joined workspace: %s",
+                event.getWorkspace().getName()
+        );
+
+        notificationService.createNotification(
+                event.getAcceptedBy(),
+                userTitle,
+                userMessage,
+                NotificationType.WORKSPACE_INVITATION,
+                event.getWorkspace().getId(),
+                ReferenceType.WORKSPACE,
+                event.getWorkspace()
+        );
+
+        // Notify the workspace owner (user who sent the invitation)
+        if (event.getInvitedBy() != null && !event.getInvitedBy().getId().equals(event.getAcceptedBy().getId())) {
+            String ownerTitle = "Invitation Accepted";
+            String ownerMessage = String.format(
+                    "%s accepted your invitation to workspace: %s as %s",
+                    event.getAcceptedBy().getFullName(),
+                    event.getWorkspace().getName(),
+                    event.getMember().getRole().toString()
+            );
+
+            notificationService.createNotification(
+                    event.getInvitedBy(),
+                    ownerTitle,
+                    ownerMessage,
+                    NotificationType.WORKSPACE_INVITATION,
+                    event.getWorkspace().getId(),
+                    ReferenceType.WORKSPACE,
+                    event.getWorkspace()
+            );
+        }
     }
 }

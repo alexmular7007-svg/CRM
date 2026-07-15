@@ -9,6 +9,7 @@ import com.arjun.crm.entity.WorkspaceInvitation;
 import com.arjun.crm.entity.WorkspaceMember;
 import com.arjun.crm.enums.InvitationStatus;
 import com.arjun.crm.enums.WorkspaceRole;
+import com.arjun.crm.event.InvitationAcceptedEvent;
 import com.arjun.crm.exception.AccessDeniedException;
 import com.arjun.crm.exception.DuplicateMemberException;
 import com.arjun.crm.exception.ResourceNotFoundException;
@@ -22,6 +23,7 @@ import com.arjun.crm.service.TokenService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -45,6 +47,7 @@ public class InvitationServiceImpl implements InvitationService {
     private final UserRepository userRepository;
     private final EmailService emailService;
     private final TokenService tokenService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Value("${app.invitation-base-url:http://localhost:3000/invitations}")
     private String invitationBaseUrl;
@@ -176,6 +179,15 @@ public class InvitationServiceImpl implements InvitationService {
         invitationRepository.save(invitation);
 
         log.info("Invitation accepted for {}, member created in workspace {}", currentUser.getEmail(), invitation.getWorkspace().getId());
+
+        // Publish event to trigger notifications
+        eventPublisher.publishEvent(new InvitationAcceptedEvent(
+            this,
+            savedMember,
+            invitation.getWorkspace(),
+            currentUser,
+            invitation.getInvitedBy()
+        ));
 
         return InvitationAcceptResponse.fromEntity(savedMember);
     }

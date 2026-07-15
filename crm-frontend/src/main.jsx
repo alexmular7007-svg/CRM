@@ -51,6 +51,9 @@ const queryClient = new QueryClient({
   },
 })
 
+// Make queryClient globally accessible for OAuth2Callback and other async contexts
+window.__queryClient = queryClient
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <Provider store={store}>

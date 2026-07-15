@@ -111,6 +111,16 @@ const OAuth2Callback = () => {
       console.log('✓ Invitation accepted successfully')
       toast.success('Invitation accepted! Redirecting to workspace...')
 
+      // Invalidate workspace cache to force refresh
+      try {
+        // Clear React Query cache for workspaces if available
+        if (window.__queryClient) {
+          window.__queryClient.invalidateQueries({ queryKey: ['workspaces'] })
+        }
+      } catch (e) {
+        console.log('Cache invalidation skipped:', e)
+      }
+
       // Redirect to the workspace dashboard using workspace ID from response
       if (workspaceData?.id) {
         navigate(`/workspaces/${workspaceData.id}`, { replace: true })
