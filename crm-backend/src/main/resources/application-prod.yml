@@ -87,6 +87,16 @@ spring.security.oauth2.client.registration.github.client-secret: ${GITHUB_CLIENT
 spring.security.oauth2.client.registration.github.scope: read:user,user:email
 spring.security.oauth2.client.registration.github.redirect-uri: "${OAUTH2_REDIRECT_URI_GITHUB:https://crm-taskflow-production.up.railway.app/login/oauth2/code/github}"
 
+spring.security.oauth2.client.provider.google.authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
+spring.security.oauth2.client.provider.google.token-uri: https://www.googleapis.com/oauth2/v4/token
+spring.security.oauth2.client.provider.google.user-info-uri: https://www.googleapis.com/oauth2/v1/userinfo
+spring.security.oauth2.client.provider.google.user-name-attribute: sub
+
+spring.security.oauth2.client.provider.github.authorization-uri: https://github.com/login/oauth/authorize
+spring.security.oauth2.client.provider.github.token-uri: https://github.com/login/oauth/access_token
+spring.security.oauth2.client.provider.github.user-info-uri: https://api.github.com/user
+spring.security.oauth2.client.provider.github.user-name-attribute: id
+
 # OAuth2 redirect after login
 oauth2:
   redirect-uri: ${OAUTH2_REDIRECT_URI:http://localhost:3000/oauth2/callback}
