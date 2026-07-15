@@ -5,8 +5,6 @@ import { loginSuccess } from '../../store/slices/authSlice'
 import toast from 'react-hot-toast'
 import Spinner from '../../components/common/Spinner'
 
-const API_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:8081'}/api`
-
 const OAuth2Callback = () => {
   const [params] = useSearchParams()
   const dispatch = useDispatch()
@@ -21,6 +19,13 @@ const OAuth2Callback = () => {
     const invitationToken = params.get('invitationToken')
     const error = params.get('error')
 
+    // Determine API base URL
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8081'
+    const apiBase = `${apiUrl}/api`
+
+    console.log('OAuth2Callback: Received token:', token?.substring(0, 20) + '...')
+    console.log('OAuth2Callback: API Base URL:', apiBase)
+
     if (error) {
       toast.error('Social login failed. Please try again.')
       navigate('/login', { replace: true })
@@ -34,7 +39,7 @@ const OAuth2Callback = () => {
     }
 
     // Step 1: Load user profile
-    fetch(`${API_BASE}/users/me`, {
+    fetch(`${apiBase}/users/me`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -42,6 +47,7 @@ const OAuth2Callback = () => {
       },
     })
       .then(async (res) => {
+        console.log('OAuth2Callback: /api/users/me response status:', res.status)
         if (!res.ok) {
           const body = await res.json().catch(() => ({}))
           throw new Error(body?.message || `HTTP ${res.status}`)
@@ -49,6 +55,7 @@ const OAuth2Callback = () => {
         return res.json()
       })
       .then((body) => {
+        console.log('OAuth2Callback: User profile loaded:', body)
         const user = body?.data ?? body
 
         if (!user?.id) throw new Error('Invalid user data received')
@@ -59,7 +66,7 @@ const OAuth2Callback = () => {
 
         // Step 3: If invitationToken present, auto-accept invitation
         if (invitationToken) {
-          acceptInvitationAndRedirect(token, invitationToken)
+          acceptInvitationAndRedirect(token, invitationToken, apiBase)
         } else {
           navigate('/dashboard', { replace: true })
         }
@@ -74,12 +81,12 @@ const OAuth2Callback = () => {
   /**
    * Accept pending invitation and redirect to workspace
    */
-  const acceptInvitationAndRedirect = async (jwtToken, invToken) => {
+  const acceptInvitationAndRedirect = async (jwtToken, invToken, apiBase) => {
     try {
-      console.log('Auto-accepting invitation with token:', invToken.substring(0, 10) + '...')
+      console.log('OAuth2Callback: Auto-accepting invitation with token:', invToken.substring(0, 10) + '...')
       
       const response = await fetch(
-        `${API_BASE}/workspaces/invitations/accept/${invToken}`,
+        `${apiBase}/workspaces/invitations/accept/${invToken}`,
         {
           method: 'POST',
           headers: {
