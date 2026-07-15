@@ -71,9 +71,9 @@ public class InvitationServiceImpl implements InvitationService {
             throw new DuplicateMemberException("User is already invited to this workspace");
         }
 
-        // Check if already a member
+        // Check if already an active (non-deleted) member
         Optional<User> existingUser = userRepository.findByEmail(email);
-        if (existingUser.isPresent() && memberRepository.existsByWorkspaceIdAndUserId(workspaceId, existingUser.get().getId())) {
+        if (existingUser.isPresent() && memberRepository.existsActiveMember(workspaceId, existingUser.get().getId())) {
             throw new DuplicateMemberException("User is already a member of this workspace");
         }
 
@@ -150,8 +150,8 @@ public class InvitationServiceImpl implements InvitationService {
             throw new AccessDeniedException("Invitation is for a different email address");
         }
 
-        // Check if already a member
-        if (memberRepository.existsByWorkspaceIdAndUserId(invitation.getWorkspace().getId(), currentUser.getId())) {
+        // Check if already an active member (not soft-deleted)
+        if (memberRepository.existsActiveMember(invitation.getWorkspace().getId(), currentUser.getId())) {
             throw new DuplicateMemberException("You are already a member of this workspace");
         }
 

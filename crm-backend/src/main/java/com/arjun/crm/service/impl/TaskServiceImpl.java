@@ -197,7 +197,7 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    @CacheEvict(value = "task", key = "#id")
+    @CacheEvict(value = {"task", "dashboard"}, allEntries = true)
     public TaskResponse updateTask(Long id, TaskUpdateRequest request) {
         User currentUser = getAuthenticatedUser();
         log.info("Updating task id: {} by user: {}", id, currentUser.getEmail());
@@ -293,7 +293,7 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    @CacheEvict(value = "task", key = "#id")
+    @CacheEvict(value = {"task", "dashboard"}, allEntries = true)
     public TaskResponse updateTaskStatus(Long id, TaskStatusUpdateRequest request) {
         User currentUser = getAuthenticatedUser();
         log.info("Updating status of task id: {} to {} by user: {}", id, request.getStatus(), currentUser.getEmail());
