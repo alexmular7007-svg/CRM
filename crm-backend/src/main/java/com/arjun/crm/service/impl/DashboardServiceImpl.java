@@ -91,8 +91,8 @@ public class DashboardServiceImpl implements DashboardService {
                 .monthActivities(monthActivities)
                 .build();
 
-        // User Productivity
-        Long userTasksCompleted = taskRepository.countByCreatedByIdAndStatus(currentUser.getId(), TaskStatus.DONE);
+        // User Productivity - Count tasks ASSIGNED to user and completed (not created by)
+        Long userTasksCompleted = taskRepository.countByAssignedToIdAndStatus(currentUser.getId(), TaskStatus.DONE);
         Long userComments = taskCommentRepository.countByUserId(currentUser.getId());
         Long userMessages = chatMessageRepository.countBySenderId(currentUser.getId());
         Double activityScore = calculateActivityScore(userTasksCompleted, userComments, userMessages);

@@ -180,6 +180,13 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     long countByWorkspaceIdAndAssigneeId(@Param("workspaceId") Long workspaceId, @Param("assigneeId") Long assigneeId);
 
     /**
+     * Count tasks assigned to a user with specific status
+     * Used for: Dashboard productivity score
+     */
+    @Query("SELECT COUNT(t) FROM Task t WHERE t.assignedTo.id = :userId AND t.status = :status")
+    long countByAssignedToIdAndStatus(@Param("userId") Long userId, @Param("status") TaskStatus status);
+
+    /**
      * Find active tasks (not DONE or CANCELLED) assigned to user in workspace
      */
     @Query("SELECT t FROM Task t WHERE t.workspace.id = :workspaceId AND t.assignedTo.id = :assigneeId AND t.status NOT IN ('DONE', 'CANCELLED')")
