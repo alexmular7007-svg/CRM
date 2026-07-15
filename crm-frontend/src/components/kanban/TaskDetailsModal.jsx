@@ -32,7 +32,7 @@ const TaskDetailsModal = ({ task, onClose, projectId, workspaceId }) => {
 
   // Delete task mutation
   const deleteMutation = useMutation({
-    mutationFn: () => taskService.delete(task.id),
+    mutationFn: () => taskService.delete(task.id, workspaceId),
     onSuccess: () => {
       queryClient.invalidateQueries(['tasks', projectId])
       toast.success('Task deleted successfully')

@@ -267,11 +267,11 @@ public class TaskController {
             @RequestParam Long workspaceId) {
         log.info("DELETE /api/tasks/{} from workspace {}", id, workspaceId);
         
-        // Validate workspace access and authorization
+        // Validate user is member of workspace
         var member = workspaceAuthService.validateWorkspaceAccess(workspaceId);
-        workspaceAuthService.validateOwnerOrAdmin(member);
         
-        taskService.deleteTask(id);
+        // Delete task (service will validate authorization)
+        taskService.deleteTask(id, workspaceId);
         return ResponseEntity.ok(ApiResponse.success("Task deleted successfully", null));
     }
 }

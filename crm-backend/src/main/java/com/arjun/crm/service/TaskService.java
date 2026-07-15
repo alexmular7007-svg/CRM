@@ -42,7 +42,7 @@ public interface TaskService {
 
     TaskResponse updateTaskStatus(Long id, TaskStatusUpdateRequest request);
 
-    void deleteTask(Long id);
+    void deleteTask(Long id, Long workspaceId);
 
     TaskCommentResponse addComment(Long taskId, TaskCommentRequest request);
 

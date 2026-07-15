@@ -319,9 +319,24 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     @CacheEvict(value = "task", key = "#id")
-    public void deleteTask(Long id) {
-        log.info("Deleting task id: {}", id);
+    public void deleteTask(Long id, Long workspaceId) {
+        log.info("Deleting task id: {} from workspace: {}", id, workspaceId);
         Task task = findTaskOrThrow(id);
+        
+        // Validate task belongs to workspace
+        if (task.getProject() == null || !task.getProject().getWorkspace().getId().equals(workspaceId)) {
+            throw new AccessDeniedException("Task does not belong to this workspace");
+        }
+        
+        // Allow deletion if user is creator or workspace member
+        User currentUser = getAuthenticatedUser();
+        boolean isCreator = task.getCreatedBy() != null && task.getCreatedBy().getId().equals(currentUser.getId());
+        boolean isWorkspaceMember = workspaceMemberRepository.existsActiveMember(workspaceId, currentUser.getId());
+        
+        if (!isCreator && !isWorkspaceMember) {
+            throw new AccessDeniedException("You don't have permission to delete this task");
+        }
+        
         taskCommentRepository.deleteByTaskId(id);
         taskRepository.delete(task);
         log.info("Task id: {} deleted successfully", id);

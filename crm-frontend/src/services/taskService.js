@@ -33,8 +33,8 @@ export const taskService = {
     return unwrap(response)
   },
 
-  delete: async (id) => {
-    const response = await api.delete(`/tasks/${id}`)
+  delete: async (id, workspaceId) => {
+    const response = await api.delete(`/tasks/${id}`, { params: { workspaceId } })
     return unwrap(response)
   },
 
