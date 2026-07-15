@@ -29,7 +29,9 @@ public class BrevoEmailService {
 
     public void sendEmail(String to, String subject, String html) {
         log.info("Brevo Email Service - Sending email");
-        log.info("  API Key starts with: {}", apiKey == null ? "NULL" : apiKey.substring(0, Math.min(10, apiKey.length())));
+        log.info("  API Key length: {}", apiKey == null ? "NULL" : apiKey.length());
+        log.info("  API Key starts with: {}", apiKey == null ? "NULL" : apiKey.substring(0, Math.min(20, apiKey.length())));
+        log.info("  API Key ends with: {}", apiKey == null ? "NULL" : apiKey.substring(Math.max(0, apiKey.length() - 10)));
         log.info("  From Email: {}", fromEmail);
         log.info("  From Name: {}", fromName);
         log.info("  To: {}", to);
