@@ -8,6 +8,7 @@ import com.arjun.crm.event.LeadAssignedEvent;
 import com.arjun.crm.event.LeadUpdatedEvent;
 import com.arjun.crm.event.RoleChangedEvent;
 import com.arjun.crm.event.AIInsightsEvent;
+import com.arjun.crm.event.MemberRemovedEvent;
 import com.arjun.crm.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -363,6 +364,33 @@ public class NotificationEventListener {
                 title,
                 message,
                 NotificationType.ROLE_CHANGED,
+                event.getWorkspace().getId(),
+                ReferenceType.WORKSPACE,
+                event.getWorkspace()
+        );
+    }
+
+    /**
+     * Handle member removed event
+     */
+    @Async
+    @TransactionalEventListener
+    public void handleMemberRemovedEvent(MemberRemovedEvent event) {
+        log.info("Handling MemberRemovedEvent for user: {} from workspace: {}", 
+                 event.getRemovedUser().getId(), event.getWorkspace().getId());
+
+        String title = "Removed from Workspace";
+        String message = String.format(
+                "%s removed you from workspace '%s'",
+                event.getRemovedBy().getFullName(),
+                event.getWorkspace().getName()
+        );
+
+        notificationService.createNotification(
+                event.getRemovedUser(),
+                title,
+                message,
+                NotificationType.WORKSPACE_MEMBER_REMOVED,
                 event.getWorkspace().getId(),
                 ReferenceType.WORKSPACE,
                 event.getWorkspace()

@@ -12,6 +12,7 @@ public enum NotificationType {
     // Workspace & Members
     WORKSPACE_INVITATION,
     WORKSPACE_JOINED,
+    WORKSPACE_MEMBER_REMOVED,
     ROLE_CHANGED,
     
     // Tasks

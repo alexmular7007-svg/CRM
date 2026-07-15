@@ -39,6 +39,7 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
 
     @Override
     @Transactional
+    @org.springframework.cache.annotation.CacheEvict(value = "dashboard", allEntries = true)
     public WorkspaceMemberResponse addMember(Long workspaceId, AddWorkspaceMemberRequest request) {
         User currentUser = getAuthenticatedUser();
         log.info("Adding member to workspace ID: {} by user: {}", workspaceId, currentUser.getEmail());
@@ -79,6 +80,7 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
 
     @Override
     @Transactional
+    @org.springframework.cache.annotation.CacheEvict(value = "dashboard", allEntries = true)
     public void removeMember(Long workspaceId, Long userId) {
         User currentUser = getAuthenticatedUser();
         log.info("Removing member from workspace ID: {} by user: {}", workspaceId, currentUser.getEmail());
@@ -99,10 +101,20 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
         WorkspaceMember member = workspaceMemberRepository.findByWorkspaceIdAndUserId(workspaceId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Member not found in this workspace"));
 
+        User removedUser = member.getUser();
+
         // Use soft delete: set deletedAt timestamp instead of physical delete
         member.setDeletedAt(LocalDateTime.now());
         workspaceMemberRepository.save(member);
         log.info("Member soft-deleted successfully from workspace: {}", workspaceId);
+
+        // Publish member removed event for notification and workspace removal from removed user's perspective
+        eventPublisher.publishEvent(new com.arjun.crm.event.MemberRemovedEvent(
+                this,
+                removedUser,
+                workspace,
+                currentUser
+        ));
     }
 
     @Override
