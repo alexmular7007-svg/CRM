@@ -193,15 +193,15 @@ public class InvitationServiceImpl implements InvitationService {
             throw new AccessDeniedException("Only workspace owner or admin can resend invitations");
         }
 
-        // Find pending invitation
+        // Normalize email
         String normalizedEmail = email.toLowerCase().trim();
-        WorkspaceInvitation invitation = invitationRepository.findByWorkspaceIdAndEmail(workspaceId, normalizedEmail)
-            .orElseThrow(() -> new ResourceNotFoundException("Invitation not found"));
-
-        // Check if pending
-        if (invitation.getStatus() != InvitationStatus.PENDING) {
-            throw new IllegalArgumentException("Can only resend pending invitations");
-        }
+        
+        // Find PENDING invitation only (not REVOKED, EXPIRED, or ACCEPTED)
+        WorkspaceInvitation invitation = invitationRepository
+            .findByWorkspaceIdAndEmailAndStatus(workspaceId, normalizedEmail, InvitationStatus.PENDING)
+            .stream()
+            .findFirst()
+            .orElseThrow(() -> new ResourceNotFoundException("No pending invitation found for this email"));
 
         // Update expiry and send new email
         LocalDateTime newExpiresAt = tokenService.generateExpiryTime();
@@ -247,15 +247,15 @@ public class InvitationServiceImpl implements InvitationService {
             throw new AccessDeniedException("Only workspace owner or admin can revoke invitations");
         }
 
-        // Find invitation
+        // Normalize email
         String normalizedEmail = email.toLowerCase().trim();
-        WorkspaceInvitation invitation = invitationRepository.findByWorkspaceIdAndEmail(workspaceId, normalizedEmail)
-            .orElseThrow(() -> new ResourceNotFoundException("Invitation not found"));
-
-        // Check if pending
-        if (invitation.getStatus() != InvitationStatus.PENDING) {
-            throw new IllegalArgumentException("Can only revoke pending invitations");
-        }
+        
+        // Find PENDING invitation only
+        WorkspaceInvitation invitation = invitationRepository
+            .findByWorkspaceIdAndEmailAndStatus(workspaceId, normalizedEmail, InvitationStatus.PENDING)
+            .stream()
+            .findFirst()
+            .orElseThrow(() -> new ResourceNotFoundException("No pending invitation found for this email"));
 
         // Revoke
         invitation.setStatus(InvitationStatus.REVOKED);

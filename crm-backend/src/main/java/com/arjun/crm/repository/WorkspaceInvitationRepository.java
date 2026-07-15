@@ -73,6 +73,12 @@ public interface WorkspaceInvitationRepository extends JpaRepository<WorkspaceIn
     List<WorkspaceInvitation> findByEmailAndStatus(@Param("email") String email, @Param("status") InvitationStatus status);
 
     /**
+     * Find all invitations by workspace, email, and status
+     * Returns List to handle multiple invitations for same email
+     */
+    List<WorkspaceInvitation> findByWorkspaceIdAndEmailAndStatus(Long workspaceId, String email, InvitationStatus status);
+
+    /**
      * Delete all invitations for a workspace
      * Used during workspace deletion cascade
      */
