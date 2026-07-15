@@ -359,5 +359,5 @@ app:
 # Brevo Configuration
 # ───────────────────────────────────────────────────────────────────────────
 brevo:
-  api-key: ${BREVO_API_KEY:}
+  api-key: ${BREVO_API_KEY}
   api-url: https://api.brevo.com/v3/smtp/email

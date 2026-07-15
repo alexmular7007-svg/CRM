@@ -1,6 +1,7 @@
 package com.arjun.crm.service.brevo;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -11,9 +12,10 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class BrevoEmailService {
 
-    @Value("${BREVO_API_KEY}")
+    @Value("${brevo.api-key}")
     private String apiKey;
 
     @Value("${app.mail.from}")
@@ -25,6 +27,12 @@ public class BrevoEmailService {
     private final RestTemplate restTemplate;
 
     public void sendEmail(String to, String subject, String html) {
+        log.info("Brevo Email Service - Sending email");
+        log.info("  API Key configured: {}", (apiKey != null && !apiKey.isEmpty()));
+        log.info("  From Email: {}", fromEmail);
+        log.info("  From Name: {}", fromName);
+        log.info("  To: {}", to);
+        
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("api-key", apiKey);
@@ -43,12 +51,19 @@ public class BrevoEmailService {
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
 
-        restTemplate.exchange(
-                "https://api.brevo.com/v3/smtp/email",
-                HttpMethod.POST,
-                entity,
-                String.class
-        );
+        log.info("Calling Brevo API: https://api.brevo.com/v3/smtp/email");
+        try {
+            var response = restTemplate.exchange(
+                    "https://api.brevo.com/v3/smtp/email",
+                    HttpMethod.POST,
+                    entity,
+                    String.class
+            );
+            log.info("✓ Brevo API Response: {}", response.getStatusCode());
+        } catch (Exception e) {
+            log.error("✗ Brevo API Error: {}", e.getMessage());
+            throw e;
+        }
     }
 
 }
