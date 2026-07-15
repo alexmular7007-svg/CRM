@@ -20,6 +20,7 @@ const WorkspaceSettings = () => {
   const [activeTab, setActiveTab] = useState('members')
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState('MEMBER')
+  const [loadingInvitationEmail, setLoadingInvitationEmail] = useState(null) // Track which invitation is loading
 
   // Fetch workspace details
   const { data: workspace, isLoading: workspaceLoading } = useQuery({
@@ -66,9 +67,11 @@ const WorkspaceSettings = () => {
     mutationFn: (email) => invitationService.resendInvitation(workspaceId, email),
     onSuccess: () => {
       queryClient.invalidateQueries(['pendingInvitations', workspaceId])
+      setLoadingInvitationEmail(null)
       toast.success('Invitation resent successfully')
     },
     onError: (error) => {
+      setLoadingInvitationEmail(null)
       toast.error(error.message || 'Failed to resend invitation')
     },
   })
@@ -78,9 +81,11 @@ const WorkspaceSettings = () => {
     mutationFn: (email) => invitationService.revokeInvitation(workspaceId, email),
     onSuccess: () => {
       queryClient.invalidateQueries(['pendingInvitations', workspaceId])
+      setLoadingInvitationEmail(null)
       toast.success('Invitation revoked successfully')
     },
     onError: (error) => {
+      setLoadingInvitationEmail(null)
       toast.error(error.message || 'Failed to revoke invitation')
     },
   })
@@ -99,11 +104,13 @@ const WorkspaceSettings = () => {
   }
 
   const handleResendInvitation = (email) => {
+    setLoadingInvitationEmail(email)
     resendInvitationMutation.mutate(email)
   }
 
   const handleRevokeInvitation = (email) => {
     if (window.confirm('Are you sure you want to revoke this invitation?')) {
+      setLoadingInvitationEmail(email)
       revokeInvitationMutation.mutate(email)
     }
   }
@@ -315,21 +322,21 @@ const WorkspaceSettings = () => {
                         <div className="flex items-center space-x-2">
                           <motion.button
                             onClick={() => handleResendInvitation(invitation.email)}
-                            disabled={resendInvitationMutation.isPending}
+                            disabled={loadingInvitationEmail === invitation.email}
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                           >
-                            Resend
+                            {loadingInvitationEmail === invitation.email ? 'Resending...' : 'Resend'}
                           </motion.button>
                           <motion.button
                             onClick={() => handleRevokeInvitation(invitation.email)}
-                            disabled={revokeInvitationMutation.isPending}
+                            disabled={loadingInvitationEmail === invitation.email}
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             className="px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
                           >
-                            Revoke
+                            {loadingInvitationEmail === invitation.email ? 'Revoking...' : 'Revoke'}
                           </motion.button>
                         </div>
                       </div>
