@@ -3,6 +3,7 @@ package com.arjun.crm.config;
 import com.arjun.crm.security.JwtAuthenticationFilter;
 import com.arjun.crm.security.OAuth2SuccessHandler;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -34,6 +35,9 @@ public class SecurityConfig {
     private final CorsConfigurationSource corsConfigurationSource;
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
 
+    @Value("${app.oauth2-frontend-failure-url:http://localhost:3000/login?error=oauth2_failed}")
+    private String oauth2FailureUrl;
+
     /**
      * Chain 1 — OAuth2 social login only.
      * Handles /oauth2/** and /login/oauth2/** with a session (required for
@@ -53,7 +57,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
             .oauth2Login(oauth2 -> oauth2
                 .successHandler(oAuth2SuccessHandler)
-                .failureUrl("http://localhost:3000/login?error=oauth2_failed")
+                .failureUrl(oauth2FailureUrl)
             );
         return http.build();
     }

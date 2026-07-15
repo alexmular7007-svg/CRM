@@ -355,6 +355,7 @@ app:
     from: ${APP_MAIL_FROM:xsde790@gmail.com}
     from-name: ${APP_MAIL_FROM_NAME:TaskFlow}
   invitation-base-url: ${INVITATION_BASE_URL:http://localhost:3000/invitations}
+  oauth2-frontend-failure-url: ${OAUTH2_FRONTEND_FAILURE_URL:http://localhost:3000/login?error=oauth2_failed}
 
 # ───────────────────────────────────────────────────────────────────────────
 # Brevo Configuration

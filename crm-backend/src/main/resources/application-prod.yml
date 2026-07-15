@@ -94,3 +94,4 @@ oauth2:
 # Application configuration
 app:
   invitation-base-url: ${INVITATION_BASE_URL:https://crm-taskflow.vercel.app/invitations}
+  oauth2-frontend-failure-url: ${OAUTH2_FRONTEND_FAILURE_URL:https://crm-taskflow.vercel.app/login?error=oauth2_failed}

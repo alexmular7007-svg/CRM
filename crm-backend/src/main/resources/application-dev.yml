@@ -98,3 +98,4 @@ app:
     from-name: "TaskFlow"
     default-timeout: 5000
   invitation-base-url: ${INVITATION_BASE_URL:http://localhost:3000/invitations}
+  oauth2-frontend-failure-url: ${OAUTH2_FRONTEND_FAILURE_URL:http://localhost:3000/login?error=oauth2_failed}
