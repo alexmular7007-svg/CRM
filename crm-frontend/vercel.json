@@ -1,20 +1,12 @@
 {
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "https://crm-taskflow-production.up.railway.app/api/:path*"
-    },
-    {
       "source": "/oauth2/:path*",
       "destination": "https://crm-taskflow-production.up.railway.app/oauth2/:path*"
     },
     {
       "source": "/login/:path*",
       "destination": "https://crm-taskflow-production.up.railway.app/login/:path*"
-    },
-    {
-      "source": "/ws/:path*",
-      "destination": "wss://crm-taskflow-production.up.railway.app/ws/:path*"
     },
     {
       "source": "/(.*)",
