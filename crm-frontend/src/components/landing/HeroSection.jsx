@@ -11,14 +11,14 @@ const fadeUp = (delay = 0) => ({
 
 const HeroSection = () => {
   return (
-    <section className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden bg-white dark:bg-[#09090B] min-h-screen flex items-center">
-      <div className="relative max-w-7xl mx-auto w-full grid lg:grid-cols-[1fr_1.2fr] gap-12 lg:gap-20 items-center">
+    <section className="relative pt-16 sm:pt-24 lg:pt-32 pb-12 sm:pb-16 lg:pb-20 px-3 sm:px-6 lg:px-8 overflow-hidden bg-white dark:bg-[#09090B] min-h-screen flex items-center">
+      <div className="relative max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-8 lg:gap-20 items-center">
         
         {/* LEFT COLUMN */}
-        <div className="max-w-2xl">
+        <div className="max-w-2xl order-2 sm:order-1">
           {/* Badge */}
-          <motion.div {...fadeUp(0)} className="flex mb-8">
-            <div className="inline-flex items-center gap-2 border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 px-4 py-2 rounded-full text-sm font-semibold">
+          <motion.div {...fadeUp(0)} className="flex mb-6 sm:mb-8">
+            <div className="inline-flex items-center gap-2 border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-semibold">
               <span className="w-2 h-2 bg-indigo-600 dark:bg-indigo-400 rounded-full animate-pulse" />
               AI-Powered Workspace
             </div>
@@ -27,11 +27,11 @@ const HeroSection = () => {
           {/* Main Headline */}
           <motion.h1
             {...fadeUp(0.1)}
-            className="text-5xl sm:text-6xl lg:text-[3.5rem] font-black tracking-tight text-gray-950 dark:text-white leading-[1.15] mb-8 space-y-2"
+            className="text-3xl sm:text-5xl lg:text-6xl xl:text-[3.5rem] font-black tracking-tight text-gray-950 dark:text-white leading-[1.2] sm:leading-[1.15] mb-6 sm:mb-8 space-y-1 sm:space-y-2"
           >
-            <span className="block">Manage Projects, CRM,</span>
-            <span className="block">Team Collaboration</span>
-            <span className="block">and AI Insights from</span>
+            <span className="block">Manage Projects,</span>
+            <span className="block">CRM, Team</span>
+            <span className="block">Collaboration & AI</span>
             <span className="block">
               <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 text-transparent bg-clip-text">One Workspace.</span>
             </span>
@@ -40,27 +40,27 @@ const HeroSection = () => {
           {/* Description */}
           <motion.p
             {...fadeUp(0.15)}
-            className="text-lg text-gray-600 dark:text-gray-300 mb-12 leading-relaxed max-w-xl font-medium"
+            className="text-base sm:text-lg text-gray-600 dark:text-gray-300 mb-8 sm:mb-12 leading-relaxed max-w-xl font-medium"
           >
             TaskFlow AI helps teams plan projects, track leads, collaborate in real time, and gain AI-powered insights to deliver exceptional results.
           </motion.p>
 
           {/* CTA Buttons */}
-          <motion.div {...fadeUp(0.2)} className="flex flex-col sm:flex-row items-center gap-4 mb-16">
+          <motion.div {...fadeUp(0.2)} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mb-12 sm:mb-16">
             <Link to="/register" className="w-full sm:w-auto">
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="w-full sm:w-auto group flex items-center justify-center gap-2 px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white text-base font-semibold rounded-xl shadow-lg shadow-indigo-600/25 transition-all"
+                className="w-full sm:w-auto group flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm sm:text-base font-semibold rounded-xl shadow-lg shadow-indigo-600/25 transition-all"
               >
                 Get Started Free
-                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform hidden sm:inline" />
               </motion.button>
             </Link>
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="w-full sm:w-auto flex items-center justify-center gap-3 px-8 py-4 border-2 border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900/50 hover:border-gray-300 dark:hover:border-gray-600 text-base font-semibold rounded-xl transition-all"
+              className="w-full sm:w-auto flex items-center justify-center gap-3 px-6 sm:px-8 py-3 sm:py-4 border-2 border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900/50 hover:border-gray-300 dark:hover:border-gray-600 text-sm sm:text-base font-semibold rounded-xl transition-all"
             >
               <Play size={18} className="text-indigo-600" />
               View Demo
@@ -68,34 +68,34 @@ const HeroSection = () => {
           </motion.div>
 
           {/* Statistics Row */}
-          <motion.div {...fadeUp(0.3)} className="grid grid-cols-3 gap-6 pt-12 border-t border-gray-200 dark:border-gray-800">
+          <motion.div {...fadeUp(0.3)} className="grid grid-cols-3 gap-3 sm:gap-6 pt-8 sm:pt-12 border-t border-gray-200 dark:border-gray-800">
             <div>
-              <div className="text-3xl font-black text-gray-950 dark:text-white mb-2">50+</div>
-              <div className="text-sm font-semibold text-gray-500 dark:text-gray-400">Active Teams</div>
+              <div className="text-2xl sm:text-3xl font-black text-gray-950 dark:text-white mb-1 sm:mb-2">50+</div>
+              <div className="text-xs sm:text-sm font-semibold text-gray-500 dark:text-gray-400">Active Teams</div>
             </div>
             <div>
-              <div className="text-3xl font-black text-gray-950 dark:text-white mb-2">10,000+</div>
-              <div className="text-sm font-semibold text-gray-500 dark:text-gray-400">Tasks Managed</div>
+              <div className="text-2xl sm:text-3xl font-black text-gray-950 dark:text-white mb-1 sm:mb-2">10K+</div>
+              <div className="text-xs sm:text-sm font-semibold text-gray-500 dark:text-gray-400">Tasks</div>
             </div>
             <div>
-              <div className="text-3xl font-black text-indigo-600 dark:text-indigo-400 mb-2">95%</div>
-              <div className="text-sm font-semibold text-gray-500 dark:text-gray-400">Faster Collaboration</div>
+              <div className="text-2xl sm:text-3xl font-black text-indigo-600 dark:text-indigo-400 mb-1 sm:mb-2">95%</div>
+              <div className="text-xs sm:text-sm font-semibold text-gray-500 dark:text-gray-400">Faster</div>
             </div>
           </motion.div>
         </div>
 
-        {/* RIGHT COLUMN - INTERACTIVE DASHBOARD */}
+        {/* RIGHT COLUMN - INTERACTIVE DASHBOARD - HIDDEN ON MOBILE */}
         <motion.div
           initial={{ opacity: 0, x: 40 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8, delay: 0.3 }}
-          className="relative lg:h-[700px] w-full rounded-2xl border-2 border-gray-300 dark:border-gray-700 bg-gradient-to-br from-white dark:from-[#1A1A1D] via-gray-50 dark:via-[#13131A] to-gray-100 dark:to-[#09090B] shadow-2xl dark:shadow-xl overflow-hidden flex flex-col"
+          className="hidden lg:flex relative w-full rounded-2xl border-2 border-gray-300 dark:border-gray-700 bg-gradient-to-br from-white dark:from-[#1A1A1D] via-gray-50 dark:via-[#13131A] to-gray-100 dark:to-[#09090B] shadow-2xl dark:shadow-xl overflow-hidden flex-col h-[700px]"
           style={{
             boxShadow: 'inset 0 1px 0 0 rgba(255, 255, 255, 0.5), 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05)'
           }}
         >
           {/* Browser Header */}
-          <div className="h-12 bg-white dark:bg-[#1A1A1D] border-b border-gray-200 dark:border-gray-700 flex items-center px-4 gap-3 shrink-0">
+          <div className="hidden sm:flex h-12 bg-white dark:bg-[#1A1A1D] border-b border-gray-200 dark:border-gray-700 items-center px-4 gap-3 shrink-0">
             <div className="flex gap-2">
               <div className="w-3 h-3 rounded-full bg-red-500 hover:bg-red-600 cursor-pointer transition" />
               <div className="w-3 h-3 rounded-full bg-yellow-500 hover:bg-yellow-600 cursor-pointer transition" />
@@ -107,8 +107,8 @@ const HeroSection = () => {
           </div>
 
           <div className="flex flex-1 overflow-hidden">
-            {/* Sidebar */}
-            <div className="w-48 bg-gradient-to-b from-slate-900 to-slate-800 border-r border-slate-700 p-4 flex flex-col gap-6 shrink-0">
+            {/* Sidebar - HIDDEN ON MOBILE */}
+            <div className="hidden sm:flex w-48 bg-gradient-to-b from-slate-900 to-slate-800 border-r border-slate-700 p-4 flex-col gap-6 shrink-0">
               <div className="flex items-center gap-2 text-white">
                 <div className="w-7 h-7 rounded bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center text-xs font-bold">✓</div>
                 <span className="font-bold text-sm">TaskFlow</span>
