@@ -2,19 +2,19 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "http://44.222.89.151:8081/api/:path*"
+      "destination": "https://crm-taskflow-production.up.railway.app/api/:path*"
     },
     {
       "source": "/oauth2/:path*",
-      "destination": "http://44.222.89.151:8081/oauth2/:path*"
+      "destination": "https://crm-taskflow-production.up.railway.app/oauth2/:path*"
     },
     {
       "source": "/login/:path*",
-      "destination": "http://44.222.89.151:8081/login/:path*"
+      "destination": "https://crm-taskflow-production.up.railway.app/login/:path*"
     },
     {
       "source": "/ws/:path*",
-      "destination": "http://44.222.89.151:8081/ws/:path*"
+      "destination": "wss://crm-taskflow-production.up.railway.app/ws/:path*"
     },
     {
       "source": "/(.*)",
