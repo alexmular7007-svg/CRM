@@ -5,10 +5,15 @@ import com.arjun.crm.dto.request.RegisterRequest;
 import com.arjun.crm.dto.response.AuthResponse;
 import com.arjun.crm.dto.response.UserResponse;
 import com.arjun.crm.entity.User;
+import com.arjun.crm.entity.WorkspaceInvitation;
+import com.arjun.crm.entity.WorkspaceMember;
+import com.arjun.crm.enums.InvitationStatus;
 import com.arjun.crm.enums.UserStatus;
 import com.arjun.crm.exception.DuplicateEmailException;
 import com.arjun.crm.exception.InvalidCredentialsException;
 import com.arjun.crm.repository.UserRepository;
+import com.arjun.crm.repository.WorkspaceInvitationRepository;
+import com.arjun.crm.repository.WorkspaceMemberRepository;
 import com.arjun.crm.security.JwtService;
 import com.arjun.crm.service.AuthService;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +28,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -35,6 +42,8 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final UserDetailsService userDetailsService;
+    private final WorkspaceInvitationRepository workspaceInvitationRepository;
+    private final WorkspaceMemberRepository workspaceMemberRepository;
 
     @Override
     @Transactional
@@ -57,23 +66,82 @@ public class AuthServiceImpl implements AuthService {
         log.debug("Email check passed, proceeding with user creation");
 
         // Create new user with default USER role
-        // Workspace roles are assigned separately when users join/create workspaces
         User user = User.builder()
                 .fullName(request.getFullName())
-                .email(normalizedEmail)  // Store normalized email
+                .email(normalizedEmail)
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role(com.arjun.crm.enums.Role.USER)  // Always default to USER for new registrations
+                .role(com.arjun.crm.enums.Role.USER)
                 .status(UserStatus.ACTIVE)
                 .build();
 
         User savedUser = userRepository.save(user);
         log.info("User registered successfully with ID: {}", savedUser.getId());
 
+        // Auto-accept pending invitations for this email
+        autoAcceptPendingInvitations(savedUser, normalizedEmail);
+
         // Generate JWT token
         UserDetails userDetails = userDetailsService.loadUserByUsername(savedUser.getEmail());
         String token = jwtService.generateToken(Map.of("userId", savedUser.getId()), userDetails);
 
         return AuthResponse.of(token, UserResponse.fromEntity(savedUser));
+    }
+
+    /**
+     * Auto-accept all pending invitations for the newly registered user's email
+     * and add them to the corresponding workspaces
+     */
+    private void autoAcceptPendingInvitations(User user, String email) {
+        log.info("Checking for pending invitations for email: {}", email);
+
+        // Find all pending invitations for this email
+        List<WorkspaceInvitation> pendingInvitations = workspaceInvitationRepository
+                .findByEmailAndStatus(email, InvitationStatus.PENDING);
+
+        if (pendingInvitations.isEmpty()) {
+            log.info("No pending invitations found for email: {}", email);
+            return;
+        }
+
+        log.info("Found {} pending invitations for email: {}", pendingInvitations.size(), email);
+
+        for (WorkspaceInvitation invitation : pendingInvitations) {
+            try {
+                // Check if not already a member
+                if (workspaceMemberRepository.existsByWorkspaceIdAndUserId(invitation.getWorkspace().getId(), user.getId())) {
+                    log.warn("User {} already a member of workspace {}, skipping", user.getId(), invitation.getWorkspace().getId());
+                    continue;
+                }
+
+                // Create workspace member with invitation role
+                WorkspaceMember member = WorkspaceMember.builder()
+                        .workspace(invitation.getWorkspace())
+                        .user(user)
+                        .role(invitation.getRole())
+                        .status("ACTIVE")
+                        .invitedAt(invitation.getInvitedAt())
+                        .invitedBy(invitation.getInvitedBy())
+                        .build();
+
+                workspaceMemberRepository.save(member);
+
+                // Mark invitation as accepted
+                invitation.setStatus(InvitationStatus.ACCEPTED);
+                invitation.setAcceptedAt(LocalDateTime.now());
+                invitation.setAcceptedBy(user);
+                workspaceInvitationRepository.save(invitation);
+
+                log.info("Auto-accepted invitation for workspace {} during registration of user {}", 
+                        invitation.getWorkspace().getId(), user.getId());
+
+            } catch (Exception e) {
+                log.error("Error auto-accepting invitation for workspace {} during registration: {}", 
+                        invitation.getWorkspace().getId(), e.getMessage(), e);
+                // Continue with next invitation even if one fails
+            }
+        }
+
+        log.info("Auto-invitation process completed for user: {}", email);
     }
 
     @Override
