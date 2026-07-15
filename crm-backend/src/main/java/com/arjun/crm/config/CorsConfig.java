@@ -27,7 +27,7 @@ public class CorsConfig {
     /**
      * CORS Configuration Source
      * Reads allowed origins from application config (cors.allowed-origins).
-     * Supports regex patterns via setAllowedOriginPatterns() for wildcard patterns.
+     * Supports wildcard patterns via setAllowedOriginPatterns().
      */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
@@ -39,43 +39,23 @@ public class CorsConfig {
                 .filter(s -> !s.isEmpty())
                 .toList();
 
-        // Separate plain URLs from wildcard patterns
-        java.util.Set<String> plainUrls = new java.util.HashSet<>();
-        java.util.List<String> patterns = new java.util.ArrayList<>();
-        
-        for (String origin : configOrigins) {
-            if (origin.contains("*")) {
-                // Wildcard pattern - convert to regex
-                String regex = origin.replace(".", "\\.").replace("*", ".*");
-                patterns.add(regex);
-            } else {
-                plainUrls.add(origin);
-            }
-        }
+        // Add all configured origins directly (Spring handles both plain URLs and patterns)
+        configuration.setAllowedOriginPatterns(configOrigins);
         
         // Add fixed localhost and vercel patterns
-        plainUrls.addAll(List.of(
+        java.util.List<String> patterns = new java.util.ArrayList<>(configOrigins);
+        patterns.addAll(List.of(
                 "http://localhost:3000",
                 "http://127.0.0.1:3000",
                 "http://localhost:3001",
                 "http://127.0.0.1:3001",
                 "http://localhost:5173",
-                "http://127.0.0.1:5173"
-        ));
-        
-        patterns.addAll(List.of(
-                "https://.*\\.vercel\\.app"   // wildcard pattern for vercel
+                "http://127.0.0.1:5173",
+                "https://*.vercel.app"   // wildcard pattern for vercel
         ));
 
-        // Set plain origins using setAllowedOrigins (no regex complications)
-        if (!plainUrls.isEmpty()) {
-            configuration.setAllowedOrigins(plainUrls.stream().toList());
-        }
-        
-        // Set patterns using setAllowedOriginPatterns (for wildcard support)
-        if (!patterns.isEmpty()) {
-            configuration.setAllowedOriginPatterns(patterns);
-        }
+        // Set patterns using setAllowedOriginPatterns (supports both plain URLs and wildcards)
+        configuration.setAllowedOriginPatterns(patterns);
 
         configuration.setAllowedMethods(Arrays.asList(
                 "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
