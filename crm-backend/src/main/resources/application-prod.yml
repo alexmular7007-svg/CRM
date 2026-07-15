@@ -90,3 +90,7 @@ spring.security.oauth2.client.registration.github.redirect-uri: "${OAUTH2_REDIRE
 # OAuth2 redirect after login
 oauth2:
   redirect-uri: ${OAUTH2_REDIRECT_URI:http://localhost:3000/oauth2/callback}
+
+# Application configuration
+app:
+  invitation-base-url: ${INVITATION_BASE_URL:https://crm-taskflow.vercel.app/invitations}

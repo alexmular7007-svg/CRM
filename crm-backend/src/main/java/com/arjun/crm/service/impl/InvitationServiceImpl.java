@@ -21,6 +21,7 @@ import com.arjun.crm.service.InvitationService;
 import com.arjun.crm.service.TokenService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -45,7 +46,8 @@ public class InvitationServiceImpl implements InvitationService {
     private final EmailService emailService;
     private final TokenService tokenService;
 
-    private static final String INVITATION_BASE_URL = "http://localhost:3000/invitations";
+    @Value("${app.invitation-base-url:http://localhost:3000/invitations}")
+    private String invitationBaseUrl;
 
     @Override
     @Transactional
@@ -96,7 +98,7 @@ public class InvitationServiceImpl implements InvitationService {
         log.info("Invitation created for {} with token", email);
 
         // Send email
-        String invitationLink = INVITATION_BASE_URL + "/" + token;
+        String invitationLink = invitationBaseUrl + "/" + token;
         try {
             log.info("Calling EmailService.sendInvitationEmail for: {}", email);
             emailService.sendInvitationEmail(
@@ -221,7 +223,7 @@ public class InvitationServiceImpl implements InvitationService {
         WorkspaceInvitation updatedInvitation = invitationRepository.save(invitation);
 
         // Send email
-        String invitationLink = INVITATION_BASE_URL + "/" + invitation.getToken();
+        String invitationLink = invitationBaseUrl + "/" + invitation.getToken();
         try {
             log.info("Calling EmailService.sendInvitationResendEmail for: {}", normalizedEmail);
             emailService.sendInvitationResendEmail(
