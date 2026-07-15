@@ -203,6 +203,16 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
             }
         }
 
+        // Ensure name is never null or blank
+        if (name == null || name.trim().isBlank()) {
+            // Fallback: use email prefix or provider ID
+            if (email != null && !email.isBlank()) {
+                name = email.substring(0, email.indexOf('@')).replace(".", " ");
+            } else {
+                name = provider.toUpperCase() + " User " + providerId;
+            }
+        }
+
         final String finalEmail   = email;
         final String finalName    = name;
         final String finalPicture = picture;
