@@ -89,7 +89,7 @@ function AppContent() {
         <Route path="/oauth2/callback" element={<Suspense fallback={<PageLoader />}><OAuth2Callback /></Suspense>} />
 
         {/* Invitation acceptance — can be public or authenticated - NO THEME */}
-        <Route path="/invitations/accept" element={<Suspense fallback={<PageLoader />}><InvitationAccept /></Suspense>} />
+        <Route path="/invitations/:token" element={<Suspense fallback={<PageLoader />}><InvitationAccept /></Suspense>} />
 
         {/* Protected Routes - WITH THEME SYSTEM */}
         <Route element={<ProtectedRoute><AuthenticatedLayout /></ProtectedRoute>}>

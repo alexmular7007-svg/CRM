@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import toast from 'react-hot-toast'
 import Spinner from '../components/common/Spinner'
@@ -8,16 +8,16 @@ const API_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:8081'}/api
 
 /**
  * Invitation Acceptance Page
- * URL: /invitations/accept?token={INVITATION_TOKEN}
+ * URL: /invitations/{token}
  * 
  * Flow:
- * 1. Extract invitation token from URL
+ * 1. Extract invitation token from URL parameter
  * 2. If user is logged in: Accept invitation directly
  * 3. If user is not logged in: Redirect to login with token preserved
  * 4. After acceptance: Redirect to workspace dashboard
  */
 const InvitationAccept = () => {
-  const [params] = useSearchParams()
+  const { token: invitationToken } = useParams()
   const navigate = useNavigate()
   const { token: authToken } = useSelector((state) => state.auth)
   const handled = useRef(false)
@@ -25,8 +25,6 @@ const InvitationAccept = () => {
   useEffect(() => {
     if (handled.current) return
     handled.current = true
-
-    const invitationToken = params.get('token')
 
     if (!invitationToken) {
       toast.error('No invitation token provided.')
