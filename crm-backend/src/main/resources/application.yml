@@ -348,13 +348,16 @@ springdoc:
   show-actuator: false
 
 # ───────────────────────────────────────────────────────────────────────────
-# Application Info
+# Email Configuration (Brevo HTTP API)
 # ───────────────────────────────────────────────────────────────────────────
-info:
-  app:
-    name: ${spring.application.name}
-    description: Enterprise AI-Powered Task Manager + CRM + Collaboration Platform
-    version: 1.0.0
-    encoding: ${project.build.sourceEncoding:UTF-8}
-    java:
-      version: ${java.version:21}
+app:
+  mail:
+    from: ${APP_MAIL_FROM:xsde790@gmail.com}
+    from-name: ${APP_MAIL_FROM_NAME:TaskFlow}
+
+# ───────────────────────────────────────────────────────────────────────────
+# Brevo Configuration
+# ───────────────────────────────────────────────────────────────────────────
+brevo:
+  api-key: ${BREVO_API_KEY:}
+  api-url: https://api.brevo.com/v3/smtp/email

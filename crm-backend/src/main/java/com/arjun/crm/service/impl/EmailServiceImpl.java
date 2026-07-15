@@ -1,6 +1,7 @@
 package com.arjun.crm.service.impl;
 
 import com.arjun.crm.service.EmailService;
+import com.arjun.crm.service.brevo.BrevoEmailService;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +37,7 @@ import java.time.format.DateTimeFormatter;
 public class EmailServiceImpl implements EmailService {
 
     private final JavaMailSender mailSender;
+    private final BrevoEmailService brevoEmailService;
 
     @Value("${app.mail.from:${spring.mail.username}}")
     private String fromEmail;
@@ -287,8 +289,8 @@ public class EmailServiceImpl implements EmailService {
     }
 
     /**
-     * Send email via SMTP (Gmail)
-     * Handles MIME message creation, headers, and error handling
+     * Send email via Brevo API (HTTP)
+     * Replaces SMTP with REST API for better reliability
      * 
      * @param toEmail recipient email address
      * @param subject email subject
@@ -297,84 +299,49 @@ public class EmailServiceImpl implements EmailService {
      */
     private void sendEmailViaSMTP(String toEmail, String subject, String htmlBody) throws MessagingException {
         log.info("═══════════════════════════════════════════════════════════");
-        log.info("SMTP SEND EMAIL - START");
+        log.info("BREVO EMAIL SEND - START");
         log.info("═══════════════════════════════════════════════════════════");
-        log.info("TRACE 1: Email send request");
+        log.info("TRACE 1: Email send request via Brevo");
         log.info("  → To: {}", toEmail);
         log.info("  → Subject: {}", subject);
         log.info("  → From (configured): {}", maskEmail(fromEmail));
         
-        if (fromEmail == null || fromEmail.isEmpty()) {
-            log.error("TRACE 2: ✗ SMTP sender email (MAIL_USERNAME) not configured!");
-            log.info("═══════════════════════════════════════════════════════════");
-            throw new MessagingException("SMTP sender email not configured. Set MAIL_USERNAME environment variable.");
-        }
-
         try {
-            log.info("TRACE 2: Creating MIME message");
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            log.info("TRACE 3: Setting email headers");
-            helper.setFrom(fromEmail, fromName);
-            helper.setTo(toEmail);
-            helper.setSubject(subject);
-            helper.setText(htmlBody, true);
-            
-            log.info("TRACE 4: Email prepared, ready to send");
-            log.info("  → From: {}", maskEmail(fromEmail));
-            log.info("  → To: {}", toEmail);
-            log.info("  → Subject: {}", subject);
-
-            log.info("TRACE 5: Calling JavaMailSender.send() - BEFORE");
+            log.info("TRACE 2: Calling BrevoEmailService.sendEmail()");
             long startTime = System.currentTimeMillis();
             
-            mailSender.send(message);
+            brevoEmailService.sendEmail(toEmail, subject, htmlBody);
             
             long duration = System.currentTimeMillis() - startTime;
-            log.info("TRACE 6: JavaMailSender.send() - AFTER ({}ms)", duration);
-            log.info("TRACE 7: ✓ SMTP SUCCESS");
-            log.info("  → Email delivered to: {}", toEmail);
+            log.info("TRACE 3: ✓ BREVO SUCCESS");
+            log.info("  → Email sent to: {}", toEmail);
             log.info("  → Subject: {}", subject);
-            log.info("  → Message ID: {}", message.getMessageID());
             log.info("  → Duration: {}ms", duration);
             log.info("═══════════════════════════════════════════════════════════");
-            log.info("SMTP SEND EMAIL - SUCCESS");
+            log.info("BREVO EMAIL SEND - SUCCESS");
             log.info("═══════════════════════════════════════════════════════════");
 
-        } catch (MessagingException e) {
-            log.error("TRACE X: ✗ SMTP FAILED - MessagingException");
+        } catch (Exception e) {
+            log.error("TRACE X: ✗ BREVO SEND FAILED");
             log.error("  → Recipient: {}", toEmail);
             log.error("  → Exception Type: {}", e.getClass().getName());
             log.error("  → Error Message: {}", e.getMessage());
             
-            if (e.getCause() != null) {
-                log.error("  → Root Cause Type: {}", e.getCause().getClass().getName());
-                log.error("  → Root Cause Message: {}", e.getCause().getMessage());
+            if (e.getMessage() != null && e.getMessage().contains("401")) {
+                log.error("  → Error Code: 401 (Invalid API Key)");
+                log.error("  → Check: BREVO_API_KEY environment variable");
             }
             
-            if (e.getMessage() != null && e.getMessage().contains("535")) {
-                log.error("  → SMTP Error Code: 535 (Authentication Failed)");
-                log.error("  → This means Gmail is rejecting your App Password");
-                log.error("  → Action Required: Regenerate App Password at https://myaccount.google.com/apppasswords");
+            if (e.getMessage() != null && e.getMessage().contains("403")) {
+                log.error("  → Error Code: 403 (Sender not verified)");
+                log.error("  → Check: Email sender must be verified in Brevo dashboard");
             }
             
             log.error("  → Complete Exception Stack Trace:", e);
             log.info("═══════════════════════════════════════════════════════════");
-            log.info("SMTP SEND EMAIL - FAILED");
+            log.info("BREVO EMAIL SEND - FAILED");
             log.info("═══════════════════════════════════════════════════════════");
-            throw e;
-            
-        } catch (Exception e) {
-            log.error("TRACE X: ✗ UNEXPECTED ERROR");
-            log.error("  → Recipient: {}", toEmail);
-            log.error("  → Exception Type: {}", e.getClass().getName());
-            log.error("  → Error Message: {}", e.getMessage());
-            log.error("  → Complete Stack Trace:", e);
-            log.info("═══════════════════════════════════════════════════════════");
-            log.info("SMTP SEND EMAIL - UNEXPECTED ERROR");
-            log.info("═══════════════════════════════════════════════════════════");
-            throw new MessagingException("Failed to send email: " + e.getMessage(), e);
+            throw new MessagingException("Failed to send email via Brevo: " + e.getMessage(), e);
         }
     }
 
