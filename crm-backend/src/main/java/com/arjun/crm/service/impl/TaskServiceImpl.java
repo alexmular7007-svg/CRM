@@ -58,6 +58,7 @@ public class TaskServiceImpl implements TaskService {
     private final TaskActivityService taskActivityService;
 
     @Override
+    @CacheEvict(value = {"task", "dashboard"}, allEntries = true)
     public TaskResponse createTask(TaskCreateRequest request, Long createdById, String createdByName) {
         User currentUser = getAuthenticatedUser();
         log.info("Creating task with title: {} by user: {}", request.getTitle(), currentUser.getEmail());
@@ -318,7 +319,7 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    @CacheEvict(value = "task", key = "#id")
+    @CacheEvict(value = {"task", "dashboard"}, allEntries = true)
     public void deleteTask(Long id, Long workspaceId) {
         log.info("Deleting task id: {} from workspace: {}", id, workspaceId);
         Task task = findTaskOrThrow(id);
