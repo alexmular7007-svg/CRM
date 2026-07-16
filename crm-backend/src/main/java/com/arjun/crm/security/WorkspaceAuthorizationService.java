@@ -49,6 +49,10 @@ public class WorkspaceAuthorizationService {
      * Validate user's access to workspace.
      * Returns WorkspaceMember if user has access, throws 403 otherwise.
      * 
+     * User is considered to have access if:
+     * 1. They are the workspace owner (workspace.owner_id)
+     * 2. They have an active (non-deleted) member record in the workspace
+     * 
      * @param workspaceId The workspace to validate access for
      * @return WorkspaceMember record if user is member or owner
      * @throws AccessDeniedException if user has no access
@@ -59,7 +63,7 @@ public class WorkspaceAuthorizationService {
         Workspace workspace = workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Workspace not found with ID: " + workspaceId));
 
-        // If user is the owner
+        // If user is the original owner
         if (workspace.getOwner().getId().equals(currentUser.getId())) {
             return WorkspaceMember.builder()
                     .workspace(workspace)
@@ -68,9 +72,14 @@ public class WorkspaceAuthorizationService {
                     .build();
         }
 
-        // Check if user is a member
+        // Check if user is an active member (excludes soft-deleted)
         WorkspaceMember member = workspaceMemberRepository.findByWorkspaceIdAndUserId(workspaceId, currentUser.getId())
                 .orElseThrow(() -> new AccessDeniedException("User does not have access to this workspace"));
+
+        // Ensure member is not soft-deleted
+        if (member.getDeletedAt() != null) {
+            throw new AccessDeniedException("User does not have access to this workspace");
+        }
 
         log.debug("User {} has {} access to workspace {}", currentUser.getId(), member.getRole(), workspaceId);
         return member;

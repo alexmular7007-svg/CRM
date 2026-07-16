@@ -35,6 +35,21 @@ public interface WorkspaceMemberRepository extends JpaRepository<WorkspaceMember
     default boolean isUserAdminOfWorkspace(Long workspaceId, Long userId) {
         return isUserAdminOfWorkspace(workspaceId, userId, WorkspaceRole.ADMIN);
     }
+
+    /**
+     * Check if user has OWNER role in workspace
+     * Used to support multiple owners per workspace
+     */
+    @Query("SELECT CASE WHEN COUNT(wm) > 0 THEN true ELSE false END " +
+           "FROM WorkspaceMember wm " +
+           "WHERE wm.workspace.id = :workspaceId AND wm.user.id = :userId AND wm.role = :role AND wm.status = 'ACTIVE' AND wm.deletedAt IS NULL")
+    boolean isUserOwnerOfWorkspace(@Param("workspaceId") Long workspaceId,
+                                    @Param("userId") Long userId,
+                                    @Param("role") WorkspaceRole role);
+
+    default boolean isUserOwnerOfWorkspace(Long workspaceId, Long userId) {
+        return isUserOwnerOfWorkspace(workspaceId, userId, WorkspaceRole.OWNER);
+    }
     
     /**
      * Delete all workspace members for a workspace
@@ -114,4 +129,22 @@ public interface WorkspaceMemberRepository extends JpaRepository<WorkspaceMember
      */
     @Query("SELECT COUNT(wm) FROM WorkspaceMember wm WHERE wm.workspace.id = :workspaceId AND wm.status = 'ACTIVE' AND wm.deletedAt IS NULL")
     long countActiveMembersExcludingDeleted(@Param("workspaceId") Long workspaceId);
+
+    /**
+     * Count active OWNER role members in a workspace (excludes soft-deleted)
+     * Used to ensure at least one owner always exists
+     */
+    @Query("SELECT COUNT(wm) FROM WorkspaceMember wm WHERE wm.workspace.id = :workspaceId AND wm.role = :role AND wm.status = 'ACTIVE' AND wm.deletedAt IS NULL")
+    long countActiveMembersWithRole(@Param("workspaceId") Long workspaceId, @Param("role") WorkspaceRole role);
+
+    /**
+     * Convenience method: Count active OWNER members in workspace
+     * Includes original workspace.owner as implicit owner
+     */
+    default long countActiveOwnersInWorkspace(Long workspaceId) {
+        // Count explicit OWNER members in workspace_member table
+        long explicitOwners = countActiveMembersWithRole(workspaceId, WorkspaceRole.OWNER);
+        // Original owner is always counted as 1 (even if not in members table for backward compatibility)
+        return explicitOwners + 1;  // +1 for workspace.owner field
+    }
 }

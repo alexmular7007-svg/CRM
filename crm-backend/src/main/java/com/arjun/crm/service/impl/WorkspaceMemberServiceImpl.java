@@ -56,16 +56,13 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
         User userToAdd = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + request.getEmail()));
 
-        // Check if user is already a member
-        if (workspaceMemberRepository.existsByWorkspaceIdAndUserId(workspaceId, userToAdd.getId())) {
+        // Check if user is already an active (non-deleted) member
+        if (workspaceMemberRepository.existsActiveMember(workspaceId, userToAdd.getId())) {
             throw new DuplicateMemberException("User is already a member of this workspace");
         }
 
-        // Cannot add owner as member
-        if (workspace.getOwner().getId().equals(userToAdd.getId())) {
-            throw new IllegalArgumentException("Workspace owner cannot be added as a member");
-        }
-
+        // Allow adding any user with any role (including OWNER to support multiple owners)
+        // This enables scenarios where Owner A can add User B as Owner, so both can manage workspace independently
         WorkspaceMember member = WorkspaceMember.builder()
                 .workspace(workspace)
                 .user(userToAdd)
@@ -73,7 +70,7 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
                 .build();
 
         WorkspaceMember savedMember = workspaceMemberRepository.save(member);
-        log.info("Member added successfully to workspace: {}", workspaceId);
+        log.info("Member added successfully with role {} to workspace: {}", request.getRole(), workspaceId);
 
         return WorkspaceMemberResponse.fromEntity(savedMember);
     }
@@ -93,25 +90,33 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
             throw new AccessDeniedException("Only workspace owner or admin can remove members");
         }
 
-        // Cannot remove owner
-        if (workspace.getOwner().getId().equals(userId)) {
-            throw new IllegalArgumentException("Cannot remove workspace owner");
+        // Check if user being removed exists
+        User userToRemove = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + userId));
+
+        // CRITICAL: Cannot remove if this is the ONLY OWNER left
+        // Must have at least one active owner in workspace at all times
+        long activeOwnerCount = workspaceMemberRepository.countActiveOwnersInWorkspace(workspaceId);
+        boolean isLastOwner = workspace.getOwner().getId().equals(userId) && activeOwnerCount <= 1;
+        
+        if (isLastOwner) {
+            log.error("❌ Cannot remove last owner {} from workspace {}", userId, workspaceId);
+            throw new IllegalArgumentException("Cannot remove the last owner from workspace. Promote someone to owner first.");
         }
 
+        // Find and soft-delete the member record
         WorkspaceMember member = workspaceMemberRepository.findByWorkspaceIdAndUserId(workspaceId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Member not found in this workspace"));
-
-        User removedUser = member.getUser();
 
         // Use soft delete: set deletedAt timestamp instead of physical delete
         member.setDeletedAt(LocalDateTime.now());
         workspaceMemberRepository.save(member);
         log.info("Member soft-deleted successfully from workspace: {}", workspaceId);
 
-        // Publish member removed event for notification and workspace removal from removed user's perspective
+        // Publish member removed event for notification
         eventPublisher.publishEvent(new com.arjun.crm.event.MemberRemovedEvent(
                 this,
-                removedUser,
+                userToRemove,
                 workspace,
                 currentUser
         ));
@@ -150,7 +155,7 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
         Workspace workspace = workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Workspace not found with ID: " + workspaceId));
 
-        // If user is the owner, construct OWNER role response
+        // Check if user is the original owner (legacy support)
         if (workspace.getOwner().getId().equals(currentUser.getId())) {
             WorkspaceMember ownerMember = WorkspaceMember.builder()
                     .workspace(workspace)
@@ -160,7 +165,7 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
             return WorkspaceMemberResponse.fromEntity(ownerMember);
         }
 
-        // Otherwise find active member record for the user (exclude soft-deleted)
+        // Check if user has a member record in the workspace
         WorkspaceMember member = workspaceMemberRepository.findByWorkspaceIdAndUserId(workspaceId, currentUser.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("User is not a member of this workspace"));
 
@@ -186,9 +191,9 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
             throw new AccessDeniedException("Only workspace owner or admin can update member roles");
         }
 
-        // Cannot change owner role
-        if (workspace.getOwner().getId().equals(userId)) {
-            throw new IllegalArgumentException("Cannot change workspace owner role");
+        // Cannot demote the original owner - they must stay as owner
+        if (workspace.getOwner().getId().equals(userId) && newRole != WorkspaceRole.OWNER) {
+            throw new IllegalArgumentException("Cannot demote the original workspace owner. Transfer ownership first.");
         }
 
         User targetUser = userRepository.findById(userId)
@@ -198,6 +203,15 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
                 .orElseThrow(() -> new ResourceNotFoundException("Member not found in this workspace"));
 
         WorkspaceRole oldRole = member.getRole();
+        
+        // Prevent demoting if this is the last owner
+        if (oldRole == WorkspaceRole.OWNER && newRole != WorkspaceRole.OWNER) {
+            long activeOwnerCount = workspaceMemberRepository.countActiveOwnersInWorkspace(workspaceId);
+            if (activeOwnerCount <= 1) {
+                throw new IllegalArgumentException("Cannot demote the last owner. Promote someone else first.");
+            }
+        }
+
         member.setRole(newRole);
         member = workspaceMemberRepository.save(member);
 
@@ -210,15 +224,19 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
 
     /**
      * Check if user is owner or admin of workspace
+     * User is considered owner/admin if:
+     * 1. They are the workspace owner (workspace.owner_id)
+     * 2. They have ADMIN or OWNER role in workspace_member table
      */
     private boolean isOwnerOrAdmin(Workspace workspace, User user) {
-        // Owner always has access - access within transaction to trigger lazy load
+        // Original owner always has access
         if (workspace.getOwner().getId().equals(user.getId())) {
             return true;
         }
 
-        // Check if user is admin member using repository (avoids lazy loading issues)
-        return workspaceMemberRepository.isUserAdminOfWorkspace(workspace.getId(), user.getId());
+        // Check if user is admin or owner member using repository
+        return workspaceMemberRepository.isUserAdminOfWorkspace(workspace.getId(), user.getId()) ||
+               workspaceMemberRepository.isUserOwnerOfWorkspace(workspace.getId(), user.getId());
     }
 
     /**

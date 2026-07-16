@@ -367,7 +367,8 @@ public class InvitationServiceImpl implements InvitationService {
         if (workspace.getOwner().getId().equals(user.getId())) {
             return true;
         }
-        return memberRepository.isUserAdminOfWorkspace(workspace.getId(), user.getId());
+        return memberRepository.isUserAdminOfWorkspace(workspace.getId(), user.getId()) ||
+               memberRepository.isUserOwnerOfWorkspace(workspace.getId(), user.getId());
     }
 
     /**
