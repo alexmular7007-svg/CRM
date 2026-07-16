@@ -111,12 +111,16 @@ const AuthenticatedSidebar = () => {
           borderColor: currentTheme.colors.border,
           zIndex: isPeeking ? 40 : 30,
           boxSizing: 'border-box',
+          borderWidth: '1px',
+          borderRightWidth: '1px',
+          margin: 0,
+          padding: 0,
         }}
         className="hidden lg:flex flex-col border-r h-screen overflow-hidden"
       >
         {/* Logo/Header */}
         <div
-          style={{ borderColor: currentTheme.colors.border }}
+          style={{ borderColor: currentTheme.colors.border, boxSizing: 'border-box', borderWidth: '1px', borderBottomWidth: '1px', margin: 0 }}
           className="flex items-center justify-between border-b px-3 py-2 h-16 flex-shrink-0"
         >
           <button

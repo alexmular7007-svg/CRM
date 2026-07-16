@@ -518,8 +518,11 @@ const AuthenticatedLayout = () => {
             backgroundColor: currentTheme.colors.navbar,
             borderColor: currentTheme.colors.border,
             boxSizing: 'border-box',
+            borderWidth: '1px',
+            margin: 0,
+            padding: '10px 12px',
           }}
-          className="border-b px-3 sm:px-4 md:px-6 py-2.5 sm:py-3 shrink-0"
+          className="border-b shrink-0"
         >
           <div className="flex items-center justify-between w-full min-h-[44px] sm:h-10">
             {/* Left Section - Mobile/Tablet: Hamburger + Title | Desktop: Title */}
