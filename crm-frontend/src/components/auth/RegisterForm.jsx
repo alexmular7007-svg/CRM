@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Mail, Lock, User, ArrowRight } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 
 const RegisterForm = ({ onSwitchToLogin }) => {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -41,11 +42,21 @@ const RegisterForm = ({ onSwitchToLogin }) => {
   }
 
   const handleGoogleLogin = () => {
-    window.location.href = `${import.meta.env.VITE_API_URL}/oauth2/authorization/google`
+    const invitationToken = searchParams.get('invitationToken')
+    let oauthUrl = `${import.meta.env.VITE_API_URL}/oauth2/authorization/google`
+    if (invitationToken) {
+      oauthUrl += `?invitationToken=${encodeURIComponent(invitationToken)}`
+    }
+    window.location.href = oauthUrl
   }
 
   const handleGithubLogin = () => {
-    window.location.href = `${import.meta.env.VITE_API_URL}/oauth2/authorization/github`
+    const invitationToken = searchParams.get('invitationToken')
+    let oauthUrl = `${import.meta.env.VITE_API_URL}/oauth2/authorization/github`
+    if (invitationToken) {
+      oauthUrl += `?invitationToken=${encodeURIComponent(invitationToken)}`
+    }
+    window.location.href = oauthUrl
   }
 
   const handleSwitchToLogin = () => {
