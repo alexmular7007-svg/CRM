@@ -127,14 +127,20 @@ public class InvitationServiceImpl implements InvitationService {
     @Transactional
     public InvitationAcceptResponse acceptInvitation(String token) {
         User currentUser = getAuthenticatedUser();
-        log.info("User {} attempting to accept invitation with token", currentUser.getEmail());
+        log.info("User {} attempting to accept invitation with token: {}", currentUser.getEmail(), token.substring(0, Math.min(10, token.length())) + "...");
 
         // Find invitation by token
         WorkspaceInvitation invitation = invitationRepository.findByToken(token)
-            .orElseThrow(() -> new ResourceNotFoundException("Invalid or expired invitation token"));
+            .orElseThrow(() -> {
+                log.error("✗ Invitation token not found: {}", token.substring(0, Math.min(10, token.length())) + "...");
+                return new ResourceNotFoundException("Invalid or expired invitation token");
+            });
+
+        log.info("✓ Invitation found - Status: {}, Email: {}, Workspace: {}", invitation.getStatus(), invitation.getEmail(), invitation.getWorkspace().getId());
 
         // Validate token
         if (!tokenService.isTokenValid(invitation.getExpiresAt())) {
+            log.error("✗ Invitation token expired: {}", invitation.getExpiresAt());
             invitation.setStatus(InvitationStatus.EXPIRED);
             invitationRepository.save(invitation);
             throw new ResourceNotFoundException("Invitation token has expired");
@@ -142,25 +148,32 @@ public class InvitationServiceImpl implements InvitationService {
 
         // Check if already accepted
         if (invitation.getStatus() == InvitationStatus.ACCEPTED) {
+            log.error("✗ Invitation already accepted");
             throw new IllegalArgumentException("Invitation has already been accepted");
         }
 
         // Check if revoked
         if (invitation.getStatus() == InvitationStatus.REVOKED) {
+            log.error("✗ Invitation has been revoked");
             throw new IllegalArgumentException("Invitation has been revoked");
         }
 
         // Verify email matches
+        log.info("Comparing emails - Invitation email: {}, Current user email: {}", invitation.getEmail(), currentUser.getEmail());
         if (!invitation.getEmail().equalsIgnoreCase(currentUser.getEmail())) {
+            log.error("✗ Email mismatch! Invitation for: {}, but logged in as: {}", invitation.getEmail(), currentUser.getEmail());
             throw new AccessDeniedException("Invitation is for a different email address");
         }
 
         // Check if already an active member (not soft-deleted)
+        log.info("Checking if user {} is already member of workspace {}", currentUser.getId(), invitation.getWorkspace().getId());
         if (memberRepository.existsActiveMember(invitation.getWorkspace().getId(), currentUser.getId())) {
+            log.error("✗ User {} is already an active member of workspace {}", currentUser.getId(), invitation.getWorkspace().getId());
             throw new DuplicateMemberException("You are already a member of this workspace");
         }
 
         // Create workspace member
+        log.info("Creating workspace member for user: {}, workspace: {}", currentUser.getEmail(), invitation.getWorkspace().getId());
         WorkspaceMember member = WorkspaceMember.builder()
             .workspace(invitation.getWorkspace())
             .user(currentUser)
@@ -171,16 +184,19 @@ public class InvitationServiceImpl implements InvitationService {
             .build();
 
         WorkspaceMember savedMember = memberRepository.save(member);
+        log.info("✓ WorkspaceMember created with ID: {}", savedMember.getId());
 
         // Update invitation as accepted
         invitation.setStatus(InvitationStatus.ACCEPTED);
         invitation.setAcceptedAt(LocalDateTime.now());
         invitation.setAcceptedBy(currentUser);
         invitationRepository.save(invitation);
+        log.info("✓ Invitation status updated to ACCEPTED");
 
         log.info("Invitation accepted for {}, member created in workspace {}", currentUser.getEmail(), invitation.getWorkspace().getId());
 
         // Publish event to trigger notifications
+        log.info("Publishing InvitationAcceptedEvent");
         eventPublisher.publishEvent(new InvitationAcceptedEvent(
             this,
             savedMember,
@@ -188,6 +204,7 @@ public class InvitationServiceImpl implements InvitationService {
             currentUser,
             invitation.getInvitedBy()
         ));
+        log.info("✓ InvitationAcceptedEvent published");
 
         return InvitationAcceptResponse.fromEntity(savedMember);
     }

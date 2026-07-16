@@ -89,9 +89,20 @@ public class InvitationController {
      */
     @PostMapping("/api/workspaces/invitations/accept/{token}")
     public ResponseEntity<ApiResponse<InvitationAcceptResponse>> acceptInvitation(@PathVariable String token) {
-        log.info("Accept invitation request for token: {}", token.substring(0, Math.min(10, token.length())) + "...");
-        InvitationAcceptResponse response = invitationService.acceptInvitation(token);
-        return ResponseEntity.ok(ApiResponse.success("Invitation accepted successfully", response));
+        try {
+            log.info("Accept invitation request for token: {}", token.substring(0, Math.min(10, token.length())) + "...");
+            InvitationAcceptResponse response = invitationService.acceptInvitation(token);
+            log.info("✓ Invitation accepted successfully");
+            return ResponseEntity.ok(ApiResponse.success("Invitation accepted successfully", response));
+        } catch (Exception e) {
+            log.error("✗ FAILED to accept invitation for token: {}", token.substring(0, Math.min(10, token.length())) + "...", e);
+            log.error("Exception type: {}", e.getClass().getSimpleName());
+            log.error("Exception message: {}", e.getMessage());
+            if (e.getCause() != null) {
+                log.error("Root cause: {}", e.getCause().getMessage());
+            }
+            throw e;
+        }
     }
 }
 
