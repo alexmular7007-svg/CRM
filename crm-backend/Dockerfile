@@ -1,20 +1,26 @@
 # ═══════════════════════════════════════════════════════════════════════════
-# Multi-stage Dockerfile for CRM Backend
+# Optimized Multi-stage Dockerfile for CRM Backend (Railway-friendly)
 # ═══════════════════════════════════════════════════════════════════════════
 
 # ───────────────────────────────────────────────────────────────────────────
-# Stage 1: Build
+# Stage 1: Build with dependency caching
 # ───────────────────────────────────────────────────────────────────────────
-FROM maven:3.9-eclipse-temurin-21 AS build
+FROM maven:3.9-eclipse-temurin-21-alpine AS build
 
 WORKDIR /app
 
-# Copy pom.xml and source code
+# Copy pom.xml first (better layer caching)
 COPY pom.xml .
+
+# Download dependencies BEFORE copying source code
+# This layer is cached unless pom.xml changes
+RUN mvn dependency:resolve dependency:resolve-plugins -q || true
+
+# Copy source code
 COPY src ./src
 
 # Build application (skip tests for faster builds)
-RUN mvn clean package -DskipTests
+RUN mvn clean package -DskipTests -q
 
 # ───────────────────────────────────────────────────────────────────────────
 # Stage 2: Runtime
