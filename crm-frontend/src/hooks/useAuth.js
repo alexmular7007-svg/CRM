@@ -24,8 +24,9 @@ export const useAuth = () => {
       websocketService.connect()
       toast.success('Login successful!')
       
-      // Check if there's a pending invitation
-      const invitationToken = searchParams.get('invitationToken')
+      // Check if there's a pending invitation - read from current window location
+      const currentParams = new URLSearchParams(window.location.search)
+      const invitationToken = currentParams.get('invitationToken')
       if (invitationToken && data.token) {
         // Auto-accept the invitation after login
         acceptInvitationAfterLogin(invitationToken, data.token)
@@ -47,8 +48,9 @@ export const useAuth = () => {
       websocketService.connect()
       toast.success('Registration successful!')
       
-      // Check if there's a pending invitation
-      const invitationToken = searchParams.get('invitationToken')
+      // Check if there's a pending invitation - read from current window location
+      const currentParams = new URLSearchParams(window.location.search)
+      const invitationToken = currentParams.get('invitationToken')
       if (invitationToken && data.token) {
         // Auto-accept the invitation after registration
         acceptInvitationAfterLogin(invitationToken, data.token)
