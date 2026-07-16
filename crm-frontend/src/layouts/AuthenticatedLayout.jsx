@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
-import { FiBell, FiLogOut, FiUser, FiSettings, FiChevronDown, FiMoon, FiSun } from 'react-icons/fi'
+import { FiBell, FiLogOut, FiUser, FiSettings, FiChevronDown, FiMoon, FiSun, FiMenu } from 'react-icons/fi'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../hooks/useAuth'
@@ -217,6 +217,7 @@ const AuthenticatedLayout = () => {
   const { unreadCount } = useSelector((state) => state.notifications)
   const { currentWorkspace } = useSelector((state) => state.workspace)
   const { currentTheme, theme, switchTheme } = useThemeContext()
+  const [showMobileMenu, setShowMobileMenu] = useState(false)
 
   // Fetch workspaces
   const { data: workspacesData } = useQuery({
@@ -246,40 +247,39 @@ const AuthenticatedLayout = () => {
     dispatch(setCopilotContext({ page: location.pathname, title: document.title }))
   }, [dispatch, location.pathname])
 
+  // Close mobile menu on route change
+  useEffect(() => {
+    setShowMobileMenu(false)
+  }, [location.pathname])
+
   return (
     <div
       style={{
         backgroundColor: currentTheme.colors.background,
         color: currentTheme.colors.text,
       }}
-      className="flex h-screen overflow-hidden"
+      className="flex h-screen overflow-hidden flex-col lg:flex-row"
     >
-      <AuthenticatedSidebar />
+      {/* Sidebar - Desktop */}
+      <div className="hidden lg:block">
+        <AuthenticatedSidebar />
+      </div>
 
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Top Navigation */}
+      {/* Main Content Area */}
+      <div className="flex flex-1 flex-col overflow-hidden w-full">
+        {/* Top Navigation - Responsive Header */}
         <header
           style={{
             backgroundColor: currentTheme.colors.navbar,
             borderColor: currentTheme.colors.border,
           }}
-          className="border-b px-6 py-3"
+          className="border-b px-4 md:px-6 py-3 shrink-0"
         >
-          <div className="flex items-center justify-end gap-1.5">
-            <div
-              style={{ backgroundColor: currentTheme.colors.border }}
-              className="h-6 w-px"
-            />
-
-            {/* Theme Toggle Button */}
+          <div className="flex items-center justify-between gap-2">
+            {/* Mobile Menu Toggle */}
             <button
-              onClick={() => {
-                const newTheme = theme === 'dark' ? 'light' : 'dark'
-                switchTheme(newTheme)
-              }}
-              aria-label="Toggle dark/light mode"
-              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-              className="relative rounded-lg p-2 transition-colors"
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              className="lg:hidden p-2 rounded-lg transition-colors"
               style={{
                 color: currentTheme.colors.textSecondary,
               }}
@@ -289,52 +289,91 @@ const AuthenticatedLayout = () => {
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = 'transparent'
               }}
+              aria-label="Toggle navigation"
             >
-              {theme === 'dark' ? (
-                <FiSun size={18} className="text-yellow-500" />
-              ) : (
-                <FiMoon size={18} />
-              )}
+              <FiMenu size={20} />
             </button>
 
-            <div
-              style={{ backgroundColor: currentTheme.colors.border }}
-              className="h-6 w-px"
-            />
+            {/* Spacer */}
+            <div className="flex-1 lg:flex-none" />
 
-            <button
-              onClick={() => dispatch(togglePanel())}
-              aria-label="Notifications"
-              className="relative rounded-lg p-2 transition-colors"
-              style={{
-                color: currentTheme.colors.textSecondary,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = currentTheme.colors.surfaceSecondary
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent'
-              }}
-            >
-              <FiBell size={18} />
-              {unreadCount > 0 && (
-                <span className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              )}
-            </button>
+            {/* Right Actions */}
+            <div className="flex items-center justify-end gap-2">
+              {/* Divider */}
+              <div
+                style={{ backgroundColor: currentTheme.colors.border }}
+                className="h-6 w-px"
+              />
 
-            <div
-              style={{ backgroundColor: currentTheme.colors.border }}
-              className="h-6 w-px"
-            />
+              {/* Theme Toggle */}
+              <button
+                onClick={() => {
+                  const newTheme = theme === 'dark' ? 'light' : 'dark'
+                  switchTheme(newTheme)
+                }}
+                aria-label="Toggle dark/light mode"
+                title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                className="relative rounded-lg p-2 transition-colors"
+                style={{
+                  color: currentTheme.colors.textSecondary,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = currentTheme.colors.surfaceSecondary
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent'
+                }}
+              >
+                {theme === 'dark' ? (
+                  <FiSun size={18} className="text-yellow-500" />
+                ) : (
+                  <FiMoon size={18} />
+                )}
+              </button>
 
-            <UserMenu
-              user={user}
-              logout={logout}
-              unreadCount={unreadCount}
-              onNotifications={() => dispatch(togglePanel())}
-            />
+              {/* Divider */}
+              <div
+                style={{ backgroundColor: currentTheme.colors.border }}
+                className="h-6 w-px"
+              />
+
+              {/* Notifications */}
+              <button
+                onClick={() => dispatch(togglePanel())}
+                aria-label="Notifications"
+                className="relative rounded-lg p-2 transition-colors"
+                style={{
+                  color: currentTheme.colors.textSecondary,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = currentTheme.colors.surfaceSecondary
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent'
+                }}
+              >
+                <FiBell size={18} />
+                {unreadCount > 0 && (
+                  <span className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Divider */}
+              <div
+                style={{ backgroundColor: currentTheme.colors.border }}
+                className="h-6 w-px"
+              />
+
+              {/* User Menu */}
+              <UserMenu
+                user={user}
+                logout={logout}
+                unreadCount={unreadCount}
+                onNotifications={() => dispatch(togglePanel())}
+              />
+            </div>
           </div>
         </header>
 
@@ -344,14 +383,32 @@ const AuthenticatedLayout = () => {
             backgroundColor: currentTheme.colors.background,
             color: currentTheme.colors.text,
           }}
-          className="flex-1 overflow-y-auto p-6"
+          className="flex-1 overflow-y-auto p-4 md:p-6 w-full"
         >
           <Outlet />
         </main>
       </div>
 
+      {/* Mobile Sidebar Drawer */}
+      <AnimatePresence>
+        {showMobileMenu && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowMobileMenu(false)}
+              className="lg:hidden fixed inset-0 bg-black/50 z-40"
+            />
+            <div className="lg:hidden">
+              <AuthenticatedSidebar />
+            </div>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* Floating Copilot */}
-      <FloatingCopilot />
+      {/* <FloatingCopilot /> */}
     </div>
   )
 }

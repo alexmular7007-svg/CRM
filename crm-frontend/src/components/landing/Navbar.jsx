@@ -22,7 +22,7 @@ const Navbar = () => {
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 16)
-      
+
       // Detect active section
       const sections = ['features', 'workflow', 'ai', 'plans']
       for (const section of sections) {
@@ -36,7 +36,7 @@ const Navbar = () => {
         }
       }
     }
-    
+
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
@@ -61,20 +61,20 @@ const Navbar = () => {
           : 'bg-transparent'
       }`}
     >
-      <div className="max-w-6xl mx-auto px-4 sm:px-6">
+      <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
 
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 bg-[#4F46E5] rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-[#4338CA] transition-colors">
+          <Link to="/" className="flex items-center gap-2.5 group flex-shrink-0">
+            <div className="w-8 h-8 bg-[#4F46E5] rounded-lg flex items-center justify-center group-hover:bg-[#4338CA] transition-colors">
               <Zap size={16} className="text-white" />
             </div>
-            <span className="text-[15px] font-semibold tracking-tight text-gray-900 dark:text-white">
+            <span className="text-sm md:text-base font-semibold tracking-tight text-gray-900 dark:text-white hidden sm:block">
               TaskFlow<span className="text-[#4F46E5]"> AI</span>
             </span>
           </Link>
 
-          {/* Desktop Nav */}
+          {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-1">
             {NAV_LINKS.map((link) => (
               <button
@@ -91,8 +91,8 @@ const Navbar = () => {
             ))}
           </div>
 
-          {/* Right actions */}
-          <div className="hidden md:flex items-center gap-2">
+          {/* Right Actions */}
+          <div className="hidden md:flex items-center gap-2 flex-shrink-0">
             <button
               onClick={toggleTheme}
               className="p-2 rounded-md text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
@@ -121,27 +121,28 @@ const Navbar = () => {
             </Link>
           </div>
 
-          {/* Mobile */}
-          <div className="md:hidden flex items-center gap-2">
+          {/* Mobile Menu Button */}
+          <div className="md:hidden flex items-center gap-2 flex-shrink-0">
             <button
               onClick={toggleTheme}
               className="p-2 rounded-md text-gray-500 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
               aria-label="Toggle theme"
               title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
             >
-              {isDark ? <Sun size={16} /> : <Moon size={16} />}
+              {isDark ? <Sun size={18} /> : <Moon size={18} />}
             </button>
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="p-2 rounded-md text-gray-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
+              aria-label="Toggle mobile menu"
             >
-              {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+              {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Mobile menu */}
+      {/* Mobile Menu - Bottom Sheet Style */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <motion.div
@@ -151,12 +152,12 @@ const Navbar = () => {
             transition={{ duration: 0.2 }}
             className="md:hidden bg-white dark:bg-[#09090B] border-t border-gray-200 dark:border-zinc-800"
           >
-            <div className="px-4 py-4 space-y-1">
+            <div className="px-4 py-4 space-y-1 max-w-7xl mx-auto">
               {NAV_LINKS.map((link) => (
                 <button
                   key={link.label}
                   onClick={() => scrollToSection(link.href)}
-                  className={`w-full text-left py-2.5 px-3 text-sm font-medium rounded-md transition-colors ${
+                  className={`w-full text-left py-2.5 px-3 text-base font-medium rounded-md transition-colors ${
                     activeSection === link.href.replace('#', '')
                       ? 'text-[#4F46E5] bg-indigo-50 dark:bg-indigo-950/30'
                       : 'text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-zinc-800/60'
@@ -169,16 +170,16 @@ const Navbar = () => {
                 <Link
                   to="/login"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="block w-full py-2.5 text-center text-sm font-medium text-gray-700 dark:text-zinc-300 border border-gray-200 dark:border-zinc-700 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors"
+                  className="block w-full py-2.5 text-center text-base font-medium text-gray-700 dark:text-zinc-300 border border-gray-200 dark:border-zinc-700 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors"
                 >
                   Sign in
                 </Link>
                 <Link
                   to="/register"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center justify-center gap-1.5 w-full py-2.5 text-sm font-medium bg-[#4F46E5] hover:bg-[#4338CA] text-white rounded-lg transition-colors"
+                  className="flex items-center justify-center gap-1.5 w-full py-2.5 text-base font-medium bg-[#4F46E5] hover:bg-[#4338CA] text-white rounded-lg transition-colors"
                 >
-                  Get started <ArrowRight size={14} />
+                  Get started <ArrowRight size={16} />
                 </Link>
               </div>
             </div>
