@@ -56,20 +56,30 @@ const TaskAIAssistant = ({ task, projectId, workspaceId }) => {
   })
 
   const createSubtasksMutation = useMutation({
-    mutationFn: async (subtasks) => Promise.all(subtasks.map((title) => taskService.create({
-      title: title.replace(/^[-*\d.\s]+/, '').slice(0, 240),
-      description: `AI-generated subtask for: ${task.title}`,
-      status: 'TODO',
-      priority: task.priority || 'MEDIUM',
-      projectId,
-      workspaceId: workspaceId,  // ← Include workspace ID from parent
-    }))),
+    mutationFn: async (subtasks) => {
+      if (!projectId || !workspaceId) {
+        throw new Error('Project ID and Workspace ID are required to create subtasks')
+      }
+      return Promise.all(subtasks.map((title) => 
+        taskService.create({
+          title: title.replace(/^[-*\d.\s]+/, '').slice(0, 240),
+          description: `AI-generated subtask for: ${task.title}`,
+          status: 'TODO',
+          priority: task.priority || 'MEDIUM',
+          projectId,
+          workspaceId,
+        })
+      ))
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks', String(projectId)] })
       queryClient.invalidateQueries({ queryKey: ['tasks', projectId] })
       toast.success('AI subtasks saved to the project')
     },
-    onError: (error) => toast.error(error.message || 'Failed to save AI subtasks'),
+    onError: (error) => {
+      console.error('Subtask creation error:', error)
+      toast.error(error.message || 'Failed to save AI subtasks')
+    },
   })
 
   const priority = priorityQuery.data
@@ -113,6 +123,10 @@ const TaskAIAssistant = ({ task, projectId, workspaceId }) => {
               type="button"
               className="btn-secondary inline-flex items-center gap-2"
               onClick={() => {
+                if (!task.id || !workspaceId) {
+                  toast.error('Task ID and Workspace ID are required')
+                  return
+                }
                 taskService.update(task.id, { priority: priority.suggestedPriority, workspaceId })
                   .then(() => {
                     queryClient.invalidateQueries({ queryKey: ['task', task.id] })
