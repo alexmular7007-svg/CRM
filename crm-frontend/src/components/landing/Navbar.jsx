@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sun, Moon, Menu, X, ArrowRight, Zap } from 'lucide-react'
+import { Sun, Moon, Menu, X, ArrowRight } from 'lucide-react'
 import { useThemeContext } from '../../contexts/ThemeContext'
 
 const NAV_LINKS = [
@@ -67,9 +67,11 @@ const Navbar = () => {
 
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2.5 group flex-shrink-0 z-10">
-              <div className="w-8 h-8 bg-[#4F46E5] rounded-lg flex items-center justify-center group-hover:bg-[#4338CA] transition-colors">
-                <Zap size={16} className="text-white" />
-              </div>
+              <img
+                src="/logo.png"
+                alt="AI CRM"
+                className="w-8 h-8 object-contain"
+              />
               <span className="text-sm sm:text-base font-semibold tracking-tight text-gray-900 dark:text-white hidden sm:inline">
                 TaskFlow<span className="text-[#4F46E5]"> AI</span>
               </span>
@@ -171,9 +173,11 @@ const Navbar = () => {
               {/* Header */}
               <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200 dark:border-zinc-800">
                 <Link to="/" className="flex items-center gap-2 group" onClick={() => setIsMobileMenuOpen(false)}>
-                  <div className="w-8 h-8 bg-[#4F46E5] rounded-lg flex items-center justify-center">
-                    <Zap size={16} className="text-white" />
-                  </div>
+                  <img
+                    src="/logo.png"
+                    alt="AI CRM"
+                    className="w-8 h-8 object-contain"
+                  />
                   <span className="font-semibold text-gray-900 dark:text-white">TaskFlow AI</span>
                 </Link>
                 <button
