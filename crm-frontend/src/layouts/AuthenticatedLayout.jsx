@@ -520,13 +520,13 @@ const AuthenticatedLayout = () => {
           }}
           className="border-b px-3 sm:px-4 md:px-6 py-2.5 sm:py-3 shrink-0"
         >
-          <div className="flex items-center justify-between gap-2 min-h-[44px] sm:h-10 w-full">
-            {/* Left Section - Mobile Only */}
-            <div className="flex items-center gap-2 lg:hidden flex-shrink-0">
-              {/* Mobile Menu Toggle */}
+          <div className="flex items-center justify-between w-full min-h-[44px] sm:h-10">
+            {/* Left Section - Mobile/Tablet: Hamburger + Title | Desktop: Title */}
+            <div className="flex items-center gap-2 flex-1 lg:flex-initial">
+              {/* Mobile Menu Toggle - Mobile Only */}
               <button
                 onClick={() => setShowMobileDrawer(!showMobileDrawer)}
-                className="p-2 -ml-2 rounded-lg transition-colors touch-target"
+                className="p-2 -ml-2 rounded-lg transition-colors touch-target lg:hidden"
                 style={{
                   color: currentTheme.colors.textSecondary,
                 }}
@@ -542,8 +542,8 @@ const AuthenticatedLayout = () => {
                 <FiMenu size={20} className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
 
-              {/* Page Title - Mobile Only */}
-              <div className="min-w-0 px-2 flex-1">
+              {/* Page Title - Mobile and Desktop */}
+              <div className="min-w-0 px-2">
                 <h1
                   style={{ color: currentTheme.colors.text }}
                   className="text-sm sm:text-base font-semibold truncate"
@@ -553,7 +553,7 @@ const AuthenticatedLayout = () => {
               </div>
             </div>
 
-            {/* Spacer - Desktop Only */}
+            {/* Spacer - Desktop Only: Push right actions to far right */}
             <div className="hidden lg:flex-1" />
 
             {/* Right Actions - Always Visible */}
