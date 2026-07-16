@@ -5,7 +5,8 @@
 # ───────────────────────────────────────────────────────────────────────────
 # Stage 1: Build with dependency caching
 # ───────────────────────────────────────────────────────────────────────────
-FROM maven:3.9-eclipse-temurin-21-alpine AS build
+# Using public.ecr.aws registry as fallback for better Railway connectivity
+FROM public.ecr.aws/docker/library/maven:3.9-eclipse-temurin-21-alpine AS build
 
 WORKDIR /app
 
@@ -25,7 +26,8 @@ RUN mvn clean package -DskipTests -q
 # ───────────────────────────────────────────────────────────────────────────
 # Stage 2: Runtime
 # ───────────────────────────────────────────────────────────────────────────
-FROM eclipse-temurin:21-jre-alpine
+# Using public.ecr.aws registry for better Railway connectivity
+FROM public.ecr.aws/docker/library/eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
 
