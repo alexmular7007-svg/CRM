@@ -27,10 +27,18 @@ export const useAuth = () => {
       // Check if there's a pending invitation - read from current window location
       const currentParams = new URLSearchParams(window.location.search)
       const invitationToken = currentParams.get('invitationToken')
+      console.log('🔍 DEBUG loginMutation.onSuccess:')
+      console.log('  window.location.search:', window.location.search)
+      console.log('  currentParams:', Object.fromEntries(currentParams))
+      console.log('  invitationToken:', invitationToken)
+      console.log('  data.token exists:', !!data.token)
+      
       if (invitationToken && data.token) {
+        console.log('✅ Calling acceptInvitationAfterLogin with token:', invitationToken.substring(0, 20) + '...')
         // Auto-accept the invitation after login
         acceptInvitationAfterLogin(invitationToken, data.token)
       } else {
+        console.log('❌ Skipping invitation acceptance - invitationToken:', !!invitationToken, 'data.token:', !!data.token)
         navigate('/dashboard')
       }
     },
@@ -51,10 +59,17 @@ export const useAuth = () => {
       // Check if there's a pending invitation - read from current window location
       const currentParams = new URLSearchParams(window.location.search)
       const invitationToken = currentParams.get('invitationToken')
+      console.log('🔍 DEBUG registerMutation.onSuccess:')
+      console.log('  window.location.search:', window.location.search)
+      console.log('  invitationToken:', invitationToken)
+      console.log('  data.token exists:', !!data.token)
+      
       if (invitationToken && data.token) {
+        console.log('✅ Calling acceptInvitationAfterLogin with token:', invitationToken.substring(0, 20) + '...')
         // Auto-accept the invitation after registration
         acceptInvitationAfterLogin(invitationToken, data.token)
       } else {
+        console.log('❌ Skipping invitation acceptance - invitationToken:', !!invitationToken, 'data.token:', !!data.token)
         navigate('/dashboard')
       }
     },
@@ -67,36 +82,48 @@ export const useAuth = () => {
   const acceptInvitationAfterLogin = async (invitationToken, jwtToken) => {
     try {
       const apiBase = `${import.meta.env.VITE_API_URL || 'http://localhost:8081'}/api`
-      const response = await fetch(
-        `${apiBase}/workspaces/invitations/accept/${invitationToken}`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${jwtToken}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      )
+      const endpoint = `${apiBase}/workspaces/invitations/accept/${invitationToken}`
+      
+      console.log('🚀 acceptInvitationAfterLogin starting...')
+      console.log('  endpoint:', endpoint)
+      console.log('  token:', jwtToken.substring(0, 30) + '...')
+      
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${jwtToken}`,
+          'Content-Type': 'application/json',
+        },
+      })
 
+      console.log('📡 API Response status:', response.status)
+      
       if (!response.ok) {
         const body = await response.json().catch(() => ({}))
+        console.error('❌ API Error response:', body)
         throw new Error(body?.message || `HTTP ${response.status}`)
       }
 
       const body = await response.json()
+      console.log('✅ API Success response:', body)
+      
       const workspaceData = body?.data?.workspace ?? body?.workspace
 
       toast.success('Invitation accepted!')
       
       // Invalidate workspace cache to ensure new workspace appears
       if (window.__queryClient) {
+        console.log('💾 Invalidating workspace cache...')
         window.__queryClient.invalidateQueries({ queryKey: ['workspaces'] })
+      } else {
+        console.warn('⚠️ No __queryClient available for cache invalidation')
       }
 
       // Redirect to workspaces list (will include newly joined workspace)
+      console.log('🔄 Navigating to /workspaces...')
       navigate('/workspaces', { replace: true })
     } catch (err) {
-      console.error('Failed to auto-accept invitation:', err)
+      console.error('❌ Failed to auto-accept invitation:', err)
       toast.error('Invitation accepted but failed to navigate. Redirecting to dashboard...')
       navigate('/dashboard', { replace: true })
     }
