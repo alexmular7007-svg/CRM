@@ -28,6 +28,8 @@ const TaskDetailsModal = ({ task, onClose, projectId, workspaceId }) => {
     queryKey: ['task', task.id],
     queryFn: () => taskService.getById(task.id),
     initialData: task,
+    retry: false,
+    enabled: !!task.id,
   })
 
   // Delete task mutation
@@ -35,6 +37,8 @@ const TaskDetailsModal = ({ task, onClose, projectId, workspaceId }) => {
     mutationFn: () => taskService.delete(task.id, workspaceId),
     onSuccess: () => {
       queryClient.invalidateQueries(['tasks', projectId])
+      // Remove the specific task from cache to prevent 404 requests
+      queryClient.removeQueries(['task', task.id])
       toast.success('Task deleted successfully')
       onClose()
     },
