@@ -110,6 +110,7 @@ const AuthenticatedSidebar = () => {
           backgroundColor: currentTheme.colors.sidebar,
           borderColor: currentTheme.colors.border,
           zIndex: isPeeking ? 40 : 30,
+          boxSizing: 'border-box',
         }}
         className="hidden lg:flex flex-col border-r h-screen overflow-hidden"
       >

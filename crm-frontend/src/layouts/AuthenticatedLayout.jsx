@@ -517,6 +517,7 @@ const AuthenticatedLayout = () => {
           style={{
             backgroundColor: currentTheme.colors.navbar,
             borderColor: currentTheme.colors.border,
+            boxSizing: 'border-box',
           }}
           className="border-b px-3 sm:px-4 md:px-6 py-2.5 sm:py-3 shrink-0"
         >
