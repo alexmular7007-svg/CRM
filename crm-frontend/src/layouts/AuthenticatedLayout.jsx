@@ -1,7 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
-import { Outlet, useLocation } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate, Link } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
-import { FiBell, FiLogOut, FiUser, FiSettings, FiChevronDown, FiMoon, FiSun, FiMenu } from 'react-icons/fi'
+import { FiBell, FiLogOut, FiUser, FiSettings, FiChevronDown, FiMoon, FiSun, FiMenu, FiX } from 'react-icons/fi'
+import {
+  LayoutDashboard,
+  FolderOpen,
+  Users,
+  MessageSquare,
+  BarChart3,
+  Zap,
+} from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../hooks/useAuth'
@@ -14,6 +22,16 @@ import UserAvatar from '../components/common/UserAvatar'
 import AuthenticatedSidebar from './AuthenticatedSidebar'
 import FloatingCopilot from '../components/landing/FloatingCopilot'
 import { useThemeContext } from '../contexts/ThemeContext'
+
+// Navigation items for mobile drawer
+const MOBILE_NAV_ITEMS = [
+  { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { path: '/workspaces', icon: FolderOpen, label: 'Workspaces' },
+  { path: '/crm', icon: Users, label: 'CRM Pipeline' },
+  { path: '/chat', icon: MessageSquare, label: 'Chat' },
+  { path: '/analytics', icon: BarChart3, label: 'Analytics' },
+  { path: '/ai-insights', icon: Zap, label: 'AI Insights' },
+]
 
 /* ─── User dropdown menu ───────────────────────────────────────────────── */
 const UserMenu = ({ user, logout, unreadCount, onNotifications }) => {
@@ -209,6 +227,216 @@ const UserMenu = ({ user, logout, unreadCount, onNotifications }) => {
   )
 }
 
+/* ─── Mobile Navigation Drawer ─────────────────────────────────────────── */
+const MobileNavigationDrawer = ({ isOpen, onClose, user, logout, unreadCount, onNotifications, currentTheme }) => {
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  const handleNavigation = (path) => {
+    navigate(path)
+    onClose()
+  }
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Overlay */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-black z-40 md:hidden"
+            style={{ opacity: 0.5 }}
+            aria-hidden="true"
+          />
+
+          {/* Drawer */}
+          <motion.div
+            initial={{ x: '-100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '-100%' }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            style={{
+              backgroundColor: currentTheme.colors.sidebar,
+              borderColor: currentTheme.colors.border,
+            }}
+            className="fixed left-0 top-0 bottom-0 w-64 border-r h-screen overflow-y-auto flex flex-col z-50 md:hidden"
+          >
+            {/* Drawer Header */}
+            <div
+              className="p-4 border-b flex items-center justify-between flex-shrink-0"
+              style={{ borderColor: currentTheme.colors.border }}
+            >
+              <Link to="/" onClick={onClose} className="flex items-center gap-2 group">
+                <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+                  <Zap size={16} className="text-white" />
+                </div>
+                <span
+                  style={{ color: currentTheme.colors.text }}
+                  className="font-bold text-base"
+                >
+                  TaskFlow AI
+                </span>
+              </Link>
+              <button
+                onClick={onClose}
+                className="p-2 rounded-lg transition-colors touch-target"
+                style={{ backgroundColor: currentTheme.colors.surface }}
+                aria-label="Close navigation menu"
+              >
+                <FiX size={20} style={{ color: currentTheme.colors.text }} />
+              </button>
+            </div>
+
+            {/* Navigation Links */}
+            <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+              {MOBILE_NAV_ITEMS.map(({ path, icon: Icon, label }) => {
+                const isActive = location.pathname.startsWith(path)
+                return (
+                  <button
+                    key={path}
+                    onClick={() => handleNavigation(path)}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors relative touch-target"
+                    style={{
+                      backgroundColor: isActive ? currentTheme.colors.surface : 'transparent',
+                      color: isActive ? currentTheme.colors.primary : currentTheme.colors.textSecondary,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = currentTheme.colors.surfaceSecondary
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = isActive ? currentTheme.colors.surface : 'transparent'
+                    }}
+                  >
+                    <Icon size={18} className="flex-shrink-0" />
+                    <span className="text-sm font-medium flex-1 text-left">{label}</span>
+                    {isActive && (
+                      <div
+                        className="absolute left-0 top-0 bottom-0 w-1 rounded-r-lg"
+                        style={{ backgroundColor: currentTheme.colors.primary }}
+                      />
+                    )}
+                  </button>
+                )
+              })}
+            </nav>
+
+            {/* Divider */}
+            <div
+              style={{ backgroundColor: currentTheme.colors.border }}
+              className="h-px mx-3"
+            />
+
+            {/* User Section */}
+            <div className="p-3 space-y-2 flex-shrink-0">
+              {/* Profile */}
+              <button
+                onClick={() => handleNavigation('/profile')}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors touch-target"
+                style={{
+                  backgroundColor: location.pathname === '/profile' ? currentTheme.colors.surface : 'transparent',
+                  color: location.pathname === '/profile' ? currentTheme.colors.primary : currentTheme.colors.textSecondary,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = currentTheme.colors.surfaceSecondary
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = location.pathname === '/profile' ? currentTheme.colors.surface : 'transparent'
+                }}
+              >
+                <FiUser size={18} className="flex-shrink-0" />
+                <span className="text-sm font-medium">Profile</span>
+              </button>
+
+              {/* Settings */}
+              <button
+                onClick={() => handleNavigation('/settings')}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors touch-target"
+                style={{
+                  backgroundColor: location.pathname === '/settings' ? currentTheme.colors.surface : 'transparent',
+                  color: location.pathname === '/settings' ? currentTheme.colors.primary : currentTheme.colors.textSecondary,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = currentTheme.colors.surfaceSecondary
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = location.pathname === '/settings' ? currentTheme.colors.surface : 'transparent'
+                }}
+              >
+                <FiSettings size={18} className="flex-shrink-0" />
+                <span className="text-sm font-medium">Settings</span>
+              </button>
+
+              {/* Notifications */}
+              <button
+                onClick={() => {
+                  onNotifications()
+                  onClose()
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors touch-target"
+                style={{
+                  backgroundColor: 'transparent',
+                  color: currentTheme.colors.textSecondary,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = currentTheme.colors.surfaceSecondary
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent'
+                }}
+              >
+                <div className="relative">
+                  <FiBell size={18} className="flex-shrink-0" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </div>
+                <span className="text-sm font-medium">Notifications</span>
+              </button>
+
+              {/* Logout */}
+              <button
+                onClick={() => {
+                  onClose()
+                  logout()
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors touch-target"
+                style={{
+                  color: currentTheme.colors.danger,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = currentTheme.colors.surfaceSecondary
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent'
+                }}
+              >
+                <FiLogOut size={18} className="flex-shrink-0" />
+                <span className="text-sm font-medium">Logout</span>
+              </button>
+            </div>
+
+            {/* Footer */}
+            <div
+              className="border-t p-3 text-center text-xs flex-shrink-0"
+              style={{
+                borderColor: currentTheme.colors.border,
+                color: currentTheme.colors.textMuted,
+              }}
+            >
+              TaskFlow AI v1.0.0
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  )
+}
+
 /* ─── Main Authenticated Layout ─────────────────────────────────────────── */
 const AuthenticatedLayout = () => {
   const { user, logout, isAuthenticated } = useAuth()
@@ -217,7 +445,17 @@ const AuthenticatedLayout = () => {
   const { unreadCount } = useSelector((state) => state.notifications)
   const { currentWorkspace } = useSelector((state) => state.workspace)
   const { currentTheme, theme, switchTheme } = useThemeContext()
-  const [showMobileMenu, setShowMobileMenu] = useState(false)
+  const [showMobileDrawer, setShowMobileDrawer] = useState(false)
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024)
+
+  // Track screen size
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 1024)
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   // Fetch workspaces
   const { data: workspacesData } = useQuery({
@@ -247,10 +485,17 @@ const AuthenticatedLayout = () => {
     dispatch(setCopilotContext({ page: location.pathname, title: document.title }))
   }, [dispatch, location.pathname])
 
-  // Close mobile menu on route change
+  // Close mobile drawer on route change
   useEffect(() => {
-    setShowMobileMenu(false)
+    setShowMobileDrawer(false)
   }, [location.pathname])
+
+  // Close mobile drawer when switching from mobile to desktop
+  useEffect(() => {
+    if (!isMobile) {
+      setShowMobileDrawer(false)
+    }
+  }, [isMobile])
 
   return (
     <div
@@ -260,8 +505,8 @@ const AuthenticatedLayout = () => {
       }}
       className="flex h-screen overflow-hidden flex-col lg:flex-row"
     >
-      {/* Sidebar - Desktop */}
-      <div className="hidden lg:block">
+      {/* Sidebar - Desktop Only (lg and above) */}
+      <div className="hidden lg:flex lg:flex-col">
         <AuthenticatedSidebar />
       </div>
 
@@ -273,13 +518,13 @@ const AuthenticatedLayout = () => {
             backgroundColor: currentTheme.colors.navbar,
             borderColor: currentTheme.colors.border,
           }}
-          className="border-b px-4 md:px-6 py-3 shrink-0"
+          className="border-b px-3 sm:px-4 md:px-6 py-2.5 sm:py-3 shrink-0"
         >
-          <div className="flex items-center justify-between gap-2">
-            {/* Mobile Menu Toggle */}
+          <div className="flex items-center justify-between gap-2 min-h-[44px] sm:h-10">
+            {/* Mobile Menu Toggle - Left Side */}
             <button
-              onClick={() => setShowMobileMenu(!showMobileMenu)}
-              className="lg:hidden p-2 rounded-lg transition-colors"
+              onClick={() => setShowMobileDrawer(!showMobileDrawer)}
+              className="lg:hidden flex-shrink-0 p-2 -ml-2 rounded-lg transition-colors touch-target"
               style={{
                 color: currentTheme.colors.textSecondary,
               }}
@@ -289,31 +534,36 @@ const AuthenticatedLayout = () => {
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = 'transparent'
               }}
-              aria-label="Toggle navigation"
+              aria-label="Toggle navigation menu"
+              title="Open navigation menu"
             >
-              <FiMenu size={20} />
+              <FiMenu size={20} className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
 
-            {/* Spacer */}
-            <div className="flex-1 lg:flex-none" />
+            {/* Page Title - Mobile Only */}
+            <div className="flex-1 lg:hidden min-w-0 px-2">
+              <h1
+                style={{ color: currentTheme.colors.text }}
+                className="text-sm sm:text-base font-semibold truncate"
+              >
+                {document.title.split(' - ')[0] || 'Dashboard'}
+              </h1>
+            </div>
 
-            {/* Right Actions */}
-            <div className="flex items-center justify-end gap-2">
-              {/* Divider */}
-              <div
-                style={{ backgroundColor: currentTheme.colors.border }}
-                className="h-6 w-px"
-              />
+            {/* Spacer for mobile */}
+            <div className="hidden lg:flex-1" />
 
+            {/* Right Actions - Responsive */}
+            <div className="flex items-center justify-end gap-0.5 sm:gap-1 flex-shrink-0">
               {/* Theme Toggle */}
               <button
                 onClick={() => {
                   const newTheme = theme === 'dark' ? 'light' : 'dark'
                   switchTheme(newTheme)
                 }}
-                aria-label="Toggle dark/light mode"
+                aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
                 title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                className="relative rounded-lg p-2 transition-colors"
+                className="p-2 rounded-lg transition-colors touch-target"
                 style={{
                   color: currentTheme.colors.textSecondary,
                 }}
@@ -331,17 +581,17 @@ const AuthenticatedLayout = () => {
                 )}
               </button>
 
-              {/* Divider */}
+              {/* Divider - Hidden on very small screens */}
               <div
                 style={{ backgroundColor: currentTheme.colors.border }}
-                className="h-6 w-px"
+                className="hidden sm:block h-5 sm:h-6 w-px"
               />
 
               {/* Notifications */}
               <button
                 onClick={() => dispatch(togglePanel())}
                 aria-label="Notifications"
-                className="relative rounded-lg p-2 transition-colors"
+                className="relative p-2 rounded-lg transition-colors touch-target"
                 style={{
                   color: currentTheme.colors.textSecondary,
                 }}
@@ -360,10 +610,10 @@ const AuthenticatedLayout = () => {
                 )}
               </button>
 
-              {/* Divider */}
+              {/* Divider - Hidden on very small screens */}
               <div
                 style={{ backgroundColor: currentTheme.colors.border }}
-                className="h-6 w-px"
+                className="hidden sm:block h-5 sm:h-6 w-px"
               />
 
               {/* User Menu */}
@@ -383,29 +633,22 @@ const AuthenticatedLayout = () => {
             backgroundColor: currentTheme.colors.background,
             color: currentTheme.colors.text,
           }}
-          className="flex-1 overflow-y-auto p-4 md:p-6 w-full"
+          className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 w-full"
         >
           <Outlet />
         </main>
       </div>
 
-      {/* Mobile Sidebar Drawer */}
-      <AnimatePresence>
-        {showMobileMenu && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowMobileMenu(false)}
-              className="lg:hidden fixed inset-0 bg-black/50 z-40"
-            />
-            <div className="lg:hidden">
-              <AuthenticatedSidebar />
-            </div>
-          </>
-        )}
-      </AnimatePresence>
+      {/* Mobile Navigation Drawer */}
+      <MobileNavigationDrawer
+        isOpen={showMobileDrawer}
+        onClose={() => setShowMobileDrawer(false)}
+        user={user}
+        logout={logout}
+        unreadCount={unreadCount}
+        onNotifications={() => dispatch(togglePanel())}
+        currentTheme={currentTheme}
+      />
 
       {/* Floating Copilot */}
       {/* <FloatingCopilot /> */}

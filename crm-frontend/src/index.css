@@ -188,6 +188,11 @@ tbody td {
 }
 
 @layer components {
+  /* ── Touch Targets (Mobile) ──────────────────────────────────────── */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
   /* ── Buttons ─────────────────────────────────────────────────────── */
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2
