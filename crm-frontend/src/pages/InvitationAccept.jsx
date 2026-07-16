@@ -66,12 +66,8 @@ const InvitationAccept = () => {
 
       toast.success('Invitation accepted! Joining workspace...')
 
-      // Redirect to the workspace dashboard
-      if (workspaceData?.id) {
-        navigate(`/workspaces/${workspaceData.id}`, { replace: true })
-      } else {
-        navigate('/dashboard', { replace: true })
-      }
+      // Redirect to workspaces list (will include newly joined workspace)
+      navigate('/workspaces', { replace: true })
     } catch (err) {
       console.error('Failed to accept invitation:', err)
       toast.error(err.message || 'Failed to accept invitation. Please try again.')

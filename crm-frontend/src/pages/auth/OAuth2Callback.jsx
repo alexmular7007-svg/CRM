@@ -121,11 +121,11 @@ const OAuth2Callback = () => {
         console.log('Cache invalidation skipped:', e)
       }
 
-      // Redirect to the workspace dashboard using workspace ID from response
+      // Redirect to the workspaces list (will include newly joined workspace)
       if (workspaceData?.id) {
-        navigate(`/workspaces/${workspaceData.id}`, { replace: true })
+        navigate(`/workspaces`, { replace: true })
       } else {
-        navigate('/dashboard', { replace: true })
+        navigate('/workspaces', { replace: true })
       }
     } catch (err) {
       console.error('Failed to auto-accept invitation:', err)

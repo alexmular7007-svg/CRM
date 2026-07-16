@@ -91,12 +91,8 @@ export const useAuth = () => {
         window.__queryClient.invalidateQueries({ queryKey: ['workspaces'] })
       }
 
-      // Redirect to workspace dashboard
-      if (workspaceData?.id) {
-        navigate(`/workspaces/${workspaceData.id}`, { replace: true })
-      } else {
-        navigate('/dashboard', { replace: true })
-      }
+      // Redirect to workspaces list (will include newly joined workspace)
+      navigate('/workspaces', { replace: true })
     } catch (err) {
       console.error('Failed to auto-accept invitation:', err)
       toast.error('Invitation accepted but failed to navigate. Redirecting to dashboard...')
