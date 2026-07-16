@@ -15,8 +15,10 @@ import com.arjun.crm.repository.TaskRepository;
 import com.arjun.crm.repository.UserRepository;
 import com.arjun.crm.service.TaskActivityService;
 import com.arjun.crm.service.TaskCommentService;
+import com.arjun.crm.event.CommentAddedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
@@ -40,6 +42,7 @@ public class TaskCommentServiceImpl implements TaskCommentService {
     private final UserRepository userRepository;
     private final MentionRepository mentionRepository;
     private final TaskActivityService taskActivityService;
+    private final ApplicationEventPublisher eventPublisher;
 
     private static final Pattern MENTION_PATTERN = Pattern.compile("@([a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})");
 
@@ -75,6 +78,9 @@ public class TaskCommentServiceImpl implements TaskCommentService {
 
         // Log activity
         taskActivityService.logCommentCreation(task, currentUser);
+
+        // Publish event to trigger cache eviction and notifications
+        eventPublisher.publishEvent(new CommentAddedEvent(this, savedComment, task, currentUser));
 
         log.info("Comment added successfully to task: {}", taskId);
         return TaskCommentResponse.fromEntity(savedComment);

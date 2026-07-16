@@ -18,9 +18,11 @@ import com.arjun.crm.repository.UserRepository;
 import com.arjun.crm.repository.BlockedUserRepository;
 import com.arjun.crm.service.ChatMessageService;
 import com.arjun.crm.service.NotificationService;
+import com.arjun.crm.service.CacheEvictionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -51,6 +53,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     private final NotificationService notificationService;
     private final SimpMessagingTemplate messagingTemplate;
     private final BlockedUserRepository blockedUserRepository;
+    private final CacheEvictionService cacheEvictionService;
 
     @Value("${file.upload.dir:uploads/task-attachments}")
     private String uploadDir;
@@ -68,6 +71,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "dashboard", allEntries = true)
     public ChatMessageResponse sendMessage(ChatMessageRequest request) {
         User currentUser = getAuthenticatedUser();
         log.info("Sending message to room {} by user {}", request.getChatRoomId(), currentUser.getEmail());
