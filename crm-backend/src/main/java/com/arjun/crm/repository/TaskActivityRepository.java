@@ -85,4 +85,11 @@ public interface TaskActivityRepository extends JpaRepository<TaskActivity, Long
     @org.springframework.data.jpa.repository.Modifying
     @Query("DELETE FROM TaskActivity ta WHERE ta.task.workspace.id = :workspaceId")
     int deleteByWorkspaceId(@Param("workspaceId") Long workspaceId);
+
+    /**
+     * Delete all activities for a specific task (used during task deletion)
+     */
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM TaskActivity ta WHERE ta.task.id = :taskId")
+    int deleteByTaskId(@Param("taskId") Long taskId);
 }

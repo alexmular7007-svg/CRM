@@ -10,6 +10,9 @@ import com.arjun.crm.dto.response.UserSummaryResponse;
 import com.arjun.crm.entity.Project;
 import com.arjun.crm.entity.Task;
 import com.arjun.crm.entity.TaskComment;
+import com.arjun.crm.entity.TaskActivity;
+import com.arjun.crm.entity.TaskAttachment;
+import com.arjun.crm.entity.TaskWatcher;
 import com.arjun.crm.entity.User;
 import com.arjun.crm.entity.Workspace;
 import com.arjun.crm.enums.TaskPriority;
@@ -18,6 +21,9 @@ import com.arjun.crm.exception.AccessDeniedException;
 import com.arjun.crm.exception.ResourceNotFoundException;
 import com.arjun.crm.repository.ProjectRepository;
 import com.arjun.crm.repository.TaskCommentRepository;
+import com.arjun.crm.repository.TaskActivityRepository;
+import com.arjun.crm.repository.TaskAttachmentRepository;
+import com.arjun.crm.repository.TaskWatcherRepository;
 import com.arjun.crm.repository.TaskRepository;
 import com.arjun.crm.repository.UserRepository;
 import com.arjun.crm.repository.WorkspaceMemberRepository;
@@ -28,6 +34,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
@@ -51,11 +58,15 @@ public class TaskServiceImpl implements TaskService {
 
     private final TaskRepository taskRepository;
     private final TaskCommentRepository taskCommentRepository;
+    private final TaskActivityRepository taskActivityRepository;
+    private final TaskAttachmentRepository taskAttachmentRepository;
+    private final TaskWatcherRepository taskWatcherRepository;
     private final UserRepository userRepository;
     private final ProjectRepository projectRepository;
     private final WorkspaceMemberRepository workspaceMemberRepository;
     private final WorkspaceRepository workspaceRepository;
     private final TaskActivityService taskActivityService;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Override
     @CacheEvict(value = {"task", "dashboard"}, allEntries = true)
@@ -301,6 +312,8 @@ public class TaskServiceImpl implements TaskService {
         
         Task task = findTaskOrThrow(id);
         String oldStatus = task.getStatus().name();
+        Long projectId = task.getProject() != null ? task.getProject().getId() : null;
+        Long workspaceId = task.getWorkspace().getId();
         
         task.setStatus(request.getStatus());
 
@@ -315,17 +328,32 @@ public class TaskServiceImpl implements TaskService {
         // Log status change activity
         taskActivityService.logStatusChange(updatedTask, currentUser, oldStatus, request.getStatus().name());
         
+        // Publish WebSocket event to project subscribers (for real-time dashboard and Kanban sync)
+        if (projectId != null) {
+            try {
+                TaskResponse response = mapToResponse(updatedTask);
+                messagingTemplate.convertAndSend(
+                    "/topic/project/" + projectId + "/tasks",
+                    response
+                );
+                log.debug("Published task status update to project {}: task {} -> {}", projectId, id, request.getStatus());
+            } catch (Exception e) {
+                log.warn("Failed to publish task update via WebSocket: {}", e.getMessage());
+            }
+        }
+        
         return mapToResponse(updatedTask);
     }
 
     @Override
     @CacheEvict(value = {"task", "dashboard"}, allEntries = true)
+    @Transactional
     public void deleteTask(Long id, Long workspaceId) {
         log.info("Deleting task id: {} from workspace: {}", id, workspaceId);
         Task task = findTaskOrThrow(id);
         
-        // Validate task belongs to workspace
-        if (task.getProject() == null || !task.getProject().getWorkspace().getId().equals(workspaceId)) {
+        // Validate task belongs to workspace (task.workspace is required, not task.project)
+        if (task.getWorkspace() == null || !task.getWorkspace().getId().equals(workspaceId)) {
             throw new AccessDeniedException("Task does not belong to this workspace");
         }
         
@@ -338,9 +366,31 @@ public class TaskServiceImpl implements TaskService {
             throw new AccessDeniedException("You don't have permission to delete this task");
         }
         
+        log.info("Cascading delete for task id: {}", id);
+        
+        // Explicit cascade delete for all related entities
+        // Comments (cascade will handle mentions)
         taskCommentRepository.deleteByTaskId(id);
+        
+        // Activities
+        taskActivityRepository.deleteByTaskId(id);
+        
+        // Attachments (will need cleanup, may trigger file deletion)
+        List<TaskAttachment> attachments = taskAttachmentRepository.findByTaskIdOrderByUploadedAtDesc(id);
+        for (TaskAttachment attachment : attachments) {
+            taskAttachmentRepository.delete(attachment);
+        }
+        
+        // Watchers
+        List<TaskWatcher> watchers = taskWatcherRepository.findByTaskIdOrderByWatchedAtDesc(id);
+        for (TaskWatcher watcher : watchers) {
+            taskWatcherRepository.delete(watcher);
+        }
+        
+        // Final task deletion (cascade=ALL on Task entity will clean up any remaining orphans)
         taskRepository.delete(task);
-        log.info("Task id: {} deleted successfully", id);
+        
+        log.info("Task id: {} and all related data deleted successfully", id);
     }
 
     @Override

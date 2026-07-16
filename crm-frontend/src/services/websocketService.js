@@ -35,10 +35,12 @@ class WebSocketService {
     this.client = new Client({
       webSocketFactory: () => {
         // ⚠️ SockJS expects HTTP URLs, not WS URLs
-        // It handles protocol conversion internally
+        // It handles protocol conversion internally based on browser capabilities
+        // For development: http://localhost:8081
+        // For production: https://api.railway.app
         const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8081'
         const sockJsUrl = `${baseUrl}/ws`
-        console.log('SockJS URL:', sockJsUrl)
+        console.log('🔗 WebSocket connecting to:', sockJsUrl)
         return new SockJS(sockJsUrl)
       },
 
@@ -55,7 +57,7 @@ class WebSocketService {
       heartbeatOutgoing: 4000,
 
       onConnect: () => {
-        console.log('WebSocket connected successfully')
+        console.log('✅ WebSocket connected successfully')
         this.connected = true
         this.connecting = false
         this.reconnectAttempts = 0
@@ -69,7 +71,7 @@ class WebSocketService {
       },
 
       onDisconnect: () => {
-        console.log('WebSocket disconnected')
+        console.log('❌ WebSocket disconnected')
         this.connected = false
         if (this.manualDisconnect) this.connecting = false
         this.stopHeartbeat()
@@ -78,7 +80,7 @@ class WebSocketService {
       },
 
       onStompError: (frame) => {
-        console.error('STOMP error:', frame)
+        console.error('🚨 STOMP error frame:', frame)
         this.connected = false
         if (this.manualDisconnect) this.connecting = false
         this.stopHeartbeat()
@@ -86,13 +88,14 @@ class WebSocketService {
       },
 
       onWebSocketError: (error) => {
-        console.error('WebSocket error:', error)
+        console.error('🚨 WebSocket error:', error)
         this.connected = false
         if (this.manualDisconnect) this.connecting = false
         this.stopHeartbeat()
         this.reconnectAttempts++
+        console.warn(`Reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts}`)
         if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-          console.error('Maximum websocket reconnect attempts reached')
+          console.error('❌ Maximum websocket reconnect attempts reached')
           this.manualDisconnect = true
           if (this.client) this.client.deactivate()
           store.dispatch(setConnected(false))
@@ -100,7 +103,7 @@ class WebSocketService {
       },
 
       onWebSocketClose: () => {
-        console.warn('WebSocket connection closed')
+        console.warn('⚠️ WebSocket connection closed')
         this.connected = false
         if (this.manualDisconnect) this.connecting = false
         this.stopHeartbeat()

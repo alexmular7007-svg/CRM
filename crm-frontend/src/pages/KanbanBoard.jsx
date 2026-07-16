@@ -90,12 +90,13 @@ const KanbanBoard = () => {
     },
   })
 
-  // WebSocket real-time updates
+  // WebSocket real-time updates and publish task changes
   useEffect(() => {
     if (!projectId || !websocketService.connected) return
 
     const handleTaskUpdate = (message) => {
       queryClient.invalidateQueries(['tasks', projectId])
+      queryClient.invalidateQueries(['dashboard', currentWorkspace?.id])
       toast.success('Task updated by another user')
     }
 
@@ -112,7 +113,7 @@ const KanbanBoard = () => {
     } catch (error) {
       console.warn('WebSocket subscription failed:', error)
     }
-  }, [projectId, queryClient])
+  }, [projectId, queryClient, currentWorkspace?.id])
 
   const handleDragStart = (event) => {
     const task = tasks.find((t) => t.id === event.active.id)

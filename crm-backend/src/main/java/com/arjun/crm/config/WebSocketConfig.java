@@ -52,9 +52,14 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     /**
      * Reads WebSocket allowed origins from environment variable.
      * Comma-separated list of origins that are allowed to connect.
-     * Default: localhost development origins
+     * Default: localhost development origins + production URLs
+     * 
+     * CRITICAL: Must include both HTTP and HTTPS variants, and explicit domains.
+     * Examples:
+     * - http://localhost:3000,http://localhost:5173,https://taskflow-ai-ochre.vercel.app
+     * - https://app.example.com,wss://app.example.com (if using WSS directly)
      */
-    @Value("${websocket.allowed-origins:http://localhost:3000,http://localhost:3001,http://localhost:5173,http://localhost:8081}")
+    @Value("${websocket.allowed-origins:http://localhost:3000,http://localhost:3001,http://localhost:5173,http://localhost:8081,https://taskflow-ai-ochre.vercel.app}")
     private String allowedOriginsRaw;
 
     /**

@@ -55,9 +55,9 @@ public class DashboardServiceImpl implements DashboardService {
                 .build();
 
         // Project Statistics - WORKSPACE SCOPED
-        Long totalProjects = projectRepository.count();  // TODO: Add workspace filter
-        Long activeProjects = projectRepository.countByStatus(ProjectStatus.ACTIVE);  // TODO: Add workspace filter
-        Long completedProjects = projectRepository.countByStatus(ProjectStatus.COMPLETED);  // TODO: Add workspace filter
+        Long totalProjects = projectRepository.countByWorkspaceId(workspaceId);
+        Long activeProjects = projectRepository.countByWorkspaceIdAndStatus(workspaceId, ProjectStatus.ACTIVE);
+        Long completedProjects = projectRepository.countByWorkspaceIdAndStatus(workspaceId, ProjectStatus.COMPLETED);
         Double averageProgress = 0.0;
 
         DashboardOverviewResponse.ProjectStatistics projectStats = DashboardOverviewResponse.ProjectStatistics.builder()

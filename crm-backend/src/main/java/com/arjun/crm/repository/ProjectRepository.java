@@ -33,6 +33,18 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
      * Count projects by status
      */
     Long countByStatus(ProjectStatus status);
+
+    /**
+     * Count projects by workspace (all statuses)
+     */
+    @Query("SELECT COUNT(p) FROM Project p WHERE p.workspace.id = :workspaceId")
+    Long countByWorkspaceId(@Param("workspaceId") Long workspaceId);
+
+    /**
+     * Count projects by workspace and status
+     */
+    @Query("SELECT COUNT(p) FROM Project p WHERE p.workspace.id = :workspaceId AND p.status = :status")
+    Long countByWorkspaceIdAndStatus(@Param("workspaceId") Long workspaceId, @Param("status") ProjectStatus status);
     
     /**
      * Count projects created in date range
