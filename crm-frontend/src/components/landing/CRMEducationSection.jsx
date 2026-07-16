@@ -116,7 +116,7 @@ const CRMEducationSection = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.6 }}
                 viewport={{ once: true }}
-                className="mt-12 grid grid-cols-3 gap-4"
+                className="mt-8 md:mt-12 grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4"
               >
                 <div className="bg-indigo-50 dark:bg-indigo-950/20 rounded-lg p-4 text-center">
                   <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 mb-1">$12.1M</div>

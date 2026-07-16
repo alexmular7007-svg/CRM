@@ -13,15 +13,15 @@ const HeroSection = () => {
   return (
     <section className="relative pt-16 pb-12 md:pt-24 md:pb-16 lg:pt-32 lg:pb-20 px-4 md:px-6 lg:px-8 overflow-hidden bg-white dark:bg-[#09090B] min-h-screen flex items-center">
       <div className="w-full max-w-7xl mx-auto">
-        {/* Single column on mobile, 2 columns on lg+ */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-8 lg:gap-16 xl:gap-20 items-center">
+        {/* Single column on mobile/sm, adjustable on md+, 2 columns on lg+ */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1fr_1.2fr] gap-6 md:gap-8 lg:gap-16 xl:gap-20 items-center">
 
           {/* LEFT COLUMN - Text Content */}
           <div className="w-full">
             {/* Main Headline - Responsive sizing */}
             <motion.h1
               {...fadeUp(0)}
-              className="text-4xl md:text-5xl lg:text-6xl xl:text-[3.5rem] font-black tracking-tight text-gray-950 dark:text-white leading-tight mb-6 md:mb-8"
+              className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-black tracking-tight text-gray-950 dark:text-white leading-tight mb-4 md:mb-6 lg:mb-8"
             >
               <span className="block">Manage Projects,</span>
               <span className="block">CRM, Team</span>
@@ -34,7 +34,7 @@ const HeroSection = () => {
             {/* Description - Responsive text */}
             <motion.p
               {...fadeUp(0.05)}
-              className="text-base md:text-lg text-gray-600 dark:text-gray-300 mb-8 md:mb-10 leading-relaxed max-w-2xl font-medium"
+              className="text-sm md:text-base lg:text-lg text-gray-600 dark:text-gray-300 mb-6 md:mb-8 lg:mb-10 leading-relaxed max-w-2xl font-medium"
             >
               TaskFlow AI helps teams plan projects, track leads, collaborate in real time, and gain AI-powered insights to deliver exceptional results.
             </motion.p>
@@ -62,7 +62,7 @@ const HeroSection = () => {
             </motion.div>
 
             {/* Statistics - 3 columns, responsive spacing */}
-            <motion.div {...fadeUp(0.15)} className="grid grid-cols-3 gap-4 md:gap-6 pt-8 md:pt-12 border-t border-gray-200 dark:border-gray-800">
+            <motion.div {...fadeUp(0.15)} className="grid grid-cols-3 gap-2 md:gap-4 lg:gap-6 pt-6 md:pt-8 lg:pt-12 border-t border-gray-200 dark:border-gray-800">
               <div>
                 <div className="text-2xl md:text-3xl font-black text-gray-950 dark:text-white mb-1 md:mb-2">50+</div>
                 <div className="text-xs md:text-sm font-semibold text-gray-500 dark:text-gray-400">Active Teams</div>
@@ -78,12 +78,12 @@ const HeroSection = () => {
             </motion.div>
           </div>
 
-          {/* RIGHT COLUMN - Dashboard Preview (hidden on mobile, visible on lg+) */}
+          {/* RIGHT COLUMN - Dashboard Preview (hidden on mobile/sm, visible on md+) */}
           <motion.div
             initial={{ opacity: 0, x: 40 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.3 }}
-            className="hidden lg:block relative w-full rounded-2xl border-2 border-gray-300 dark:border-gray-700 bg-gradient-to-br from-white dark:from-[#1A1A1D] via-gray-50 dark:via-[#13131A] to-gray-100 dark:to-[#09090B] shadow-2xl dark:shadow-lg overflow-hidden flex flex-col h-[600px] xl:h-[700px]"
+            className="hidden md:block relative w-full rounded-2xl border-2 border-gray-300 dark:border-gray-700 bg-gradient-to-br from-white dark:from-[#1A1A1D] via-gray-50 dark:via-[#13131A] to-gray-100 dark:to-[#09090B] shadow-2xl dark:shadow-lg overflow-hidden flex flex-col h-[500px] md:h-[550px] lg:h-[600px] xl:h-[700px]"
             style={{
               boxShadow: 'inset 0 1px 0 0 rgba(255, 255, 255, 0.5), 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05)'
             }}
@@ -95,7 +95,7 @@ const HeroSection = () => {
                 <div className="w-3 h-3 rounded-full bg-yellow-500 hover:bg-yellow-600 cursor-pointer transition" />
                 <div className="w-3 h-3 rounded-full bg-green-500 hover:bg-green-600 cursor-pointer transition" />
               </div>
-              <div className="ml-3 flex-1 flex justify-center text-xs text-gray-500 dark:text-gray-400 font-medium">
+              <div className="ml-3 flex-1 flex justify-center text-xs md:text-sm text-gray-500 dark:text-gray-400 font-medium">
                 localhost:3000/dashboard
               </div>
             </div>
@@ -230,7 +230,7 @@ const HeroSection = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6 }}
-              className="absolute bottom-4 left-4 right-4 lg:bottom-6 lg:left-56 lg:right-6 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl p-4 text-white shadow-2xl border border-indigo-500/30 max-w-xs"
+              className="absolute bottom-3 left-3 right-3 md:bottom-4 md:left-4 md:right-4 lg:bottom-6 lg:left-56 lg:right-6 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl p-3 md:p-4 text-white shadow-2xl border border-indigo-500/30 max-w-xs"
             >
               <div className="flex items-start gap-3">
                 <Sparkles size={18} className="mt-0.5 flex-shrink-0" />

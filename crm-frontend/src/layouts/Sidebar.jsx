@@ -33,12 +33,12 @@ const Sidebar = () => {
 
       {/* Sidebar */}
       <aside className={`
-        fixed lg:static left-0 top-0 h-full w-56 flex-shrink-0 flex flex-col
+        fixed lg:static left-0 top-0 h-screen lg:h-full w-56 flex-shrink-0 flex flex-col
         bg-white dark:bg-[#161B22]
         border-r border-gray-200 dark:border-[#30363D]
         transition-all duration-200 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        lg:translate-x-0 z-40 lg:z-0
+        z-40 lg:z-0
       `}>
         {/* Logo */}
         <div className="flex items-center gap-2 px-4 h-14 border-b border-gray-200 dark:border-[#30363D]">

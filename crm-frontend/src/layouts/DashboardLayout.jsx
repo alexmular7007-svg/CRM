@@ -184,7 +184,7 @@ const DashboardLayout = () => {
               <button
                 onClick={() => dispatch(toggleSidebar())}
                 aria-label="Toggle sidebar"
-                className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-700 lg:hidden transition-colors"
+                className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-700 md:hidden transition-colors"
               >
                 <FiMenu className="text-xl" />
               </button>

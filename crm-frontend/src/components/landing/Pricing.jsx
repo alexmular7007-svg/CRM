@@ -100,7 +100,7 @@ const FaqItem = ({ faq, index }) => {
     >
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-5 py-4 text-left bg-white dark:bg-[#18181B] hover:bg-gray-50/60 dark:hover:bg-zinc-800/40 transition-colors"
+        className="w-full flex items-center justify-between px-5 py-4 md:py-5 text-left bg-white dark:bg-[#18181B] hover:bg-gray-50/60 dark:hover:bg-zinc-800/40 transition-colors min-h-14"
       >
         <span className="text-[14px] font-medium text-gray-900 dark:text-white">{faq.q}</span>
         <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
@@ -171,7 +171,7 @@ const Pricing = () => {
         </motion.div>
 
         {/* Plans */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6 lg:gap-6 mb-16">
           {PLANS.map((plan, i) => {
             const CtaIcon = plan.ctaIcon
             const price = yearly ? plan.yearlyPrice : plan.monthlyPrice
@@ -218,7 +218,7 @@ const Pricing = () => {
 
                 {/* CTA */}
                 {plan.comingSoon ? (
-                  <button disabled className="mb-6 w-full py-2.5 px-4 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-75">
+                  <button disabled className="mb-6 w-full py-3 px-4 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-75 min-h-12">
                     {plan.cta}
                   </button>
                 ) : (
@@ -226,7 +226,7 @@ const Pricing = () => {
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                      className={`w-full flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-medium transition-colors min-h-12 ${
                         plan.highlighted
                           ? 'bg-[#4F46E5] hover:bg-[#4338CA] text-white shadow-md shadow-indigo-500/20'
                           : 'border border-gray-200 dark:border-zinc-700 text-gray-700 dark:text-zinc-300 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:border-gray-300 dark:hover:border-zinc-600'

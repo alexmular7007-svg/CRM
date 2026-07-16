@@ -52,7 +52,7 @@ const ProjectsEducationSection = () => {
               </div>
 
               {/* Kanban Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 overflow-x-auto">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3 lg:gap-3">
                 {kanbanColumns.map((col, idx) => (
                   <motion.div
                     key={col.title}
@@ -60,7 +60,6 @@ const ProjectsEducationSection = () => {
                     whileInView={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 + idx * 0.1 }}
                     viewport={{ once: true }}
-                    className="flex-shrink-0"
                   >
                     <div className="flex items-center gap-2 mb-3">
                       <div className={`w-2 h-2 rounded-full ${col.color.replace('bg-', 'bg-')}`} />

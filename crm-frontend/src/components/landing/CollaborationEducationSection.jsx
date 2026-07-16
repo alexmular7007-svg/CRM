@@ -30,32 +30,32 @@ const CollaborationEducationSection = () => {
             {/* Collaboration features */}
             <div className="space-y-6">
               <div className="flex gap-4">
-                <div className="flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-lg bg-blue-100">
-                  <MessageSquare size={24} className="text-blue-600" />
+                <div className="flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-lg bg-blue-100 dark:bg-blue-950/30">
+                  <MessageSquare size={24} className="text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">Real-time Chat</h3>
-                  <p className="text-gray-600">Direct messages and group channels for seamless team communication</p>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Real-time Chat</h3>
+                  <p className="text-gray-600 dark:text-gray-400">Direct messages and group channels for seamless team communication</p>
                 </div>
               </div>
 
               <div className="flex gap-4">
-                <div className="flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-lg bg-green-100">
-                  <Bell size={24} className="text-green-600" />
+                <div className="flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-lg bg-green-100 dark:bg-green-950/30">
+                  <Bell size={24} className="text-green-600 dark:text-green-400" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">Smart Notifications</h3>
-                  <p className="text-gray-600">Get alerted on mentions, assigned tasks, and deadline reminders</p>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Smart Notifications</h3>
+                  <p className="text-gray-600 dark:text-gray-400">Get alerted on mentions, assigned tasks, and deadline reminders</p>
                 </div>
               </div>
 
               <div className="flex gap-4">
-                <div className="flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-lg bg-purple-100">
-                  <Eye size={24} className="text-purple-600" />
+                <div className="flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-lg bg-purple-100 dark:bg-purple-950/30">
+                  <Eye size={24} className="text-purple-600 dark:text-purple-400" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">Read Receipts</h3>
-                  <p className="text-gray-600">Know when teammates see your messages and files</p>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Read Receipts</h3>
+                  <p className="text-gray-600 dark:text-gray-400">Know when teammates see your messages and files</p>
                 </div>
               </div>
 
