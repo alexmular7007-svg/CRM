@@ -11,13 +11,23 @@ const Dashboard = () => {
   const c = currentTheme.colors
   const currentWorkspace = useSelector((state) => state.workspace.currentWorkspace)
 
-  const { data: dashboardData, isLoading } = useQuery({
+  console.log('🔍 Dashboard: currentWorkspace:', currentWorkspace)
+
+  const { data: dashboardData, isLoading, error } = useQuery({
     queryKey: ['dashboard', currentWorkspace?.id],
-    queryFn: () => currentWorkspace?.id 
-      ? analyticsService.getDashboard(currentWorkspace.id) 
-      : Promise.resolve(null),
+    queryFn: () => {
+      console.log('📡 Fetching dashboard for workspace:', currentWorkspace?.id)
+      return currentWorkspace?.id 
+        ? analyticsService.getDashboard(currentWorkspace.id)
+        : Promise.resolve(null)
+    },
     enabled: !!currentWorkspace?.id,
+    retry: 1,
   })
+
+  console.log('📊 Dashboard data:', dashboardData)
+  console.log('⏳ Dashboard loading:', isLoading)
+  console.log('❌ Dashboard error:', error)
 
   const { data: recentActivities = [], isLoading: isLoadingActivities } = useQuery({
     queryKey: ['recentActivities', currentWorkspace?.id],
@@ -27,6 +37,18 @@ const Dashboard = () => {
     retry: false,
   })
 
+  if (!currentWorkspace) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <p style={{ color: c.textMuted }} className="text-sm">
+            No workspace selected. Please create or select a workspace.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -35,36 +57,50 @@ const Dashboard = () => {
     )
   }
 
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <p style={{ color: c.danger }} className="text-sm">
+            Failed to load dashboard: {error.message || 'Unknown error'}
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   const stats = [
     {
       label: 'Total Tasks',
-      value: dashboardData?.taskStatistics?.totalTasks || 0,
+      value: dashboardData?.taskStatistics?.totalTasks ?? 0,
       icon: FiCheckCircle,
       color: c.info,
       bgColor: c.badgeInfo,
     },
     {
       label: 'Completed',
-      value: dashboardData?.taskStatistics?.completedTasks || 0,
+      value: dashboardData?.taskStatistics?.completedTasks ?? 0,
       icon: FiCheckCircle,
       color: c.success,
       bgColor: c.badgeSuccess,
     },
     {
       label: 'In Progress',
-      value: dashboardData?.taskStatistics?.inProgressTasks || 0,
+      value: dashboardData?.taskStatistics?.inProgressTasks ?? 0,
       icon: FiClock,
       color: c.warning,
       bgColor: c.badgeWarning,
     },
     {
       label: 'Overdue',
-      value: dashboardData?.taskStatistics?.overdueTasks || 0,
+      value: dashboardData?.taskStatistics?.overdueTasks ?? 0,
       icon: FiAlertCircle,
       color: c.danger,
       bgColor: c.badgeDanger,
     },
   ]
+
+  const activityScore = dashboardData?.userProductivity?.activityScore ?? 0
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -143,7 +179,7 @@ const Dashboard = () => {
           <div className="flex items-center justify-center py-8 sm:py-10">
             <div className="text-center">
               <div style={{ color: c.primary }} className="text-4xl sm:text-5xl font-bold mb-1.5 sm:mb-2">
-                {dashboardData?.userProductivity?.activityScore?.toFixed(0) || 0}
+                {activityScore?.toFixed(0) || 0}
               </div>
               <p style={{ color: c.textSecondary }} className="text-xs sm:text-sm">Activity Score</p>
             </div>

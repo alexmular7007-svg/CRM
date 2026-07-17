@@ -37,6 +37,42 @@ public class DashboardServiceImpl implements DashboardService {
     @Cacheable(value = "dashboard", key = "#workspaceId + '_' + @dashboardServiceImpl.getAuthenticatedUser().id")
     public DashboardOverviewResponse getDashboardOverview(Long workspaceId) {
         User currentUser = getAuthenticatedUser();
+        
+        if (workspaceId == null) {
+            log.error("❌ getDashboardOverview called with NULL workspaceId for user: {}", currentUser.getEmail());
+            // Return empty response instead of processing with null
+            return DashboardOverviewResponse.builder()
+                    .taskStatistics(DashboardOverviewResponse.TaskStatistics.builder()
+                            .totalTasks(0L)
+                            .completedTasks(0L)
+                            .overdueTasks(0L)
+                            .inProgressTasks(0L)
+                            .completionRate(0.0)
+                            .build())
+                    .projectStatistics(DashboardOverviewResponse.ProjectStatistics.builder()
+                            .totalProjects(0L)
+                            .activeProjects(0L)
+                            .completedProjects(0L)
+                            .averageProgress(0.0)
+                            .build())
+                    .notificationStatistics(DashboardOverviewResponse.NotificationStatistics.builder()
+                            .unreadCount(0L)
+                            .totalCount(0L)
+                            .build())
+                    .activityStatistics(DashboardOverviewResponse.ActivityStatistics.builder()
+                            .todayActivities(0L)
+                            .weekActivities(0L)
+                            .monthActivities(0L)
+                            .build())
+                    .userProductivity(DashboardOverviewResponse.UserProductivity.builder()
+                            .tasksCompleted(0L)
+                            .commentsPosted(0L)
+                            .messagesSet(0L)
+                            .activityScore(0.0)
+                            .build())
+                    .build();
+        }
+        
         log.info("Fetching dashboard overview for workspace: {} and user: {}", workspaceId, currentUser.getEmail());
 
         // Task Statistics - WORKSPACE SCOPED
