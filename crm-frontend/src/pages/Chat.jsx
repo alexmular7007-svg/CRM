@@ -221,9 +221,13 @@ const Chat = () => {
                 </div>
                 {/* Name and Status */}
                 <div className="flex-1 min-w-0">
-                  <h2 className="font-semibold text-gray-900 dark:text-white truncate text-sm">{currentRoom?.name}</h2>
+                  <h2 className="font-semibold text-gray-900 dark:text-white truncate text-sm">
+                    {currentRoom?.type === 'PRIVATE' 
+                      ? currentRoom.participants?.find(p => p.userId !== useSelector((state) => state.auth.user)?.id)?.userName || 'Unknown User'
+                      : currentRoom?.name}
+                  </h2>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {currentRoom?.participants?.length || 0} {currentRoom?.type === 'PRIVATE' ? '' : 'members'}
+                    {currentRoom?.type === 'PRIVATE' ? 'Online' : `${currentRoom?.participants?.length || 0} members`}
                   </p>
                 </div>
               </div>

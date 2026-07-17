@@ -41,9 +41,12 @@ const MessageInput = ({ onSendMessage, onTyping, roomId, disabled = false }) => 
   // Handle keyboard visibility on mobile - scroll input into view
   useEffect(() => {
     const handleFocus = () => {
-      setTimeout(() => {
-        containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
-      }, 300)
+      // Don't scroll on mobile - let OS handle keyboard
+      if (window.innerWidth > 768) {
+        setTimeout(() => {
+          containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+        }, 300)
+      }
     }
 
     textareaRef.current?.addEventListener('focus', handleFocus)
@@ -142,7 +145,7 @@ const MessageInput = ({ onSendMessage, onTyping, roomId, disabled = false }) => 
   const isActive = (message.trim() || attachments.length > 0) && !disabled && !uploading
 
   return (
-    <div ref={containerRef} className="p-2 sm:p-3 md:p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0 min-h-[56px]">
+    <div ref={containerRef} className="p-2 sm:p-3 md:p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0 min-h-[56px] z-20 relative">
       {/* Attachments preview - responsive */}
       {attachments.length > 0 && (
         <div className="mb-2 sm:mb-3 flex flex-wrap gap-2">
@@ -170,7 +173,7 @@ const MessageInput = ({ onSendMessage, onTyping, roomId, disabled = false }) => 
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="flex items-end gap-1 sm:gap-2 md:gap-3">
+      <form onSubmit={handleSubmit} className="flex items-end gap-1 sm:gap-2 md:gap-3 w-full">
         {/* Attachment button */}
         <motion.button
           type="button"
@@ -179,9 +182,9 @@ const MessageInput = ({ onSendMessage, onTyping, roomId, disabled = false }) => 
           onClick={() => fileInputRef.current?.click()}
           className="p-2 sm:p-2 md:p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 flex-shrink-0 min-h-10 min-w-10 flex items-center justify-center touch-target"
           disabled={disabled || uploading}
-          title="Attach file (PDF, DOCX, XLSX, PPTX, images)"
+          title="Attach file"
         >
-          <FiPaperclip size={20} />
+          <FiPaperclip size={18} />
         </motion.button>
         <input
           ref={fileInputRef}
@@ -199,24 +202,13 @@ const MessageInput = ({ onSendMessage, onTyping, roomId, disabled = false }) => 
             value={message}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
-            placeholder={uploading ? 'Uploading...' : 'Type a message...'}
+            placeholder={uploading ? 'Uploading...' : 'Type message...'}
             disabled={disabled || uploading}
             rows={1}
-            className="w-full px-3 sm:px-4 py-2 sm:py-3 pr-10 sm:pr-12 border-0 rounded-xl focus:ring-2 focus:ring-blue-500 resize-none transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+            className="w-full px-3 sm:px-4 py-2 sm:py-3 pr-10 sm:pr-12 border border-gray-300 dark:border-gray-600 rounded-2xl focus:ring-2 focus:ring-blue-500 resize-none transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white"
             style={{
               minHeight: '40px',
-              maxHeight: '120px',
-              backgroundColor: 'rgb(243, 244, 246)',
-              color: 'rgb(17, 24, 39)',
-              caretColor: 'rgb(59, 130, 246)',
-            }}
-            onFocus={(e) => {
-              e.target.style.backgroundColor = 'rgb(249, 250, 251)'
-              e.target.style.color = 'rgb(17, 24, 39)'
-            }}
-            onBlur={(e) => {
-              e.target.style.backgroundColor = 'rgb(243, 244, 246)'
-              e.target.style.color = 'rgb(17, 24, 39)'
+              maxHeight: '100px',
             }}
           />
           <div className="absolute right-2 sm:right-3 bottom-2 sm:bottom-3">
@@ -227,9 +219,9 @@ const MessageInput = ({ onSendMessage, onTyping, roomId, disabled = false }) => 
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
               className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors p-1 min-w-8 min-h-8 flex items-center justify-center touch-target"
               disabled={disabled}
-              title="Add emoji"
+              title="Emoji"
             >
-              <FiSmile size={20} />
+              <FiSmile size={18} />
             </motion.button>
             {showEmojiPicker && (
               <EmojiPicker
@@ -240,7 +232,7 @@ const MessageInput = ({ onSendMessage, onTyping, roomId, disabled = false }) => 
           </div>
         </div>
 
-        {/* Send button */}
+        {/* Send button - ALWAYS VISIBLE */}
         <motion.button
           type="submit"
           whileHover={{ scale: isActive ? 1.05 : 1 }}
@@ -249,18 +241,13 @@ const MessageInput = ({ onSendMessage, onTyping, roomId, disabled = false }) => 
           className={`p-2 sm:p-2 md:p-2 rounded-xl font-semibold transition-all flex-shrink-0 min-h-10 min-w-10 flex items-center justify-center touch-target ${
             isActive
               ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg hover:shadow-xl'
-              : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+              : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
           }`}
-          title="Send message"
+          title="Send"
         >
-          <FiSend size={20} />
+          <FiSend size={18} />
         </motion.button>
       </form>
-
-      <div className="mt-1.5 sm:mt-2 text-xs text-gray-500 dark:text-gray-400 text-center hidden sm:block">
-        Press <kbd className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">Enter</kbd> to send,{' '}
-        <kbd className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">Shift+Enter</kbd> for new line
-      </div>
     </div>
   )
 }
