@@ -145,7 +145,7 @@ const MessageInput = ({ onSendMessage, onTyping, roomId, disabled = false }) => 
   const isActive = (message.trim() || attachments.length > 0) && !disabled && !uploading
 
   return (
-    <div ref={containerRef} className="p-2 sm:p-3 md:p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0 min-h-[56px] z-40 relative">
+    <div ref={containerRef} className="p-2 sm:p-3 md:p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0 min-h-[56px] z-40 relative safe-area-bottom">
       {/* Attachments preview - responsive */}
       {attachments.length > 0 && (
         <div className="mb-2 sm:mb-3 flex flex-wrap gap-2">
@@ -195,7 +195,7 @@ const MessageInput = ({ onSendMessage, onTyping, roomId, disabled = false }) => 
           className="hidden"
         />
 
-        {/* Message textarea */}
+        {/* Message textarea - with better keyboard handling */}
         <div className="flex-1 relative min-w-0">
           <textarea
             ref={textareaRef}
@@ -209,9 +209,11 @@ const MessageInput = ({ onSendMessage, onTyping, roomId, disabled = false }) => 
             style={{
               minHeight: '40px',
               maxHeight: '100px',
+              WebkitAppearance: 'none',
+              WebkitBorderRadius: '16px',
             }}
           />
-          <div className="absolute right-2 sm:right-3 bottom-2 sm:bottom-3 z-10">
+          <div className="absolute right-2 sm:right-3 bottom-2 sm:bottom-3 z-10 pointer-events-auto">
             <motion.button
               type="button"
               whileHover={{ scale: 1.1 }}
@@ -232,13 +234,13 @@ const MessageInput = ({ onSendMessage, onTyping, roomId, disabled = false }) => 
           </div>
         </div>
 
-        {/* Send button - ALWAYS VISIBLE */}
+        {/* Send button - ALWAYS VISIBLE and CLICKABLE */}
         <motion.button
           type="submit"
           whileHover={{ scale: isActive ? 1.05 : 1 }}
           whileTap={{ scale: isActive ? 0.95 : 1 }}
           disabled={!isActive}
-          className={`p-2 sm:p-2 md:p-2 rounded-xl font-semibold transition-all flex-shrink-0 min-h-10 min-w-10 flex items-center justify-center touch-target ${
+          className={`p-2 sm:p-2 md:p-2 rounded-xl font-semibold transition-all flex-shrink-0 min-h-10 min-w-10 flex items-center justify-center touch-target pointer-events-auto ${
             isActive
               ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg hover:shadow-xl'
               : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'

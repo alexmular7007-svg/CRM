@@ -189,11 +189,11 @@ const Chat = () => {
   // MOBILE: Show full-screen chat when roomId is set
   if (isMobile && roomId) {
     return (
-      <div className="flex flex-col h-full bg-white dark:bg-gray-800 overflow-hidden">
+      <div className="flex flex-col h-screen bg-white dark:bg-gray-800 overflow-hidden safe-area-inset">
         {currentRoom ? (
           <>
             {/* Mobile Chat Header with Back Button - Optimized */}
-            <div className="border-b border-gray-200 dark:border-gray-700 px-2 py-2 flex items-center gap-2 bg-white dark:bg-gray-800 flex-shrink-0 h-14">
+            <div className="border-b border-gray-200 dark:border-gray-700 px-2 py-2 flex items-center gap-2 bg-white dark:bg-gray-800 flex-shrink-0 h-14 safe-area-top">
               {/* Back Button */}
               <motion.button
                 whileTap={{ scale: 0.95 }}
@@ -267,6 +267,15 @@ const Chat = () => {
                 onLoadOlder={fetchOlderMessages}
                 hasOlderMessages={hasOlderMessages}
                 isFetchingOlderMessages={isFetchingOlderMessages}
+              />
+            )}
+
+            {/* Room Info Panel - Mobile bottom sheet */}
+            {showInfo && isMobile && (
+              <RoomInfoPanel
+                room={currentRoom}
+                isOpen={true}
+                onClose={() => setShowInfo(false)}
               />
             )}
 
