@@ -31,35 +31,45 @@ public class ChatFileController {
     @GetMapping("/{filename:.+}")
     public ResponseEntity<Resource> downloadFile(@PathVariable String filename) {
         try {
-            // Chat files are stored in <uploadDir>/../chat-files/
+            // Chat files are stored in uploadDir/chat/ and served via WebMvcConfig at /api/uploads/chat/
+            // This endpoint is a fallback for direct download if needed
+            // BUT: Files should be accessed directly via /api/uploads/chat/{filename} instead
+            
+            log.warn("⚠️ ChatFileController.downloadFile called - this should not happen!");
+            log.warn("   Files should be accessed via /api/uploads/chat/{} instead", filename);
+            
+            // Try both possible locations for backwards compatibility
             Path chatDir = Paths.get(taskUploadDir)
                     .normalize()
-                    .resolveSibling("chat-files");
-
+                    .resolve("chat");  // FIXED: Changed from resolveSibling("chat-files") to resolve("chat")
+            
             Path filePath = chatDir.resolve(filename).normalize();
 
             // Safety: prevent path traversal
             if (!filePath.startsWith(chatDir)) {
+                log.error("❌ Path traversal attempt detected for file: {}", filename);
                 return ResponseEntity.badRequest().build();
             }
 
             Resource resource = new UrlResource(filePath.toUri());
             if (!resource.exists() || !resource.isReadable()) {
-                log.warn("Chat file not found: {}", filename);
+                log.warn("❌ Chat file not found at: {}", filePath);
                 return ResponseEntity.notFound().build();
             }
 
+            log.info("✅ Chat file found and downloaded: {}", filePath);
+            
             // Determine content type from extension
             String contentType = determineContentType(filename);
 
             return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType(contentType))
                     .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "inline; filename=\"" + resource.getFilename() + "\"")
+                            "attachment; filename=\"" + filename + "\"")  // FIXED: Changed from "inline" to "attachment" for downloads
                     .body(resource);
 
         } catch (MalformedURLException e) {
-            log.error("Malformed URL for file: {}", filename, e);
+            log.error("❌ Malformed URL for file: {}", filename, e);
             return ResponseEntity.badRequest().build();
         }
     }

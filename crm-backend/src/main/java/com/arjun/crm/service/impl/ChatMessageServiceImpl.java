@@ -156,7 +156,11 @@ public class ChatMessageServiceImpl implements ChatMessageService {
 
             Files.copy(file.getInputStream(), uploadPath.resolve(storedName), StandardCopyOption.REPLACE_EXISTING);
 
+            // FIXED: Use consistent URL path that matches WebMvcConfig resource handler
+            // Files are served via /api/uploads/chat/{filename} → browser can directly access
+            // No need for ChatFileController since WebMvcConfig handles static file serving
             String fileUrl = "/api/uploads/chat/" + storedName;
+            log.info("✅ File uploaded to: {} with URL: {}", uploadPath.resolve(storedName), fileUrl);
             MessageType msgType = contentType.startsWith("image/") ? MessageType.IMAGE : MessageType.FILE;
 
             ChatMessage message = ChatMessage.builder()
@@ -173,14 +177,16 @@ public class ChatMessageServiceImpl implements ChatMessageService {
             ChatMessage saved = chatMessageRepository.save(message);
             ChatMessageResponse response = ChatMessageResponse.fromEntity(saved);
 
+            // Broadcast to all participants in the chat room
+            log.info("📢 Broadcasting file message to /topic/chat/{}", chatRoomId);
             messagingTemplate.convertAndSend("/topic/chat/" + chatRoomId, response);
             notifyParticipants(chatRoom, currentUser, "📎 " + originalName);
 
-            log.info("File message saved: {} -> {}", originalName, fileUrl);
+            log.info("✅ File message saved with ID: {} → URL: {}", saved.getId(), fileUrl);
             return response;
 
         } catch (IOException e) {
-            log.error("Failed to save chat file", e);
+            log.error("❌ Failed to save chat file", e);
             throw new RuntimeException("Failed to upload file: " + e.getMessage());
         }
     }
