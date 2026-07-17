@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -10,6 +10,7 @@ import { useSelector } from 'react-redux'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { chatService } from '../../services/chatService'
 import toast from 'react-hot-toast'
+import MobileDrawer from '../layout/MobileDrawer'
 
 // ─── Confirmation Dialog ──────────────────────────────────────────────────────
 const ConfirmDialog = ({ isOpen, title, message, confirmLabel, confirmClass, onConfirm, onCancel }) => {
@@ -55,9 +56,19 @@ const RoomInfoPanel = ({ room, isOpen, onClose }) => {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('members')
   const [confirm, setConfirm] = useState(null) // { type, payload }
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 1024)
   const { user } = useSelector((state) => state.auth)
   const { onlineUsers } = useSelector((state) => state.presence)
   const queryClient = useQueryClient()
+
+  // Track screen size for responsive behavior
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 1024)
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   const isUserOnline = (userId) => Boolean(onlineUsers[userId]?.online ?? onlineUsers[userId])
   const isCreator = room?.createdById === user?.id
@@ -163,6 +174,195 @@ const RoomInfoPanel = ({ room, isOpen, onClose }) => {
 
   const cfg = confirm ? DIALOG_CONFIG[confirm.type] : null
 
+  // ─── Room Info Content - Reusable for mobile and desktop ───────────────────
+  const RoomInfoContent = () => (
+    <div className="flex-1 overflow-y-auto p-5">
+      {/* ─── MEMBERS TAB ─── */}
+      {activeTab === 'members' && (
+        <div className="space-y-3">
+          {room.type === 'GROUP' && isCreator && (
+            <button className="w-full p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl font-semibold hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors flex items-center justify-center gap-2 text-sm">
+              <FiUserPlus size={16} />
+              Add Member
+            </button>
+          )}
+
+          {room.participants?.map((participant) => {
+            const isOnline = isUserOnline(participant.userId)
+            const isMe = participant.userId === user?.id
+            const isBlocked = blockedSet.has(participant.userId)
+            const canRemove = isCreator && !isMe && room.type === 'GROUP'
+            const canBlock = !isMe
+
+            return (
+              <div
+                key={participant.id}
+                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="relative flex-shrink-0">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white text-sm font-semibold">
+                      {participant.userName?.charAt(0).toUpperCase()}
+                    </div>
+                    {isOnline && (
+                      <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white dark:border-gray-700 rounded-full" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                        {participant.userName}
+                      </span>
+                      {isMe && (
+                        <span className="text-[10px] text-gray-400">(You)</span>
+                      )}
+                      {participant.userId === room.createdById && (
+                        <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[10px] font-semibold rounded-full">
+                          Owner
+                        </span>
+                      )}
+                      {isBlocked && (
+                        <span className="px-1.5 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[10px] font-semibold rounded-full">
+                          Blocked
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-gray-500 truncate">{participant.userEmail}</div>
+                  </div>
+                </div>
+
+                {/* Action buttons */}
+                {!isMe && (
+                  <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                    {/* Block / Unblock */}
+                    {canBlock && (
+                      <button
+                        onClick={() => {
+                          if (isBlocked) {
+                            unblockMutation.mutate(participant.userId)
+                          } else {
+                            openConfirm('block', { userId: participant.userId, userName: participant.userName })
+                          }
+                        }}
+                        className={`p-1.5 rounded-lg transition-colors text-xs ${
+                          isBlocked
+                            ? 'text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'
+                            : 'text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20'
+                        }`}
+                        title={isBlocked ? 'Unblock user' : 'Block user'}
+                      >
+                        <FiSlash size={15} />
+                      </button>
+                    )}
+                    {/* Remove from group */}
+                    {canRemove && (
+                      <button
+                        onClick={() => openConfirm('remove', { userId: participant.userId, userName: participant.userName })}
+                        className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        title="Remove from group"
+                      >
+                        <FiUserMinus size={15} />
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* ─── FILES TAB ─── */}
+      {activeTab === 'files' && (
+        <div className="text-center py-12">
+          <FiFile size={40} className="mx-auto text-gray-400 mb-3" />
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">No files yet</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Files shared in this conversation will appear here
+          </p>
+        </div>
+      )}
+
+      {/* ─── ACTIONS TAB ─── */}
+      {activeTab === 'actions' && (
+        <div className="space-y-3">
+          <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-4">
+            Conversation Actions
+          </p>
+
+          {/* Leave group (non-creators in group chats) */}
+          {room.type === 'GROUP' && !isCreator && (
+            <button
+              onClick={() => openConfirm('leave', {})}
+              className="w-full flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700/50 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors group"
+            >
+              <div className="w-9 h-9 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                <FiLogOut size={16} className="text-red-600 dark:text-red-400" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400">
+                  Leave Group
+                </p>
+                <p className="text-xs text-gray-500">Stop receiving messages from this group</p>
+              </div>
+            </button>
+          )}
+
+          {/* Delete chat (creator only) */}
+          {isCreator && (
+            <button
+              onClick={() => openConfirm('delete', {})}
+              className="w-full flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700/50 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors group"
+            >
+              <div className="w-9 h-9 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                <FiTrash2 size={16} className="text-red-600 dark:text-red-400" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400">
+                  Delete Chat
+                </p>
+                <p className="text-xs text-gray-500">Permanently delete this conversation and all messages</p>
+              </div>
+            </button>
+          )}
+
+          {/* Leave private chat */}
+          {room.type === 'PRIVATE' && (
+            <button
+              onClick={() => openConfirm('leave', {})}
+              className="w-full flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700/50 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors group"
+            >
+              <div className="w-9 h-9 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                <FiLogOut size={16} className="text-red-600 dark:text-red-400" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400">
+                  Leave Conversation
+                </p>
+                <p className="text-xs text-gray-500">Remove yourself from this direct message</p>
+              </div>
+            </button>
+          )}
+
+          {/* Blocked users summary */}
+          {blockedSet.size > 0 && (
+            <div className="mt-4 p-4 bg-orange-50 dark:bg-orange-900/10 rounded-xl border border-orange-100 dark:border-orange-900/30">
+              <div className="flex items-center gap-2 mb-2">
+                <FiSlash size={14} className="text-orange-500" />
+                <p className="text-xs font-semibold text-orange-700 dark:text-orange-400">
+                  {blockedSet.size} blocked {blockedSet.size === 1 ? 'user' : 'users'}
+                </p>
+              </div>
+              <p className="text-xs text-orange-600 dark:text-orange-400/70">
+                Go to Members tab to unblock individual users.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+
   return (
     <>
       <ConfirmDialog
@@ -175,264 +375,124 @@ const RoomInfoPanel = ({ room, isOpen, onClose }) => {
         onCancel={closeConfirm}
       />
 
-      {/* Mobile backdrop overlay */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-black/40 z-[99] sm:hidden"
-          />
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        <motion.div
-          initial={{ x: '100%' }}
-          animate={{ x: 0 }}
-          exit={{ x: '100%' }}
-          transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-          className="fixed right-0 top-0 h-full w-full sm:w-96 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 shadow-2xl z-[100] flex flex-col overflow-hidden"
+      {/* MOBILE: Display as a bottom sheet drawer */}
+      {isMobile && (
+        <MobileDrawer
+          isOpen={isOpen}
+          onClose={onClose}
+          position="bottom"
+          maxHeight="90vh"
+          isDismissible={true}
         >
-          {/* ── Header ── */}
-          <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-5 z-10">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Room Info</h2>
-              <button
-                onClick={onClose}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              >
-                <FiX size={20} className="text-gray-600 dark:text-gray-400" />
-              </button>
-            </div>
-
-            {/* Avatar + name */}
-            <div className="text-center">
-              <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center text-white text-xl font-bold mb-2 ${
-                room.type === 'PRIVATE'
-                  ? 'bg-gradient-to-br from-blue-600 to-purple-600'
-                  : 'bg-gradient-to-br from-green-600 to-teal-600'
-              }`}>
-                {room.type === 'GROUP' ? <FiUsers size={28} /> : room.name?.charAt(0).toUpperCase()}
-              </div>
-              <h3 className="text-base font-bold text-gray-900 dark:text-white">{room.name || 'Unnamed Room'}</h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                {room.type === 'PRIVATE' ? 'Direct Message' : `${room.participants?.length || 0} members`}
-              </p>
-            </div>
-          </div>
-
-          {/* ── Tabs ── */}
-          <div className="flex border-b border-gray-200 dark:border-gray-700">
-            {['members', 'files', 'actions'].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`flex-1 py-3 text-xs font-semibold capitalize transition-colors ${
-                  activeTab === tab
-                    ? 'text-blue-600 border-b-2 border-blue-600'
-                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                }`}
-              >
-                {tab === 'members' && <FiUsers className="inline mr-1" size={13} />}
-                {tab === 'files' && <FiFile className="inline mr-1" size={13} />}
-                {tab === 'actions' && <FiShield className="inline mr-1" size={13} />}
-                {tab}
-              </button>
-            ))}
-          </div>
-
-          {/* ── Content ── */}
-          <div className="flex-1 overflow-y-auto p-5">
-
-            {/* ─── MEMBERS TAB ─── */}
-            {activeTab === 'members' && (
-              <div className="space-y-3">
-                {room.type === 'GROUP' && isCreator && (
-                  <button className="w-full p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl font-semibold hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors flex items-center justify-center gap-2 text-sm">
-                    <FiUserPlus size={16} />
-                    Add Member
-                  </button>
-                )}
-
-                {room.participants?.map((participant) => {
-                  const isOnline = isUserOnline(participant.userId)
-                  const isMe = participant.userId === user?.id
-                  const isBlocked = blockedSet.has(participant.userId)
-                  const canRemove = isCreator && !isMe && room.type === 'GROUP'
-                  const canBlock = !isMe
-
-                  return (
-                    <div
-                      key={participant.id}
-                      className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="relative flex-shrink-0">
-                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white text-sm font-semibold">
-                            {participant.userName?.charAt(0).toUpperCase()}
-                          </div>
-                          {isOnline && (
-                            <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white dark:border-gray-700 rounded-full" />
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                              {participant.userName}
-                            </span>
-                            {isMe && (
-                              <span className="text-[10px] text-gray-400">(You)</span>
-                            )}
-                            {participant.userId === room.createdById && (
-                              <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[10px] font-semibold rounded-full">
-                                Owner
-                              </span>
-                            )}
-                            {isBlocked && (
-                              <span className="px-1.5 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[10px] font-semibold rounded-full">
-                                Blocked
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-[11px] text-gray-500 truncate">{participant.userEmail}</div>
-                        </div>
-                      </div>
-
-                      {/* Action buttons */}
-                      {!isMe && (
-                        <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-                          {/* Block / Unblock */}
-                          {canBlock && (
-                            <button
-                              onClick={() => {
-                                if (isBlocked) {
-                                  unblockMutation.mutate(participant.userId)
-                                } else {
-                                  openConfirm('block', { userId: participant.userId, userName: participant.userName })
-                                }
-                              }}
-                              className={`p-1.5 rounded-lg transition-colors text-xs ${
-                                isBlocked
-                                  ? 'text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20'
-                                  : 'text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20'
-                              }`}
-                              title={isBlocked ? 'Unblock user' : 'Block user'}
-                            >
-                              <FiSlash size={15} />
-                            </button>
-                          )}
-                          {/* Remove from group */}
-                          {canRemove && (
-                            <button
-                              onClick={() => openConfirm('remove', { userId: participant.userId, userName: participant.userName })}
-                              className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                              title="Remove from group"
-                            >
-                              <FiUserMinus size={15} />
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-
-            {/* ─── FILES TAB ─── */}
-            {activeTab === 'files' && (
-              <div className="text-center py-12">
-                <FiFile size={40} className="mx-auto text-gray-400 mb-3" />
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">No files yet</h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Files shared in this conversation will appear here
+          <div className="flex flex-col h-full bg-white dark:bg-gray-800 overflow-hidden">
+            {/* Header - Fixed */}
+            <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 flex-shrink-0">
+              <div className="text-center">
+                <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center text-white text-xl font-bold mb-2 ${
+                  room.type === 'PRIVATE'
+                    ? 'bg-gradient-to-br from-blue-600 to-purple-600'
+                    : 'bg-gradient-to-br from-green-600 to-teal-600'
+                }`}>
+                  {room.type === 'GROUP' ? <FiUsers size={28} /> : room.name?.charAt(0).toUpperCase()}
+                </div>
+                <h3 className="text-base font-bold text-gray-900 dark:text-white">{room.name || 'Unnamed Room'}</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  {room.type === 'PRIVATE' ? 'Direct Message' : `${room.participants?.length || 0} members`}
                 </p>
               </div>
-            )}
+            </div>
 
-            {/* ─── ACTIONS TAB ─── */}
-            {activeTab === 'actions' && (
-              <div className="space-y-3">
-                <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-4">
-                  Conversation Actions
-                </p>
+            {/* Tabs - Fixed */}
+            <div className="flex border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+              {['members', 'files', 'actions'].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`flex-1 py-3 text-xs font-semibold capitalize transition-colors ${
+                    activeTab === tab
+                      ? 'text-blue-600 border-b-2 border-blue-600'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                >
+                  {tab === 'members' && <FiUsers className="inline mr-1" size={13} />}
+                  {tab === 'files' && <FiFile className="inline mr-1" size={13} />}
+                  {tab === 'actions' && <FiShield className="inline mr-1" size={13} />}
+                  {tab}
+                </button>
+              ))}
+            </div>
 
-                {/* Leave group (non-creators in group chats) */}
-                {room.type === 'GROUP' && !isCreator && (
+            {/* Content - Scrollable */}
+            <RoomInfoContent />
+          </div>
+        </MobileDrawer>
+      )}
+
+      {/* DESKTOP: Display as a side panel */}
+      {!isMobile && (
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed right-0 top-0 h-full w-96 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 shadow-2xl z-[100] flex flex-col overflow-hidden"
+            >
+              {/* Header */}
+              <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-5 z-10 flex-shrink-0">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white">Room Info</h2>
                   <button
-                    onClick={() => openConfirm('leave', {})}
-                    className="w-full flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700/50 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors group"
+                    onClick={onClose}
+                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   >
-                    <div className="w-9 h-9 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                      <FiLogOut size={16} className="text-red-600 dark:text-red-400" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400">
-                        Leave Group
-                      </p>
-                      <p className="text-xs text-gray-500">Stop receiving messages from this group</p>
-                    </div>
+                    <FiX size={20} className="text-gray-600 dark:text-gray-400" />
                   </button>
-                )}
+                </div>
 
-                {/* Delete chat (creator only) */}
-                {isCreator && (
-                  <button
-                    onClick={() => openConfirm('delete', {})}
-                    className="w-full flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700/50 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors group"
-                  >
-                    <div className="w-9 h-9 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                      <FiTrash2 size={16} className="text-red-600 dark:text-red-400" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400">
-                        Delete Chat
-                      </p>
-                      <p className="text-xs text-gray-500">Permanently delete this conversation and all messages</p>
-                    </div>
-                  </button>
-                )}
-
-                {/* Leave private chat */}
-                {room.type === 'PRIVATE' && (
-                  <button
-                    onClick={() => openConfirm('leave', {})}
-                    className="w-full flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700/50 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors group"
-                  >
-                    <div className="w-9 h-9 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                      <FiLogOut size={16} className="text-red-600 dark:text-red-400" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400">
-                        Leave Conversation
-                      </p>
-                      <p className="text-xs text-gray-500">Remove yourself from this direct message</p>
-                    </div>
-                  </button>
-                )}
-
-                {/* Blocked users summary */}
-                {blockedSet.size > 0 && (
-                  <div className="mt-4 p-4 bg-orange-50 dark:bg-orange-900/10 rounded-xl border border-orange-100 dark:border-orange-900/30">
-                    <div className="flex items-center gap-2 mb-2">
-                      <FiSlash size={14} className="text-orange-500" />
-                      <p className="text-xs font-semibold text-orange-700 dark:text-orange-400">
-                        {blockedSet.size} blocked {blockedSet.size === 1 ? 'user' : 'users'}
-                      </p>
-                    </div>
-                    <p className="text-xs text-orange-600 dark:text-orange-400/70">
-                      Go to Members tab to unblock individual users.
-                    </p>
+                {/* Avatar + name */}
+                <div className="text-center">
+                  <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center text-white text-xl font-bold mb-2 ${
+                    room.type === 'PRIVATE'
+                      ? 'bg-gradient-to-br from-blue-600 to-purple-600'
+                      : 'bg-gradient-to-br from-green-600 to-teal-600'
+                  }`}>
+                    {room.type === 'GROUP' ? <FiUsers size={28} /> : room.name?.charAt(0).toUpperCase()}
                   </div>
-                )}
+                  <h3 className="text-base font-bold text-gray-900 dark:text-white">{room.name || 'Unnamed Room'}</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    {room.type === 'PRIVATE' ? 'Direct Message' : `${room.participants?.length || 0} members`}
+                  </p>
+                </div>
               </div>
-            )}
-          </div>
-        </motion.div>
-      </AnimatePresence>
+
+              {/* Tabs */}
+              <div className="flex border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+                {['members', 'files', 'actions'].map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`flex-1 py-3 text-xs font-semibold capitalize transition-colors ${
+                      activeTab === tab
+                        ? 'text-blue-600 border-b-2 border-blue-600'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                  >
+                    {tab === 'members' && <FiUsers className="inline mr-1" size={13} />}
+                    {tab === 'files' && <FiFile className="inline mr-1" size={13} />}
+                    {tab === 'actions' && <FiShield className="inline mr-1" size={13} />}
+                    {tab}
+                  </button>
+                ))}
+              </div>
+
+              {/* Content */}
+              <RoomInfoContent />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
     </>
   )
 }
