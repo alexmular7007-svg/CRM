@@ -8,7 +8,7 @@ import toast from 'react-hot-toast'
 import Spinner from '../common/Spinner'
 import { useAutoRefreshOnMemberRemoval } from '../../hooks/useAutoRefreshOnMemberRemoval'
 
-const CreateRoomModal = ({ isOpen, onClose, workspaceId = null }) => {
+const CreateRoomModal = ({ isOpen, onClose, workspaceId = null, onRoomCreated }) => {
   const [roomType, setRoomType] = useState('PRIVATE')
   const [roomName, setRoomName] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
@@ -47,6 +47,10 @@ const CreateRoomModal = ({ isOpen, onClose, workspaceId = null }) => {
       setTimeout(() => {
         queryClient.refetchQueries({ queryKey: ['chat-rooms'] })
         queryClient.refetchQueries({ queryKey: ['chatRooms'] })
+        // Notify parent component of successful creation for navigation
+        if (onRoomCreated) {
+          onRoomCreated(data)
+        }
       }, 300)
       onClose()
       resetForm()
@@ -111,30 +115,25 @@ const CreateRoomModal = ({ isOpen, onClose, workspaceId = null }) => {
   if (!isOpen) return null
 
   return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          className="w-full max-w-2xl bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden"
+    <div className="w-full h-full flex flex-col bg-white dark:bg-gray-800">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+          Create New Conversation
+        </h2>
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={onClose}
+          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
+          aria-label="Close"
         >
-          {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Create New Conversation
-            </h2>
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={onClose}
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            >
-              <FiX size={24} className="text-gray-600 dark:text-gray-400" />
-            </motion.button>
-          </div>
+          <FiX size={24} className="text-gray-600 dark:text-gray-400" />
+        </motion.button>
+      </div>
 
-          <form onSubmit={handleSubmit} className="p-6">
+      {/* Form - Scrollable */}
+      <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-6">
             {/* Room Type Selection */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
@@ -299,7 +298,7 @@ const CreateRoomModal = ({ isOpen, onClose, workspaceId = null }) => {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={onClose}
-                className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                className="px-4 sm:px-6 py-2 sm:py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
               >
                 Cancel
               </motion.button>
@@ -308,16 +307,14 @@ const CreateRoomModal = ({ isOpen, onClose, workspaceId = null }) => {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 disabled={createRoomMutation.isPending || selectedUsers.length === 0}
-                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                className="px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
               >
                 {createRoomMutation.isPending && <Spinner size="sm" />}
-                <span>Create Conversation</span>
+                <span>Create</span>
               </motion.button>
             </div>
-          </form>
-        </motion.div>
-      </div>
-    </AnimatePresence>
+      </form>
+    </div>
   )
 }
 

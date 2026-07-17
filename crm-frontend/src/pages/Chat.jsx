@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
-import { FiMessageSquare, FiArrowLeft } from 'react-icons/fi'
+import { FiMessageSquare, FiArrowLeft, FiPlus } from 'react-icons/fi'
 import { useChat } from '../hooks/useChat'
 import { websocketService } from '../services/websocketService'
 import ConversationSidebar from '../components/chat/ConversationSidebar'
@@ -14,6 +14,7 @@ import RoomInfoPanel from '../components/chat/RoomInfoPanel'
 import MessageSearch from '../components/chat/MessageSearch'
 import ChatAIPanel from '../components/ai/ChatAIPanel'
 import Spinner from '../components/common/Spinner'
+import MobileDrawer from '../components/layout/MobileDrawer'
 import { useAutoRefreshOnMemberRemoval } from '../hooks/useAutoRefreshOnMemberRemoval'
 import { useQueryClient } from '@tanstack/react-query'
 
@@ -27,10 +28,20 @@ const Chat = () => {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
   const [showAI, setShowAI] = useState(false)
-  const [showMobileSidebar, setShowMobileSidebar] = useState(false)
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024)
 
   // PHASE 7: Auto-refresh when member is removed from workspace
   useAutoRefreshOnMemberRemoval(workspaceId, queryClient)
+
+  // Track screen size for responsive behavior
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 1024)
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
   const {
     rooms,
     currentRoom,
@@ -60,7 +71,6 @@ const Chat = () => {
   const handleSelectRoom = (room) => {
     selectRoom(room)
     navigate(`/chat/${room.id}`)
-    setShowMobileSidebar(false)
   }
 
   const handleCreateRoom = () => {
@@ -77,6 +87,15 @@ const Chat = () => {
     })
   }
 
+  // Handle room creation and auto-navigate on mobile
+  const handleRoomCreated = (newRoom) => {
+    setShowCreateModal(false)
+    selectRoom(newRoom)
+    if (isMobile) {
+      navigate(`/chat/${newRoom.id}`)
+    }
+  }
+
   if (roomsLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -85,9 +104,173 @@ const Chat = () => {
     )
   }
 
+  // MOBILE: Show conversations list when no roomId
+  if (isMobile && !roomId) {
+    return (
+      <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900">
+        {/* Mobile Header */}
+        <div className="border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between bg-white dark:bg-gray-800 flex-shrink-0">
+          <h1 className="font-semibold text-gray-900 dark:text-white text-lg">Messages</h1>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleCreateRoom}
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            aria-label="Create new conversation"
+            title="New conversation"
+          >
+            <FiPlus size={20} className="text-gray-700 dark:text-gray-300" />
+          </motion.button>
+        </div>
+
+        {/* Conversations List */}
+        <div className="flex-1 overflow-y-auto">
+          {rooms.length > 0 ? (
+            <ConversationSidebar
+              rooms={rooms}
+              currentRoom={null}
+              onSelectRoom={handleSelectRoom}
+              onCreateRoom={handleCreateRoom}
+            />
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="text-center px-4"
+              >
+                <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
+                  <FiMessageSquare size={40} className="text-white" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                  No Conversations Yet
+                </h2>
+                <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm">
+                  Start a new conversation to begin chatting
+                </p>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleCreateRoom}
+                  className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all inline-flex items-center gap-2"
+                >
+                  <FiPlus size={18} />
+                  New Conversation
+                </motion.button>
+              </motion.div>
+            </div>
+          )}
+        </div>
+
+        {/* Create Room Modal - Bottom Sheet on Mobile */}
+        <MobileDrawer
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          position="bottom"
+          maxHeight="90vh"
+          isDismissible={true}
+        >
+          <div className="flex flex-col h-full">
+            <CreateRoomModal
+              isOpen={true}
+              onClose={() => setShowCreateModal(false)}
+              workspaceId={workspaceId}
+              onRoomCreated={handleRoomCreated}
+            />
+          </div>
+        </MobileDrawer>
+      </div>
+    )
+  }
+
+  // MOBILE: Show full-screen chat when roomId is set
+  if (isMobile && roomId) {
+    return (
+      <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 overflow-hidden">
+        {currentRoom ? (
+          <>
+            {/* Mobile Chat Header with Back Button */}
+            <div className="border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center gap-3 bg-white dark:bg-gray-800 flex-shrink-0 min-h-[50px]">
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => navigate('/chat')}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
+                aria-label="Back to conversations"
+                title="Back"
+              >
+                <FiArrowLeft size={20} className="text-gray-700 dark:text-gray-300" />
+              </motion.button>
+              <div className="flex-1 min-w-0">
+                <h2 className="font-semibold text-gray-900 dark:text-white truncate text-base">{currentRoom?.name}</h2>
+              </div>
+            </div>
+
+            {/* Connection Status */}
+            {!isConnected && (
+              <div className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 px-4 py-2 text-xs sm:text-sm text-center flex-shrink-0">
+                Reconnecting to chat...
+              </div>
+            )}
+
+            {/* Messages - Scrollable */}
+            {messagesLoading ? (
+              <div className="flex-1 flex items-center justify-center">
+                <Spinner size="lg" />
+              </div>
+            ) : (
+              <MessageArea
+                messages={messages}
+                typingUsers={typingUsers}
+                onLoadOlder={fetchOlderMessages}
+                hasOlderMessages={hasOlderMessages}
+                isFetchingOlderMessages={isFetchingOlderMessages}
+              />
+            )}
+
+            {/* AI Panel */}
+            {showAI && (
+              <div className="border-b border-gray-200 bg-gradient-to-r from-cyan-50 to-blue-50 p-3 dark:border-gray-700 dark:from-cyan-950/20 dark:to-blue-950/20 flex-shrink-0">
+                <ChatAIPanel room={currentRoom} messages={messages} onSendMessage={sendMessage} />
+              </div>
+            )}
+
+            {/* Message Input */}
+            <MessageInput
+              onSendMessage={sendMessage}
+              onTyping={sendTypingIndicator}
+              roomId={currentRoom?.id}
+              disabled={!isConnected}
+              onRetryConnect={() => {
+                if (!isConnected) {
+                  websocketService.connect()
+                }
+              }}
+            />
+          </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="text-center"
+            >
+              <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
+                <FiMessageSquare size={48} className="text-white" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                Loading Chat
+              </h2>
+            </motion.div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // DESKTOP: Split-view layout (conversation list + chat)
   return (
     <div className="flex h-full overflow-hidden bg-gray-50 dark:bg-gray-900">
-      {/* Desktop Sidebar - Hidden on mobile/tablet, visible on lg+ */}
+      {/* Desktop Sidebar */}
       <div className="hidden lg:flex lg:flex-col lg:w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
         <ConversationSidebar
           rooms={rooms}
@@ -97,67 +280,12 @@ const Chat = () => {
         />
       </div>
 
-      {/* Mobile Sidebar Drawer - Only on mobile/tablet */}
-      <AnimatePresence>
-        {showMobileSidebar && (
-          <>
-            {/* Overlay */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowMobileSidebar(false)}
-              className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-              aria-hidden="true"
-            />
-
-            {/* Drawer */}
-            <motion.div
-              initial={{ x: '-100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
-              className="fixed left-0 top-0 bottom-0 w-80 bg-white dark:bg-gray-800 z-50 lg:hidden flex flex-col overflow-hidden"
-            >
-              <ConversationSidebar
-                rooms={rooms}
-                currentRoom={currentRoom}
-                onSelectRoom={handleSelectRoom}
-                onCreateRoom={handleCreateRoom}
-              />
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col bg-white dark:bg-gray-800 overflow-hidden">
         {currentRoom ? (
           <>
-            {/* Mobile Header with Menu Button */}
-            <div className="lg:hidden border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center gap-3 bg-white dark:bg-gray-800">
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setShowMobileSidebar(true)}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                aria-label="Open sidebar"
-              >
-                <FiArrowLeft size={20} className="text-gray-700 dark:text-gray-300" />
-              </motion.button>
-              <div className="flex-1 min-w-0">
-                <h2 className="font-semibold text-gray-900 dark:text-white truncate">{currentRoom?.name}</h2>
-              </div>
-            </div>
-
-            {/* Connection Status */}
-            {!isConnected && (
-              <div className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 px-4 py-2 text-sm text-center">
-                Reconnecting to chat...
-              </div>
-            )}
-
-            {/* Chat Header - Desktop only */}
-            <div className="hidden lg:block">
+            {/* Desktop Chat Header */}
+            <div className="hidden lg:block border-b border-gray-200 dark:border-gray-700">
               <ChatHeader 
                 room={currentRoom} 
                 onShowInfo={() => setShowInfo(!showInfo)}
@@ -166,6 +294,7 @@ const Chat = () => {
               />
             </div>
 
+            {/* AI Panel */}
             {showAI && (
               <div className="border-b border-gray-200 bg-gradient-to-r from-cyan-50 to-blue-50 p-4 dark:border-gray-700 dark:from-cyan-950/20 dark:to-blue-950/20">
                 <ChatAIPanel room={currentRoom} messages={messages} onSendMessage={sendMessage} />
@@ -250,6 +379,7 @@ const Chat = () => {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         workspaceId={workspaceId}
+        onRoomCreated={handleRoomCreated}
       />
     </div>
   )
