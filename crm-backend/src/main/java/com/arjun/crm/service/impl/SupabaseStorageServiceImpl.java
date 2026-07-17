@@ -294,6 +294,16 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
 
     private UploadResult uploadToSupabase(MultipartFile file, String storagePath) {
         try {
+            // Validate Supabase configuration
+            if (config.getUrl() == null || config.getUrl().isEmpty()) {
+                log.error("❌ Supabase URL not configured");
+                throw new RuntimeException("Supabase storage is not configured - missing SUPABASE_URL environment variable");
+            }
+            if (config.getServiceKey() == null || config.getServiceKey().isEmpty()) {
+                log.error("❌ Supabase Service Key not configured");
+                throw new RuntimeException("Supabase storage is not configured - missing SUPABASE_SERVICE_KEY environment variable");
+            }
+
             log.debug("🚀 Uploading to Supabase: {} bytes → {}", file.getSize(), storagePath);
 
             String url = String.format(
@@ -318,7 +328,7 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
                 if (!response.isSuccessful()) {
                     log.error("❌ Upload failed: {} {}", response.code(), response.message());
                     String errorBody = response.body() != null ? response.body().string() : "Unknown error";
-                    throw new RuntimeException("Upload failed: " + errorBody);
+                    throw new RuntimeException("Upload failed (HTTP " + response.code() + "): " + errorBody);
                 }
 
                 String contentHash = calculateHash(fileContent);

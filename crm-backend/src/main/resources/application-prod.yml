@@ -107,5 +107,41 @@ oauth2:
 
 # Application configuration
 app:
+  mail:
+    from: ${APP_MAIL_FROM:xsde790@gmail.com}
+    from-name: ${APP_MAIL_FROM_NAME:TaskFlow}
   invitation-base-url: ${INVITATION_BASE_URL:https://crm-taskflow.vercel.app/invitations}
   oauth2-frontend-failure-url: ${OAUTH2_FRONTEND_FAILURE_URL:https://crm-taskflow.vercel.app/login?error=oauth2_failed}
+
+# Supabase Storage Configuration (File Upload/Download)
+supabase:
+  url: ${SUPABASE_URL:https://db.xkzpzcvwzqjavftrnxjl.supabase.co}
+  anon-key: ${SUPABASE_ANON_KEY}
+  service-key: ${SUPABASE_SERVICE_KEY}
+  storage:
+    bucket-name: ${SUPABASE_STORAGE_BUCKET:chat-attachments}
+    chat-folder: ${SUPABASE_CHAT_FOLDER:chat}
+    task-folder: ${SUPABASE_TASK_FOLDER:tasks}
+    max-file-size: ${SUPABASE_MAX_FILE_SIZE:20971520}
+    signed-url-expiry: ${SUPABASE_SIGNED_URL_EXPIRY:604800}
+    is-public: ${SUPABASE_BUCKET_PUBLIC:false}
+
+# AI Configuration (xAI)
+ai:
+  xai:
+    api-key: ${XAI_API_KEY}
+    model: ${XAI_MODEL:grok-4.20-reasoning}
+    base-url: ${XAI_BASE_URL:https://api.x.ai/v1/chat/completions}
+    temperature: ${AI_TEMPERATURE:0.7}
+    max-tokens: ${AI_MAX_TOKENS:1000}
+    timeout: ${AI_TIMEOUT:30000}
+    retry:
+      max-attempts: ${AI_RETRY_MAX_ATTEMPTS:3}
+      backoff-delay: ${AI_RETRY_BACKOFF:1000}
+  cache:
+    ttl: ${AI_CACHE_TTL:1800000}
+
+# Brevo Email Configuration
+brevo:
+  api-key: ${BREVO_API_KEY}
+  api-url: https://api.brevo.com/v3/smtp/email
