@@ -98,7 +98,7 @@ class MultiOwnerMemberManagementTest extends BaseIntegrationTest {
         var response = workspaceMemberService.addMember(workspace.getId(), request);
 
         assertNotNull(response);
-        assertEquals("member.b@test.com", response.getEmail());
+        assertEquals("member.b@test.com", response.getUserEmail());
         assertEquals(WorkspaceRole.MEMBER, response.getRole());
     }
 
@@ -115,7 +115,7 @@ class MultiOwnerMemberManagementTest extends BaseIntegrationTest {
         var response = workspaceMemberService.addMember(workspace.getId(), request);
 
         assertNotNull(response);
-        assertEquals("owner.c@test.com", response.getEmail());
+        assertEquals("owner.c@test.com", response.getUserEmail());
         assertEquals(WorkspaceRole.OWNER, response.getRole());
     }
 
@@ -252,7 +252,7 @@ class MultiOwnerMemberManagementTest extends BaseIntegrationTest {
 
         assertNotNull(response);
         assertEquals(WorkspaceRole.OWNER, response.getRole());
-        assertEquals("member.b@test.com", response.getEmail());
+        assertEquals("member.b@test.com", response.getUserEmail());
     }
 
     @Test
@@ -370,7 +370,7 @@ class MultiOwnerMemberManagementTest extends BaseIntegrationTest {
 
         assertNotNull(roleResponse);
         assertEquals(WorkspaceRole.OWNER, roleResponse.getRole());
-        assertEquals("owner.a@test.com", roleResponse.getEmail());
+        assertEquals("owner.a@test.com", roleResponse.getUserEmail());
     }
 
     @Test
