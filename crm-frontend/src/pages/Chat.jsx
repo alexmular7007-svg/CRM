@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
 import { FiMessageSquare, FiArrowLeft, FiPlus, FiUsers, FiInfo } from 'react-icons/fi'
+import { Sparkles } from 'lucide-react'
 import { useChat } from '../hooks/useChat'
 import { websocketService } from '../services/websocketService'
 import ConversationSidebar from '../components/chat/ConversationSidebar'
@@ -226,6 +227,16 @@ const Chat = () => {
               </div>
 
               {/* Mobile Header Actions - Compact */}
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0 min-h-10 min-w-10 flex items-center justify-center"
+                title="AI Assistant"
+                onClick={() => setShowAI(!showAI)}
+              >
+                <Sparkles size={18} className="text-gray-700 dark:text-gray-300" />
+              </motion.button>
+
+              {/* Info menu button */}
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0 min-h-10 min-w-10 flex items-center justify-center"
