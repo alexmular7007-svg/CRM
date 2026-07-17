@@ -126,38 +126,38 @@ const WorkspaceSettings = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center space-x-4">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
         <button
           onClick={() => navigate(`/workspaces/${workspaceId}`)}
-          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors w-fit"
         >
           <FiArrowLeft size={20} />
         </button>
         <div>
-          <h1 className="text-3xl font-bold" style={{ color: 'var(--theme-textPrimary)' }}>
+          <h1 className="text-xl sm:text-3xl font-bold" style={{ color: 'var(--theme-textPrimary)' }}>
             {workspaceName} Settings
           </h1>
-          <p className="mt-1" style={{ color: 'var(--theme-textSecondary)' }}>
+          <p className="mt-0.5 sm:mt-1 text-xs sm:text-sm" style={{ color: 'var(--theme-textSecondary)' }}>
             Manage your workspace members, invitations, and permissions
           </p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 dark:border-gray-700">
-        <div className="flex space-x-8">
+      <div className="border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+        <div className="flex space-x-2 sm:space-x-8 min-w-min sm:min-w-0">
           <button
             onClick={() => setActiveTab('members')}
-            className={`px-1 py-4 border-b-2 font-medium text-sm transition-colors ${
+            className={`px-2 sm:px-1 py-3 sm:py-4 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
               activeTab === 'members'
                 ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                 : 'border-transparent text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
             }`}
           >
-            <div className="flex items-center space-x-2">
-              <FiUsers size={18} />
+            <div className="flex items-center gap-1 sm:gap-2">
+              <FiUsers size={16} className="sm:block hidden" />
               <span>Members</span>
             </div>
           </button>
@@ -165,14 +165,14 @@ const WorkspaceSettings = () => {
           <RoleGuard workspaceId={workspaceId} requireRole="ADMIN">
             <button
               onClick={() => setActiveTab('invitations')}
-              className={`px-1 py-4 border-b-2 font-medium text-sm transition-colors ${
+              className={`px-2 sm:px-1 py-3 sm:py-4 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
                 activeTab === 'invitations'
                   ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                   : 'border-transparent text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
               }`}
             >
-              <div className="flex items-center space-x-2">
-                <FiMail size={18} />
+              <div className="flex items-center gap-1 sm:gap-2">
+                <FiMail size={16} className="sm:block hidden" />
                 <span>Invitations</span>
               </div>
             </button>
@@ -181,14 +181,14 @@ const WorkspaceSettings = () => {
           <RoleGuard workspaceId={workspaceId} requireRole="OWNER">
             <button
               onClick={() => setActiveTab('roles')}
-              className={`px-1 py-4 border-b-2 font-medium text-sm transition-colors ${
+              className={`px-2 sm:px-1 py-3 sm:py-4 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
                 activeTab === 'roles'
                   ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                   : 'border-transparent text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
               }`}
             >
-              <div className="flex items-center space-x-2">
-                <FiLock size={18} />
+              <div className="flex items-center gap-1 sm:gap-2">
+                <FiLock size={16} className="sm:block hidden" />
                 <span>Roles & Permissions</span>
               </div>
             </button>
@@ -197,14 +197,14 @@ const WorkspaceSettings = () => {
           <RoleGuard workspaceId={workspaceId} requireRole="OWNER">
             <button
               onClick={() => setActiveTab('general')}
-              className={`px-1 py-4 border-b-2 font-medium text-sm transition-colors ${
+              className={`px-2 sm:px-1 py-3 sm:py-4 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
                 activeTab === 'general'
                   ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                   : 'border-transparent text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
               }`}
             >
-              <div className="flex items-center space-x-2">
-                <FiSettings size={18} />
+              <div className="flex items-center gap-1 sm:gap-2">
+                <FiSettings size={16} className="sm:block hidden" />
                 <span>General</span>
               </div>
             </button>
@@ -225,20 +225,20 @@ const WorkspaceSettings = () => {
         {/* Invitations Tab */}
         {activeTab === 'invitations' && (
           <RoleGuard workspaceId={workspaceId} requireRole="ADMIN">
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {/* Send Invitation Form */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 sm:p-6">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-2 sm:mb-4">
                   Send Gmail Invitation
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-4">
                   Invite someone via email. If they already have an account, they'll be added directly. 
                   If not, they'll receive an invitation email.
                 </p>
-                <form onSubmit={handleSendInvitation} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <form onSubmit={handleSendInvitation} className="space-y-3 sm:space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
                         Gmail Address
                       </label>
                       <input
@@ -246,17 +246,17 @@ const WorkspaceSettings = () => {
                         value={inviteEmail}
                         onChange={(e) => setInviteEmail(e.target.value)}
                         placeholder="user@gmail.com"
-                        className="w-full px-4 py-2 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-600 dark:placeholder-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all"
+                        className="w-full px-3 sm:px-4 py-2 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-600 dark:placeholder-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
                         Role
                       </label>
                       <select
                         value={inviteRole}
                         onChange={(e) => setInviteRole(e.target.value)}
-                        className="w-full px-4 py-2 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all"
+                        className="w-full px-3 sm:px-4 py-2 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all"
                       >
                         <option value="MEMBER">Member</option>
                         <option value="ADMIN">Admin</option>
@@ -268,7 +268,7 @@ const WorkspaceSettings = () => {
                     disabled={sendInvitationMutation.isPending}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
+                    className="w-full sm:w-auto px-4 sm:px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm font-medium rounded-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
                   >
                     {sendInvitationMutation.isPending ? 'Sending...' : 'Send Invitation'}
                   </motion.button>
@@ -276,8 +276,8 @@ const WorkspaceSettings = () => {
               </div>
 
               {/* Pending Invitations List */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 sm:p-6">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
                   Pending Invitations
                 </h3>
                 {invitationsLoading ? (
@@ -285,7 +285,7 @@ const WorkspaceSettings = () => {
                     <Spinner size="md" />
                   </div>
                 ) : pendingInvitations.length === 0 ? (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                     No pending invitations
                   </p>
                 ) : (
@@ -293,19 +293,19 @@ const WorkspaceSettings = () => {
                     {pendingInvitations.map((invitation) => (
                       <div
                         key={invitation.id}
-                        className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600"
+                        className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600"
                       >
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-pink-600 rounded-full flex items-center justify-center text-white font-bold">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 sm:gap-3">
+                            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-orange-400 to-pink-600 rounded-full flex items-center justify-center text-white font-bold text-xs sm:text-sm flex-shrink-0">
                               {invitation.email?.charAt(0).toUpperCase() || 'U'}
                             </div>
-                            <div>
-                              <p className="font-medium text-gray-900 dark:text-white">
+                            <div className="min-w-0">
+                              <p className="font-medium text-xs sm:text-sm text-gray-900 dark:text-white truncate">
                                 {invitation.email}
                               </p>
-                              <div className="flex items-center space-x-2 mt-1">
-                                <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-1">
+                                <span className={`px-2 py-0.5 rounded text-xs font-medium w-fit ${
                                   invitation.role === 'ADMIN'
                                     ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200'
                                     : 'bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200'
@@ -319,13 +319,13 @@ const WorkspaceSettings = () => {
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-2">
+                        <div className="flex gap-2 w-full sm:w-auto flex-shrink-0">
                           <motion.button
                             onClick={() => handleResendInvitation(invitation.email)}
                             disabled={loadingInvitationEmail === invitation.email}
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
-                            className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                            className="flex-1 sm:flex-none px-2 sm:px-3 py-1.5 bg-blue-600 text-white text-xs sm:text-sm rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                           >
                             {loadingInvitationEmail === invitation.email ? 'Resending...' : 'Resend'}
                           </motion.button>
@@ -334,7 +334,7 @@ const WorkspaceSettings = () => {
                             disabled={loadingInvitationEmail === invitation.email}
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
-                            className="px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                            className="flex-1 sm:flex-none px-2 sm:px-3 py-1.5 bg-red-600 text-white text-xs sm:text-sm rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
                           >
                             {loadingInvitationEmail === invitation.email ? 'Revoking...' : 'Revoke'}
                           </motion.button>
