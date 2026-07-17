@@ -40,7 +40,14 @@ const CreateRoomModal = ({ isOpen, onClose, workspaceId = null }) => {
     },
     onSuccess: (data) => {
       toast.success('Chat room created successfully')
+      // Invalidate queries to force refresh
       queryClient.invalidateQueries({ queryKey: ['chat-rooms'] })
+      queryClient.invalidateQueries({ queryKey: ['chatRooms'] })
+      // Add small delay to ensure backend has saved data
+      setTimeout(() => {
+        queryClient.refetchQueries({ queryKey: ['chat-rooms'] })
+        queryClient.refetchQueries({ queryKey: ['chatRooms'] })
+      }, 300)
       onClose()
       resetForm()
     },
