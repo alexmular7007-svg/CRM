@@ -134,13 +134,13 @@ const Chat = () => {
       <div className="flex-1 flex flex-col bg-white dark:bg-gray-800 overflow-hidden">
         {currentRoom ? (
           <>
-            {/* Mobile Header with Back Button */}
+            {/* Mobile Header with Menu Button */}
             <div className="lg:hidden border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center gap-3 bg-white dark:bg-gray-800">
               <motion.button
                 whileTap={{ scale: 0.95 }}
-                onClick={() => setShowMobileSidebar(!showMobileSidebar)}
+                onClick={() => setShowMobileSidebar(true)}
                 className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                aria-label="Toggle sidebar"
+                aria-label="Open sidebar"
               >
                 <FiArrowLeft size={20} className="text-gray-700 dark:text-gray-300" />
               </motion.button>

@@ -1,6 +1,7 @@
 package com.arjun.crm.controller;
 
 import com.arjun.crm.dto.request.AddWorkspaceMemberRequest;
+import com.arjun.crm.dto.request.UpdateMemberRoleRequest;
 import com.arjun.crm.dto.response.ApiResponse;
 import com.arjun.crm.dto.response.WorkspaceMemberResponse;
 import com.arjun.crm.service.WorkspaceMemberService;
@@ -81,5 +82,20 @@ public class WorkspaceMemberController {
         log.info("Remove member request received for workspace ID: {} and user ID: {}", workspaceId, userId);
         workspaceMemberService.removeMember(workspaceId, userId);
         return ResponseEntity.ok(ApiResponse.success("Member removed successfully", null));
+    }
+
+    /**
+     * Update member role in workspace
+     * PATCH /api/workspaces/{workspaceId}/members/{userId}/role
+     */
+    @PatchMapping("/{userId}/role")
+    public ResponseEntity<ApiResponse<WorkspaceMemberResponse>> updateMemberRole(
+            @PathVariable Long workspaceId,
+            @PathVariable Long userId,
+            @Valid @RequestBody UpdateMemberRoleRequest request) {
+        log.info("Update member role request received for workspace ID: {}, user ID: {}, new role: {}", 
+                 workspaceId, userId, request.getRole());
+        WorkspaceMemberResponse response = workspaceMemberService.updateMemberRole(workspaceId, userId, request.getRole());
+        return ResponseEntity.ok(ApiResponse.success("Member role updated successfully", response));
     }
 }

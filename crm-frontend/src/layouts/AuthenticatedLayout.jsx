@@ -658,7 +658,7 @@ const AuthenticatedLayout = () => {
       />
 
       {/* Floating Copilot */}
-      {/* <FloatingCopilot /> */}
+      <FloatingCopilot />
     </div>
   )
 }

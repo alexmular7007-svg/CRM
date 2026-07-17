@@ -78,12 +78,12 @@ const HeroSection = () => {
             </motion.div>
           </div>
 
-          {/* RIGHT COLUMN - Dashboard Preview (hidden on mobile/sm, visible on md+) */}
+          {/* RIGHT COLUMN - Dashboard Preview (visible on all screens, stacked on mobile) */}
           <motion.div
             initial={{ opacity: 0, x: 40 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.3 }}
-            className="hidden md:block relative w-full rounded-2xl border-2 border-gray-300 dark:border-gray-700 bg-gradient-to-br from-white dark:from-[#1A1A1D] via-gray-50 dark:via-[#13131A] to-gray-100 dark:to-[#09090B] shadow-2xl dark:shadow-lg overflow-hidden flex flex-col h-[500px] md:h-[550px] lg:h-[600px] xl:h-[700px]"
+            className="relative w-full rounded-2xl border-2 border-gray-300 dark:border-gray-700 bg-gradient-to-br from-white dark:from-[#1A1A1D] via-gray-50 dark:via-[#13131A] to-gray-100 dark:to-[#09090B] shadow-2xl dark:shadow-lg overflow-hidden flex flex-col h-[400px] sm:h-[450px] md:h-[500px] lg:h-[600px] xl:h-[700px]"
             style={{
               boxShadow: 'inset 0 1px 0 0 rgba(255, 255, 255, 0.5), 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05)'
             }}
