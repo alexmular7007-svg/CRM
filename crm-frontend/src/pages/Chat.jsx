@@ -23,6 +23,7 @@ const Chat = () => {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const currentWorkspace = useSelector((state) => state.workspace.currentWorkspace)
+  const currentUser = useSelector((state) => state.auth.user)
   const workspaceId = currentWorkspace?.id
   const [showInfo, setShowInfo] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -186,14 +187,6 @@ const Chat = () => {
 
   // MOBILE: Show full-screen chat when roomId is set
   if (isMobile && roomId) {
-    // Get the other user for private chats
-    const getOtherUser = () => {
-      if (currentRoom?.type === 'PRIVATE') {
-        return currentRoom.participants?.find(p => p.userId !== useSelector((state) => state.auth.user)?.id)
-      }
-      return null
-    }
-
     return (
       <div className="flex flex-col h-full bg-white dark:bg-gray-800 overflow-hidden">
         {currentRoom ? (
@@ -223,7 +216,7 @@ const Chat = () => {
                 <div className="flex-1 min-w-0">
                   <h2 className="font-semibold text-gray-900 dark:text-white truncate text-sm">
                     {currentRoom?.type === 'PRIVATE' 
-                      ? currentRoom.participants?.find(p => p.userId !== useSelector((state) => state.auth.user)?.id)?.userName || 'Unknown User'
+                      ? currentRoom.participants?.find(p => p.userId !== currentUser?.id)?.userName || 'Unknown User'
                       : currentRoom?.name}
                   </h2>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
