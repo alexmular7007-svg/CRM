@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
 import { FiMessageSquare, FiArrowLeft, FiPlus, FiUsers, FiInfo } from 'react-icons/fi'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, X } from 'lucide-react'
 import { useChat } from '../hooks/useChat'
 import { websocketService } from '../services/websocketService'
 import ConversationSidebar from '../components/chat/ConversationSidebar'
@@ -269,8 +269,32 @@ const Chat = () => {
               />
             )}
 
-            {/* AI Panel */}
-            {showAI && (
+            {/* AI Panel - Mobile bottom sheet */}
+            {showAI && isMobile && (
+              <MobileDrawer
+                isOpen={true}
+                onClose={() => setShowAI(false)}
+                position="bottom"
+                maxHeight="60vh"
+                isDismissible={true}
+              >
+                <div className="flex flex-col h-full">
+                  <div className="bg-gradient-to-r from-cyan-500 to-blue-500 p-3 flex-shrink-0 flex items-center justify-between min-h-12">
+                    <h3 className="font-semibold text-white text-sm">AI Assistant</h3>
+                    <motion.button
+                      onClick={() => setShowAI(false)}
+                      className="text-white hover:bg-white/20 rounded-lg p-1.5 transition-colors"
+                    >
+                      <X size={18} />
+                    </motion.button>
+                  </div>
+                  <ChatAIPanel room={currentRoom} messages={messages} onSendMessage={sendMessage} />
+                </div>
+              </MobileDrawer>
+            )}
+
+            {/* AI Panel - Desktop inline */}
+            {showAI && !isMobile && (
               <div className="border-b border-gray-200 bg-gradient-to-r from-cyan-50 to-blue-50 p-3 dark:border-gray-700 dark:from-cyan-950/20 dark:to-blue-950/20 flex-shrink-0">
                 <ChatAIPanel room={currentRoom} messages={messages} onSendMessage={sendMessage} />
               </div>
