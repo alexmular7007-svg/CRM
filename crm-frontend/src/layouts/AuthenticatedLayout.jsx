@@ -20,7 +20,6 @@ import { websocketService } from '../services/websocketService'
 import { workspaceService } from '../services/workspaceService'
 import UserAvatar from '../components/common/UserAvatar'
 import AuthenticatedSidebar from './AuthenticatedSidebar'
-import FloatingCopilot from '../components/landing/FloatingCopilot'
 import { useThemeContext } from '../contexts/ThemeContext'
 
 // Navigation items for mobile drawer
@@ -659,8 +658,8 @@ const AuthenticatedLayout = () => {
         currentTheme={currentTheme}
       />
 
-      {/* Floating Copilot */}
-      <FloatingCopilot />
+      {/* Global Notification Panel - Removed FloatingCopilot from authenticated layout */}
+      {/* FloatingCopilot only appears on Landing page, not in authenticated pages */}
     </div>
   )
 }
