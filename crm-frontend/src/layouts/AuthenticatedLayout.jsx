@@ -270,9 +270,11 @@ const MobileNavigationDrawer = ({ isOpen, onClose, user, logout, unreadCount, on
               style={{ borderColor: currentTheme.colors.border }}
             >
               <Link to="/" onClick={onClose} className="flex items-center gap-2 group">
-                <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-                  <Zap size={16} className="text-white" />
-                </div>
+                <img 
+                  src="/logo.png" 
+                  alt="TaskFlow AI" 
+                  className="w-8 h-8 object-contain"
+                />
                 <span
                   style={{ color: currentTheme.colors.text }}
                   className="font-bold text-base"
