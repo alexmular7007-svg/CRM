@@ -24,7 +24,7 @@ public class ChatMessageResponse {
     private Boolean isDeleted;
 
     // File attachment fields (null for TEXT messages)
-    private String attachmentUrl;
+    private String attachmentUrl;        // Full signed URL (for direct image display)
     private String attachmentName;
     private String attachmentType;
     private Long attachmentSize;
@@ -46,7 +46,7 @@ public class ChatMessageResponse {
                 .messageType(message.getMessageType())
                 .isEdited(message.getIsEdited())
                 .isDeleted(message.getIsDeleted())
-                .attachmentUrl(message.getAttachmentUrl())
+                .attachmentUrl(message.getAttachmentUrl())  // Storage path only - will be replaced with signed URL
                 .attachmentName(message.getAttachmentName())
                 .attachmentType(message.getAttachmentType())
                 .attachmentSize(message.getAttachmentSize())

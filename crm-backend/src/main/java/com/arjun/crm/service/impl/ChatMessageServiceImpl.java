@@ -168,6 +168,16 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         ChatMessage saved = chatMessageRepository.save(message);
         ChatMessageResponse response = ChatMessageResponse.fromEntity(saved);
 
+        // PHASE 4: Generate signed URL for the response (to be displayed in frontend)
+        try {
+            String signedUrl = storageService.generateSignedDownloadUrl(uploadResult.storagePath, 604800);  // 7 days
+            response.setAttachmentUrl(signedUrl);
+            log.info("✅ Signed URL generated: {}", signedUrl);
+        } catch (Exception e) {
+            log.warn("⚠️ Failed to generate signed URL for immediate response: {}", e.getMessage());
+            // Keep storage path - frontend will fetch it later
+        }
+
         // PHASE 7: Broadcast via WebSocket
         log.info("📢 Broadcasting file message to /topic/chat/{}", chatRoomId);
         messagingTemplate.convertAndSend("/topic/chat/" + chatRoomId, response);
@@ -193,7 +203,20 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         }
         return chatMessageRepository
                 .findByChatRoomIdAndIsDeletedFalseOrderByCreatedAtDesc(roomId, pageable)
-                .map(ChatMessageResponse::fromEntity);
+                .map(msg -> {
+                    ChatMessageResponse response = ChatMessageResponse.fromEntity(msg);
+                    // Generate signed URL for attachments
+                    if (response.getAttachmentUrl() != null && !response.getAttachmentUrl().isEmpty()) {
+                        try {
+                            String signedUrl = storageService.generateSignedDownloadUrl(response.getAttachmentUrl(), 604800);
+                            response.setAttachmentUrl(signedUrl);
+                        } catch (Exception e) {
+                            log.warn("⚠️ Failed to generate signed URL for attachment: {}", e.getMessage());
+                            // Keep original path if URL generation fails
+                        }
+                    }
+                    return response;
+                });
     }
 
     @Override
