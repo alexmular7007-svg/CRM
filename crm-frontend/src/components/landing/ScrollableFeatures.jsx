@@ -134,7 +134,7 @@ const ScrollableFeatures = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
-                className="flex-shrink-0 w-96 group/card"
+                className="flex-shrink-0 w-full sm:w-96 group/card px-2"
               >
                 <div className={`${feature.bgColor} dark:bg-[#1A1A1D] h-full rounded-2xl p-8 border-2 border-transparent dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600 shadow-md hover:shadow-xl transition-all duration-300 backdrop-blur-sm`}>
                   {/* Icon & Title */}
