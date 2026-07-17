@@ -240,8 +240,9 @@ const Chat = () => {
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0 min-h-10 min-w-10 flex items-center justify-center"
-                title="More options"
+                title="Room Info"
                 onClick={() => setShowInfo(!showInfo)}
+                aria-label="Room Information"
               >
                 <FiInfo size={18} className="text-gray-700 dark:text-gray-300" />
               </motion.button>

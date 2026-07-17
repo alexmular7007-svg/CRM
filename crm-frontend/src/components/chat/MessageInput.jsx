@@ -145,7 +145,7 @@ const MessageInput = ({ onSendMessage, onTyping, roomId, disabled = false }) => 
   const isActive = (message.trim() || attachments.length > 0) && !disabled && !uploading
 
   return (
-    <div ref={containerRef} className="p-2 sm:p-3 md:p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0 min-h-[56px] z-20 relative">
+    <div ref={containerRef} className="p-2 sm:p-3 md:p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0 min-h-[56px] z-40 relative">
       {/* Attachments preview - responsive */}
       {attachments.length > 0 && (
         <div className="mb-2 sm:mb-3 flex flex-wrap gap-2">
@@ -211,7 +211,7 @@ const MessageInput = ({ onSendMessage, onTyping, roomId, disabled = false }) => 
               maxHeight: '100px',
             }}
           />
-          <div className="absolute right-2 sm:right-3 bottom-2 sm:bottom-3">
+          <div className="absolute right-2 sm:right-3 bottom-2 sm:bottom-3 z-10">
             <motion.button
               type="button"
               whileHover={{ scale: 1.1 }}
