@@ -67,63 +67,63 @@ const Dashboard = () => {
   ]
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-2xl font-bold mb-2" style={{ color: c.heading }}>Dashboard</h1>
-        <p style={{ color: c.textSecondary }}>
+        <h1 className="text-xl sm:text-2xl font-bold mb-1 sm:mb-2" style={{ color: c.heading }}>Dashboard</h1>
+        <p style={{ color: c.textSecondary }} className="text-xs sm:text-sm">
           Welcome back! Here's what's happening today.
         </p>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         {stats.map((stat, index) => (
-          <div key={index} className="card">
-            <div className="flex items-center justify-between">
-              <div>
-                <p style={{ color: c.textSecondary }} className="text-sm mb-1">
+          <div key={index} className="card p-3 sm:p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="min-w-0">
+                <p style={{ color: c.textSecondary }} className="text-xs sm:text-sm mb-0.5 sm:mb-1">
                   {stat.label}
                 </p>
-                <p style={{ color: c.textPrimary }} className="text-3xl font-bold">{stat.value}</p>
+                <p style={{ color: c.textPrimary }} className="text-2xl sm:text-3xl font-bold">{stat.value}</p>
               </div>
-              <div style={{ backgroundColor: stat.bgColor }} className="p-3 rounded-lg">
-                <stat.icon style={{ color: stat.color }} className="text-2xl" />
+              <div style={{ backgroundColor: stat.bgColor }} className="p-2 sm:p-3 rounded-lg w-fit">
+                <stat.icon style={{ color: stat.color }} className="text-lg sm:text-2xl" />
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="card">
-          <h2 style={{ color: c.heading }} className="text-lg font-semibold mb-4">Recent Activity</h2>
-          <div className="space-y-4">
+      {/* Recent Activity & Productivity Score */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        <div className="card p-4 sm:p-5">
+          <h2 style={{ color: c.heading }} className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Recent Activity</h2>
+          <div className="space-y-3 sm:space-y-4">
             {isLoadingActivities ? (
               <div className="flex items-center justify-center py-8">
                 <Spinner size="sm" />
               </div>
             ) : recentActivities && recentActivities.length > 0 ? (
               recentActivities.map((activity, index) => (
-                <div key={index} className="flex items-start space-x-3 pb-3" style={{ borderBottomColor: c.border, borderBottomWidth: index < recentActivities.length - 1 ? 1 : 0 }}>
+                <div key={index} className="flex items-start gap-2 sm:gap-3 pb-2 sm:pb-3" style={{ borderBottomColor: c.border, borderBottomWidth: index < recentActivities.length - 1 ? 1 : 0 }}>
                   <div style={{ 
                     backgroundColor: activity.type === 'TASK' ? c.badgeInfo : c.badgeWarning,
                     color: activity.type === 'TASK' ? c.badgeInfoText : c.badgeWarningText
-                  }} className="px-2.5 py-1.5 rounded text-xs font-medium whitespace-nowrap">
+                  }} className="px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded text-xs font-medium whitespace-nowrap flex-shrink-0 mt-0.5">
                     {activity.type}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p style={{ color: c.textPrimary }} className="text-sm font-medium truncate">
+                    <p style={{ color: c.textPrimary }} className="text-xs sm:text-sm font-medium truncate">
                       {activity.title}
                     </p>
                     <p style={{ color: c.textMuted }} className="text-xs mt-0.5 line-clamp-2">
                       {activity.description}
                     </p>
-                    <div className="flex items-center justify-between mt-2">
-                      <span style={{ color: c.textMuted }} className="text-xs">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mt-1.5 sm:mt-2 text-xs">
+                      <span style={{ color: c.textMuted }} className="truncate">
                         {activity.createdBy}
                       </span>
-                      <span style={{ color: c.textMuted }} className="text-xs">
+                      <span style={{ color: c.textMuted }} className="flex-shrink-0">
                         {format(new Date(activity.timestamp), 'MMM dd, HH:mm')}
                       </span>
                     </div>
@@ -131,21 +131,21 @@ const Dashboard = () => {
                 </div>
               ))
             ) : (
-              <p style={{ color: c.textMuted }} className="text-center py-8">
+              <p style={{ color: c.textMuted }} className="text-center py-6 sm:py-8 text-xs sm:text-sm">
                 No recent activity
               </p>
             )}
           </div>
         </div>
 
-        <div className="card">
-          <h2 style={{ color: c.heading }} className="text-lg font-semibold mb-4">Productivity Score</h2>
-          <div className="flex items-center justify-center py-8">
+        <div className="card p-4 sm:p-5">
+          <h2 style={{ color: c.heading }} className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Productivity Score</h2>
+          <div className="flex items-center justify-center py-8 sm:py-10">
             <div className="text-center">
-              <div style={{ color: c.primary }} className="text-5xl font-bold mb-2">
+              <div style={{ color: c.primary }} className="text-4xl sm:text-5xl font-bold mb-1.5 sm:mb-2">
                 {dashboardData?.userProductivity?.activityScore?.toFixed(0) || 0}
               </div>
-              <p style={{ color: c.textSecondary }}>Activity Score</p>
+              <p style={{ color: c.textSecondary }} className="text-xs sm:text-sm">Activity Score</p>
             </div>
           </div>
         </div>
