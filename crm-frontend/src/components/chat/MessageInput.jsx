@@ -128,10 +128,10 @@ const MessageInput = ({ onSendMessage, onTyping, roomId, disabled = false }) => 
   const isActive = (message.trim() || attachments.length > 0) && !disabled && !uploading
 
   return (
-    <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-      {/* Attachments preview */}
+    <div className="p-2 sm:p-3 md:p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+      {/* Attachments preview - responsive */}
       {attachments.length > 0 && (
-        <div className="mb-3 flex flex-wrap gap-2">
+        <div className="mb-2 sm:mb-3 flex flex-wrap gap-2">
           {attachments.map(({ file }, index) => (
             <motion.div
               key={index}
@@ -139,13 +139,14 @@ const MessageInput = ({ onSendMessage, onTyping, roomId, disabled = false }) => 
               animate={{ opacity: 1, scale: 1 }}
               className="relative group"
             >
-              <div className="px-3 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg text-sm flex items-center space-x-2">
-                <FiFile size={14} />
-                <span className="max-w-[150px] truncate">{file.name}</span>
-                <span className="text-xs opacity-60">({(file.size / 1024).toFixed(0)} KB)</span>
+              <div className="px-2 sm:px-3 py-1.5 sm:py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg text-xs sm:text-sm flex items-center space-x-1.5 sm:space-x-2">
+                <FiFile size={14} className="flex-shrink-0" />
+                <span className="max-w-[100px] sm:max-w-[150px] truncate">{file.name}</span>
+                <span className="text-xs opacity-60 flex-shrink-0">({(file.size / 1024).toFixed(0)} KB)</span>
                 <button
                   onClick={() => handleRemoveAttachment(index)}
-                  className="hover:bg-blue-100 dark:hover:bg-blue-800 rounded-full p-0.5"
+                  className="hover:bg-blue-100 dark:hover:bg-blue-800 rounded-full p-0.5 flex-shrink-0 touch-target"
+                  type="button"
                 >
                   <FiX size={14} />
                 </button>
@@ -155,14 +156,14 @@ const MessageInput = ({ onSendMessage, onTyping, roomId, disabled = false }) => 
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="flex items-end space-x-3">
+      <form onSubmit={handleSubmit} className="flex items-end gap-1.5 sm:gap-2 md:gap-3">
         {/* Attachment button */}
         <motion.button
           type="button"
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={() => fileInputRef.current?.click()}
-          className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+          className="p-2.5 sm:p-2 md:p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 flex-shrink-0 min-h-10 min-w-10 flex items-center justify-center touch-target"
           disabled={disabled || uploading}
           title="Attach file (PDF, DOCX, XLSX, PPTX, images)"
         >
@@ -187,9 +188,9 @@ const MessageInput = ({ onSendMessage, onTyping, roomId, disabled = false }) => 
             placeholder={uploading ? 'Uploading...' : 'Type a message...'}
             disabled={disabled || uploading}
             rows={1}
-            className="w-full px-4 py-3 pr-12 border-0 rounded-xl focus:ring-2 focus:ring-blue-500 resize-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 pr-10 sm:pr-12 border-0 rounded-xl focus:ring-2 focus:ring-blue-500 resize-none transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
             style={{
-              minHeight: '48px',
+              minHeight: '44px',
               maxHeight: '120px',
               backgroundColor: 'rgb(243, 244, 246)',
               color: 'rgb(17, 24, 39)',
@@ -204,14 +205,15 @@ const MessageInput = ({ onSendMessage, onTyping, roomId, disabled = false }) => 
               e.target.style.color = 'rgb(17, 24, 39)'
             }}
           />
-          <div className="absolute right-3 bottom-3">
+          <div className="absolute right-2 sm:right-3 bottom-2 sm:bottom-3">
             <motion.button
               type="button"
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors p-1 min-w-8 min-h-8 flex items-center justify-center touch-target"
               disabled={disabled}
+              title="Add emoji"
             >
               <FiSmile size={20} />
             </motion.button>
@@ -230,17 +232,18 @@ const MessageInput = ({ onSendMessage, onTyping, roomId, disabled = false }) => 
           whileHover={{ scale: isActive ? 1.05 : 1 }}
           whileTap={{ scale: isActive ? 0.95 : 1 }}
           disabled={!isActive}
-          className={`p-3 rounded-xl font-semibold transition-all ${
+          className={`p-2.5 sm:p-2 md:p-2 rounded-xl font-semibold transition-all flex-shrink-0 min-h-10 min-w-10 flex items-center justify-center touch-target ${
             isActive
               ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg hover:shadow-xl'
               : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
           }`}
+          title="Send message"
         >
           <FiSend size={20} />
         </motion.button>
       </form>
 
-      <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">
+      <div className="mt-1.5 sm:mt-2 text-xs text-gray-500 dark:text-gray-400 text-center hidden sm:block">
         Press <kbd className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">Enter</kbd> to send,{' '}
         <kbd className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">Shift+Enter</kbd> for new line
       </div>

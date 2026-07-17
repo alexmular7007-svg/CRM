@@ -42,16 +42,17 @@ const ConversationSidebar = ({ rooms, currentRoom, onSelectRoom, onCreateRoom })
   }
 
   return (
-    <div className="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col h-full">
+    <div className="w-full h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Messages</h2>
+      <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+        <div className="flex items-center justify-between mb-3 sm:mb-4">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Messages</h2>
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={onCreateRoom}
-            className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+            className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors min-h-10 min-w-10 flex items-center justify-center"
+            aria-label="Create new conversation"
           >
             <FiPlus size={20} />
           </motion.button>
@@ -65,7 +66,7 @@ const ConversationSidebar = ({ rooms, currentRoom, onSelectRoom, onCreateRoom })
             placeholder="Search conversations..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+            className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all min-h-10"
           />
         </div>
       </div>
@@ -85,14 +86,14 @@ const ConversationSidebar = ({ rooms, currentRoom, onSelectRoom, onCreateRoom })
                   key={room.id}
                   whileHover={{ backgroundColor: 'rgba(59, 130, 246, 0.05)' }}
                   onClick={() => onSelectRoom(room)}
-                  className={`p-4 cursor-pointer transition-colors ${
+                  className={`p-3 sm:p-4 cursor-pointer transition-colors touch-target min-h-20 sm:min-h-24 flex items-center ${
                     isActive ? 'bg-blue-50 dark:bg-blue-900/20' : ''
                   }`}
                 >
-                  <div className="flex items-start space-x-3">
+                  <div className="flex items-start space-x-3 w-full min-w-0">
                     {/* Avatar */}
                     <div className="relative flex-shrink-0">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold ${
+                      <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0 ${
                         room.type === 'PRIVATE' ? 'bg-gradient-to-br from-blue-600 to-purple-600' : 'bg-gradient-to-br from-green-600 to-teal-600'
                       }`}>
                         {room.type === 'GROUP' ? <FiUsers size={20} /> : getRoomAvatar(room)}
@@ -104,18 +105,18 @@ const ConversationSidebar = ({ rooms, currentRoom, onSelectRoom, onCreateRoom })
 
                     {/* Content */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center justify-between mb-1 gap-2">
                         <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
                           {getRoomName(room)}
                         </h3>
                         {room.lastMessage && (
-                          <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+                          <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
                             {formatDistanceToNow(new Date(room.lastMessage.createdAt), { addSuffix: true })}
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm text-gray-600 dark:text-gray-400 truncate line-clamp-1">
                           {room.lastMessage ? (
                             <>
                               {room.lastMessage.senderName === user?.fullName ? 'You: ' : ''}
@@ -126,7 +127,7 @@ const ConversationSidebar = ({ rooms, currentRoom, onSelectRoom, onCreateRoom })
                           )}
                         </p>
                         {unreadCount > 0 && (
-                          <span className="ml-2 px-2 py-0.5 bg-blue-600 text-white text-xs font-semibold rounded-full">
+                          <span className="px-2 py-1 bg-blue-600 text-white text-xs font-semibold rounded-full flex-shrink-0">
                             {unreadCount > 99 ? '99+' : unreadCount}
                           </span>
                         )}
@@ -138,7 +139,7 @@ const ConversationSidebar = ({ rooms, currentRoom, onSelectRoom, onCreateRoom })
             })}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+          <div className="flex flex-col items-center justify-center h-full p-4 sm:p-8 text-center">
             <FiMessageCircle size={48} className="text-gray-400 mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
               {searchQuery ? 'No conversations found' : 'No conversations yet'}
@@ -151,7 +152,7 @@ const ConversationSidebar = ({ rooms, currentRoom, onSelectRoom, onCreateRoom })
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={onCreateRoom}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors min-h-10"
               >
                 Start Conversation
               </motion.button>
