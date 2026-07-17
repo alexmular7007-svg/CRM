@@ -39,7 +39,7 @@ const Dashboard = () => {
 
   if (!currentWorkspace) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <p style={{ color: c.textMuted }} className="text-sm">
             No workspace selected. Please create or select a workspace.
@@ -51,7 +51,7 @@ const Dashboard = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center min-h-screen">
         <Spinner size="lg" />
       </div>
     )
@@ -59,7 +59,7 @@ const Dashboard = () => {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <p style={{ color: c.danger }} className="text-sm">
             Failed to load dashboard: {error.message || 'Unknown error'}
