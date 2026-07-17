@@ -6,18 +6,34 @@ import toast from 'react-hot-toast'
 import api from '../../services/api'
 
 const ALLOWED_EXTENSIONS = [
-  '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
-  '.jpg', '.jpeg', '.png', '.gif', '.webp',
+  // Documents
+  '.pdf', '.doc', '.docx', '.txt', '.md', '.csv',
+  '.xls', '.xlsx', '.ppt', '.pptx',
+  // Images
+  '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg',
+  // Video
+  '.mp4', '.mov', '.avi', '.webm',
+  // Audio
+  '.mp3', '.wav', '.ogg',
 ]
 const ALLOWED_MIME = [
+  // Documents
   'application/pdf',
   'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'text/plain',
+  'text/markdown',
+  'text/csv',
   'application/vnd.ms-excel',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   'application/vnd.ms-powerpoint',
   'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+  // Images
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+  // Video
+  'video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm',
+  // Audio
+  'audio/mpeg', 'audio/wav', 'audio/ogg',
 ]
 
 const MessageInput = ({ onSendMessage, onTyping, roomId, disabled = false }) => {
@@ -190,7 +206,7 @@ const MessageInput = ({ onSendMessage, onTyping, roomId, disabled = false }) => 
           ref={fileInputRef}
           type="file"
           multiple
-          accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.webp"
+          accept=".pdf,.doc,.docx,.txt,.md,.csv,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.webp,.svg,.mp4,.mov,.avi,.webm,.mp3,.wav,.ogg"
           onChange={handleFileSelect}
           className="hidden"
         />

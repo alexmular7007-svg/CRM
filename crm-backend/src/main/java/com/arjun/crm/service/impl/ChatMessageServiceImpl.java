@@ -59,14 +59,23 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     private String uploadDir;
 
     private static final Set<String> ALLOWED_TYPES = Set.of(
+            // Documents
             "application/pdf",
             "application/msword",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "text/plain",
+            "text/markdown",
+            "text/csv",
             "application/vnd.ms-excel",
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             "application/vnd.ms-powerpoint",
             "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-            "image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"
+            // Images
+            "image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml",
+            // Video
+            "video/mp4", "video/quicktime", "video/x-msvideo", "video/webm",
+            // Audio
+            "audio/mpeg", "audio/wav", "audio/ogg"
     );
 
     @Override
