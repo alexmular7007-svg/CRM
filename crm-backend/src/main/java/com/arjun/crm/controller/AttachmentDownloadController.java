@@ -115,14 +115,14 @@ public class AttachmentDownloadController {
      * Marks as deleted soft-delete and triggers async storage cleanup.
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<String>> deleteAttachment(
+    public ResponseEntity<ApiResponse<Void>> deleteAttachment(
             @PathVariable Long id) {
         log.info("🗑️ Delete request: attachment_id={}", id);
 
         try {
             User currentUser = getAuthenticatedUser();
             attachmentService.deleteAttachment(id, currentUser.getId());
-            return ResponseEntity.ok(ApiResponse.success("Attachment deleted successfully"));
+            return ResponseEntity.ok(ApiResponse.success("Attachment deleted successfully", null));
         } catch (Exception e) {
             log.error("❌ Delete failed:", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
