@@ -19,6 +19,9 @@ import com.arjun.crm.repository.BlockedUserRepository;
 import com.arjun.crm.service.ChatMessageService;
 import com.arjun.crm.service.NotificationService;
 import com.arjun.crm.service.CacheEvictionService;
+import com.arjun.crm.service.AttachmentService;
+import com.arjun.crm.service.SupabaseStorageService;
+import com.arjun.crm.entity.Attachment;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -54,6 +57,8 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     private final SimpMessagingTemplate messagingTemplate;
     private final BlockedUserRepository blockedUserRepository;
     private final CacheEvictionService cacheEvictionService;
+    private final AttachmentService attachmentService;
+    private final SupabaseStorageService storageService;
 
     @Value("${file.upload.dir:uploads/task-attachments}")
     private String uploadDir;
@@ -126,7 +131,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     @Transactional
     public ChatMessageResponse sendFileMessage(Long chatRoomId, MultipartFile file) {
         User currentUser = getAuthenticatedUser();
-        log.info("Uploading file to chat room {} by user {}", chatRoomId, currentUser.getEmail());
+        log.info("📤 Uploading file to chat room {} by user {}", chatRoomId, currentUser.getEmail());
 
         if (file.isEmpty()) throw new IllegalArgumentException("File is empty");
         if (file.getSize() > 20L * 1024 * 1024) throw new IllegalArgumentException("File exceeds 20 MB limit");
@@ -143,52 +148,40 @@ public class ChatMessageServiceImpl implements ChatMessageService {
             throw new AccessDeniedException("You are not a participant of this chat room");
         }
 
-        String chatUploadDir = uploadDir + "/chat";
+        // PHASE 3-4: Upload to Supabase Storage
+        SupabaseStorageService.UploadResult uploadResult = storageService.uploadChatAttachment(file, chatRoom.getId());
+        
+        // PHASE 3: Store metadata in PostgreSQL
+        MessageType msgType = contentType.startsWith("image/") ? MessageType.IMAGE : MessageType.FILE;
+
+        ChatMessage message = ChatMessage.builder()
+                .chatRoom(chatRoom)
+                .sender(currentUser)
+                .content(uploadResult.fileName)
+                .messageType(msgType)
+                .attachmentUrl(uploadResult.storagePath)  // Store path, not direct URL
+                .attachmentName(uploadResult.fileName)
+                .attachmentType(uploadResult.mimeType)
+                .attachmentSize(uploadResult.fileSize)
+                .build();
+
+        ChatMessage saved = chatMessageRepository.save(message);
+        ChatMessageResponse response = ChatMessageResponse.fromEntity(saved);
+
+        // PHASE 7: Broadcast via WebSocket
+        log.info("📢 Broadcasting file message to /topic/chat/{}", chatRoomId);
+        messagingTemplate.convertAndSend("/topic/chat/" + chatRoomId, response);
+        notifyParticipants(chatRoom, currentUser, "📎 " + uploadResult.fileName);
+
+        // Also create attachment metadata record
         try {
-            Path uploadPath = Paths.get(chatUploadDir);
-            if (!Files.exists(uploadPath)) Files.createDirectories(uploadPath);
-
-            String originalName = file.getOriginalFilename() != null ? file.getOriginalFilename() : "file";
-            String ext = originalName.contains(".")
-                    ? originalName.substring(originalName.lastIndexOf("."))
-                    : "";
-            String storedName = UUID.randomUUID() + ext;
-
-            Files.copy(file.getInputStream(), uploadPath.resolve(storedName), StandardCopyOption.REPLACE_EXISTING);
-
-            // FIXED: Use consistent URL path that matches WebMvcConfig resource handler
-            // Files are served via /api/uploads/chat/{filename} → browser can directly access
-            // No need for ChatFileController since WebMvcConfig handles static file serving
-            String fileUrl = "/api/uploads/chat/" + storedName;
-            log.info("✅ File uploaded to: {} with URL: {}", uploadPath.resolve(storedName), fileUrl);
-            MessageType msgType = contentType.startsWith("image/") ? MessageType.IMAGE : MessageType.FILE;
-
-            ChatMessage message = ChatMessage.builder()
-                    .chatRoom(chatRoom)
-                    .sender(currentUser)
-                    .content(originalName)
-                    .messageType(msgType)
-                    .attachmentUrl(fileUrl)
-                    .attachmentName(originalName)
-                    .attachmentType(contentType)
-                    .attachmentSize(file.getSize())
-                    .build();
-
-            ChatMessage saved = chatMessageRepository.save(message);
-            ChatMessageResponse response = ChatMessageResponse.fromEntity(saved);
-
-            // Broadcast to all participants in the chat room
-            log.info("📢 Broadcasting file message to /topic/chat/{}", chatRoomId);
-            messagingTemplate.convertAndSend("/topic/chat/" + chatRoomId, response);
-            notifyParticipants(chatRoom, currentUser, "📎 " + originalName);
-
-            log.info("✅ File message saved with ID: {} → URL: {}", saved.getId(), fileUrl);
-            return response;
-
-        } catch (IOException e) {
-            log.error("❌ Failed to save chat file", e);
-            throw new RuntimeException("Failed to upload file: " + e.getMessage());
+            attachmentService.uploadChatAttachment(file, saved.getId(), currentUser.getId());
+        } catch (Exception e) {
+            log.warn("⚠️ Failed to create attachment metadata, but file is uploaded: {}", e.getMessage());
         }
+
+        log.info("✅ File message saved with ID: {} → Storage: {}", saved.getId(), uploadResult.storagePath);
+        return response;
     }
 
     @Override

@@ -278,7 +278,7 @@ jwt:
   issuer: ${JWT_ISSUER:crm-backend}
 
 # ───────────────────────────────────────────────────────────────────────────
-# File Upload Configuration
+# File Upload Configuration (LEGACY - Deprecated)
 # ───────────────────────────────────────────────────────────────────────────
 file:
   upload:
@@ -286,6 +286,39 @@ file:
     max-size: ${FILE_MAX_SIZE:10485760}  # 10MB in bytes
     allowed-extensions: jpg,jpeg,png,gif,pdf,doc,docx,xls,xlsx,txt,zip
     create-dir-if-not-exists: true
+
+# ───────────────────────────────────────────────────────────────────────────
+# Supabase Configuration (NEW - Production Storage)
+# ───────────────────────────────────────────────────────────────────────────
+supabase:
+  # Supabase Project URL
+  url: ${SUPABASE_URL:https://db.xkzpzcvwzqjavftrnxjl.supabase.co}
+  
+  # Supabase Anon Key (client-side safe)
+  anon-key: ${SUPABASE_ANON_KEY:}
+  
+  # Supabase Service Role Key (server-side only - admin access)
+  service-key: ${SUPABASE_SERVICE_KEY:}
+  
+  # Storage Configuration
+  storage:
+    # Chat attachments bucket
+    bucket-name: ${SUPABASE_STORAGE_BUCKET:chat-attachments}
+    
+    # Chat attachment folder prefix
+    chat-folder: ${SUPABASE_CHAT_FOLDER:chat}
+    
+    # Task attachment folder prefix
+    task-folder: ${SUPABASE_TASK_FOLDER:tasks}
+    
+    # Maximum file size in bytes (20MB)
+    max-file-size: ${SUPABASE_MAX_FILE_SIZE:20971520}
+    
+    # URL expiration in seconds (7 days)
+    signed-url-expiry: ${SUPABASE_SIGNED_URL_EXPIRY:604800}
+    
+    # Bucket is private (signed URLs required)
+    is-public: ${SUPABASE_BUCKET_PUBLIC:false}
 
 # ───────────────────────────────────────────────────────────────────────────
 # AI Configuration (xAI)

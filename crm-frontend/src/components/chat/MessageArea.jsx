@@ -1,8 +1,10 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, isToday, isYesterday, isSameDay } from 'date-fns'
 import { useSelector } from 'react-redux'
-import { FiEdit2, FiCheck, FiChevronUp } from 'react-icons/fi'
+import { FiEdit2, FiCheck, FiChevronUp, FiDownload, FiAlertCircle } from 'react-icons/fi'
+import attachmentService from '../../services/attachmentService'
+import toast from 'react-hot-toast'
 
 const MessageArea = ({
   messages,
@@ -13,6 +15,8 @@ const MessageArea = ({
 }) => {
   const messagesEndRef = useRef(null)
   const { user } = useSelector((state) => state.auth)
+  const [downloadingId, setDownloadingId] = useState(null)
+  const [attachmentUrls, setAttachmentUrls] = useState({})  // Cache signed URLs
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -55,6 +59,36 @@ const MessageArea = ({
     
     const timeDiff = new Date(currentMsg.createdAt) - new Date(previousMsg.createdAt)
     return timeDiff < 60000 // Group if within 1 minute
+  }
+
+  /**
+   * PHASE 4: Handle file attachment download
+   * PHASE 8: Security - backend validates permissions
+   */
+  const handleDownloadAttachment = async (msg) => {
+    try {
+      setDownloadingId(msg.id)
+      
+      // PHASE 4: Generate signed URL from backend
+      const signedUrl = await attachmentService.getDownloadUrl(msg.id)
+      
+      // Open in new tab or trigger download
+      if (msg.messageType === 'IMAGE') {
+        // Images open in new tab for preview
+        window.open(signedUrl, '_blank')
+      } else {
+        // Files trigger download
+        const blob = await attachmentService.downloadAttachment(msg.id)
+        attachmentService.downloadBlob(blob, msg.attachmentName || 'download')
+      }
+      
+      toast.success('Download started')
+    } catch (error) {
+      console.error('Download failed:', error)
+      toast.error('Failed to download file')
+    } finally {
+      setDownloadingId(null)
+    }
   }
 
   const groupedMessages = messages.reduce((acc, msg, index) => {
@@ -137,42 +171,59 @@ const MessageArea = ({
                           : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-bl-sm'
                       } ${msg.isDeleted ? 'italic opacity-60' : ''}`}
                     >
-                      {/* Image attachment */}
+                      {/* PHASE 4 + PHASE 6: Image attachment with signed URL */}
                       {msg.messageType === 'IMAGE' && msg.attachmentUrl && (
-                        <a href={msg.attachmentUrl} target="_blank" rel="noopener noreferrer">
-                          <img
-                            src={msg.attachmentUrl}
-                            alt={msg.attachmentName || 'image'}
-                            className="max-w-xs sm:max-w-sm md:max-w-md max-h-64 rounded-lg mb-2 object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                          />
-                        </a>
+                        <div className="mb-2">
+                          <button
+                            onClick={() => handleDownloadAttachment(msg)}
+                            disabled={downloadingId === msg.id}
+                            className="relative group"
+                            title="Click to view/download"
+                          >
+                            <img
+                              src={msg.attachmentUrl}
+                              alt={msg.attachmentName || 'image'}
+                              className="max-w-xs sm:max-w-sm md:max-w-md max-h-64 rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                              onError={(e) => {
+                                // If URL is expired or invalid, show error
+                                e.target.style.opacity = '0.5'
+                              }}
+                            />
+                            {downloadingId === msg.id && (
+                              <div className="absolute inset-0 bg-black/30 rounded-lg flex items-center justify-center">
+                                <div className="text-white text-sm">Downloading...</div>
+                              </div>
+                            )}
+                          </button>
+                        </div>
                       )}
 
-                      {/* File attachment (non-image) */}
+                      {/* PHASE 4 + PHASE 6: File attachment with signed URL */}
                       {msg.messageType === 'FILE' && msg.attachmentUrl && (
-                        <a
-                          href={msg.attachmentUrl}
-                          download={msg.attachmentName}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={`flex items-center gap-2 mb-2 px-3 py-2 rounded-lg border transition-colors ${
+                        <button
+                          onClick={() => handleDownloadAttachment(msg)}
+                          disabled={downloadingId === msg.id}
+                          className={`w-full flex items-center gap-2 mb-2 px-3 py-2 rounded-lg border transition-colors ${
                             isOwn
                               ? 'border-blue-400 hover:bg-blue-500 text-white'
                               : 'border-gray-300 dark:border-gray-600 hover:bg-gray-300 dark:hover:bg-gray-600'
-                          }`}
+                          } ${downloadingId === msg.id ? 'opacity-60 cursor-not-allowed' : ''}`}
                         >
-                          <span className="text-lg">📎</span>
-                          <div className="min-w-0">
+                          <span className="text-lg flex-shrink-0">
+                            {downloadingId === msg.id ? '⌛' : '📎'}
+                          </span>
+                          <div className="min-w-0 text-left">
                             <p className="text-sm font-medium truncate max-w-[200px]">
                               {msg.attachmentName || msg.content}
                             </p>
                             {msg.attachmentSize && (
                               <p className={`text-xs ${isOwn ? 'text-blue-200' : 'text-gray-500 dark:text-gray-400'}`}>
-                                {(msg.attachmentSize / 1024).toFixed(0)} KB · Click to download
+                                {(msg.attachmentSize / 1024).toFixed(0)} KB · {downloadingId === msg.id ? 'Downloading...' : 'Click to download'}
                               </p>
                             )}
                           </div>
-                        </a>
+                          <FiDownload className="flex-shrink-0 ml-auto" />
+                        </button>
                       )}
 
                       {/* Text content (always shown for TEXT, shown as filename for files) */}
