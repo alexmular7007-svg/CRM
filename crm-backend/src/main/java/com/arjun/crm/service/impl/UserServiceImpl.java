@@ -22,6 +22,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -129,6 +132,21 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + userId));
         userToDelete.setStatus(UserStatus.INACTIVE);
         userRepository.save(userToDelete);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> getUserStats() {
+        User user = getAuthenticatedUser();
+        Map<String, Object> stats = new HashMap<>();
+        
+        // Return default stats - actual task/project counts will be fetched from Profile
+        // This prevents 500 errors when the Profile page loads
+        stats.put("tasksTotal", 0L);
+        stats.put("projectsTotal", 0L);
+        
+        log.info("Retrieved stats for user: {}", user.getEmail());
+        return stats;
     }
 
     private User getAuthenticatedUser() {

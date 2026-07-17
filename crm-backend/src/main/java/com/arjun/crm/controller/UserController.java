@@ -16,6 +16,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
@@ -28,6 +30,12 @@ public class UserController {
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<UserResponse>> getCurrentUser() {
         return ResponseEntity.ok(ApiResponse.success("User fetched", userService.getCurrentUser()));
+    }
+
+    /** GET /api/users/me/stats - Get user activity statistics */
+    @GetMapping("/me/stats")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getUserStats() {
+        return ResponseEntity.ok(ApiResponse.success("User stats fetched", userService.getUserStats()));
     }
 
     /** GET /api/users/search?workspaceId={id} */

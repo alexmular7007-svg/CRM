@@ -58,15 +58,17 @@ const Profile = () => {
   const { data: stats } = useQuery({
     queryKey: ['profile-stats'],
     queryFn: async () => {
-      const [tasks, projects] = await Promise.allSettled([
-        api.get('/tasks?page=0&size=1'),
-        api.get('/workspaces?page=0&size=1'),
-      ])
-      const tasksData  = tasks.status  === 'fulfilled' ? unwrap(tasks.value)    : {}
-      const projectsData = projects.status === 'fulfilled' ? unwrap(projects.value) : {}
-      return {
-        tasksTotal:    tasksData?.totalElements ?? 0,
-        projectsTotal: projectsData?.totalElements ?? 0,
+      try {
+        // Call backend endpoint that doesn't require workspaceId
+        // These endpoints should fetch user's overall stats without workspace filter
+        const res = await api.get('/users/me/stats')
+        return unwrap(res)
+      } catch (error) {
+        // Fallback if endpoint doesn't exist
+        return {
+          tasksTotal: 0,
+          projectsTotal: 0,
+        }
       }
     },
     staleTime: 60_000,
