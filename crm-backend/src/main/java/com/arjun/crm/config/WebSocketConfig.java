@@ -97,11 +97,17 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 .filter(s -> !s.isEmpty())
                 .toList();
 
+        // Add wildcard patterns for Vercel deployments
+        java.util.List<String> allOrigins = new java.util.ArrayList<>(allowedOrigins);
+        allOrigins.addAll(List.of(
+                "https://crm-taskflow.vercel.app",
+                "https://*.vercel.app"
+        ));
+
         // Convert to array for setAllowedOrigins()
-        String[] originsArray = allowedOrigins.toArray(new String[0]);
+        String[] originsArray = allOrigins.toArray(new String[0]);
 
         // Register STOMP endpoint with SockJS fallback
-        // Origins from environment variable support production HTTPS URLs
         registry.addEndpoint("/ws")
                 .setAllowedOrigins(originsArray)
                 .withSockJS();

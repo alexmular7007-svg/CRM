@@ -65,8 +65,12 @@ springdoc:
 
 # Strict CORS for production — must be set via env var
 cors:
-  allowed-origins: ${CORS_ALLOWED_ORIGINS}
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:https://crm-taskflow.vercel.app,https://crm-taskflow-production.up.railway.app}
   allow-credentials: true
+
+# WebSocket configuration for production
+websocket:
+  allowed-origins: ${WEBSOCKET_ALLOWED_ORIGINS:https://crm-taskflow.vercel.app,https://*.vercel.app,https://crm-taskflow-production.up.railway.app}
 
 # Redis presence service: set REDIS_ENABLED=true when Redis is available
 redis:
