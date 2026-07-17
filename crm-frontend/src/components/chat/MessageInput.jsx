@@ -24,11 +24,12 @@ const MessageInput = ({ onSendMessage, onTyping, roomId, disabled = false }) => 
   const [message, setMessage] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
-  const [attachments, setAttachments] = useState([])   // { file, preview? }
+  const [attachments, setAttachments] = useState([])
   const [uploading, setUploading] = useState(false)
   const textareaRef = useRef(null)
   const fileInputRef = useRef(null)
   const typingTimeoutRef = useRef(null)
+  const containerRef = useRef(null)
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -37,11 +38,29 @@ const MessageInput = ({ onSendMessage, onTyping, roomId, disabled = false }) => 
     }
   }, [message])
 
+  // Handle keyboard visibility on mobile - scroll input into view
+  useEffect(() => {
+    const handleFocus = () => {
+      setTimeout(() => {
+        containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+      }, 300)
+    }
+
+    textareaRef.current?.addEventListener('focus', handleFocus)
+    return () => textareaRef.current?.removeEventListener('focus', handleFocus)
+  }, [])
+
   const handleChange = (e) => {
     setMessage(e.target.value)
-    if (!isTyping) { setIsTyping(true); onTyping?.(true) }
+    if (!isTyping) { 
+      setIsTyping(true)
+      onTyping?.(true) 
+    }
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
-    typingTimeoutRef.current = setTimeout(() => { setIsTyping(false); onTyping?.(false) }, 3000)
+    typingTimeoutRef.current = setTimeout(() => { 
+      setIsTyping(false)
+      onTyping?.(false) 
+    }, 3000)
   }
 
   const handleFileSelect = (e) => {
@@ -59,7 +78,6 @@ const MessageInput = ({ onSendMessage, onTyping, roomId, disabled = false }) => 
       return true
     })
     setAttachments((prev) => [...prev, ...valid.map((file) => ({ file }))])
-    // Reset so the same file can be selected again
     e.target.value = ''
   }
 
@@ -76,23 +94,19 @@ const MessageInput = ({ onSendMessage, onTyping, roomId, disabled = false }) => 
     const formData = new FormData()
     formData.append('file', fileObj.file)
     formData.append('roomId', roomId)
-    // api interceptor already adds Authorization header
     await api.post('/chat/messages/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
-    // The backend broadcasts the message via WebSocket — no need to dispatch here
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     if ((!message.trim() && attachments.length === 0) || disabled || uploading) return
 
-    // Send text message
     if (message.trim()) {
       onSendMessage(message.trim())
     }
 
-    // Upload each file
     if (attachments.length > 0) {
       if (!roomId) {
         toast.error('No chat room selected')
@@ -128,7 +142,7 @@ const MessageInput = ({ onSendMessage, onTyping, roomId, disabled = false }) => 
   const isActive = (message.trim() || attachments.length > 0) && !disabled && !uploading
 
   return (
-    <div className="p-2 sm:p-3 md:p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+    <div ref={containerRef} className="p-2 sm:p-3 md:p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0 min-h-[56px]">
       {/* Attachments preview - responsive */}
       {attachments.length > 0 && (
         <div className="mb-2 sm:mb-3 flex flex-wrap gap-2">
@@ -156,14 +170,14 @@ const MessageInput = ({ onSendMessage, onTyping, roomId, disabled = false }) => 
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="flex items-end gap-1.5 sm:gap-2 md:gap-3">
+      <form onSubmit={handleSubmit} className="flex items-end gap-1 sm:gap-2 md:gap-3">
         {/* Attachment button */}
         <motion.button
           type="button"
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={() => fileInputRef.current?.click()}
-          className="p-2.5 sm:p-2 md:p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 flex-shrink-0 min-h-10 min-w-10 flex items-center justify-center touch-target"
+          className="p-2 sm:p-2 md:p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 flex-shrink-0 min-h-10 min-w-10 flex items-center justify-center touch-target"
           disabled={disabled || uploading}
           title="Attach file (PDF, DOCX, XLSX, PPTX, images)"
         >
@@ -179,7 +193,7 @@ const MessageInput = ({ onSendMessage, onTyping, roomId, disabled = false }) => 
         />
 
         {/* Message textarea */}
-        <div className="flex-1 relative">
+        <div className="flex-1 relative min-w-0">
           <textarea
             ref={textareaRef}
             value={message}
@@ -188,9 +202,9 @@ const MessageInput = ({ onSendMessage, onTyping, roomId, disabled = false }) => 
             placeholder={uploading ? 'Uploading...' : 'Type a message...'}
             disabled={disabled || uploading}
             rows={1}
-            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 pr-10 sm:pr-12 border-0 rounded-xl focus:ring-2 focus:ring-blue-500 resize-none transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+            className="w-full px-3 sm:px-4 py-2 sm:py-3 pr-10 sm:pr-12 border-0 rounded-xl focus:ring-2 focus:ring-blue-500 resize-none transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
             style={{
-              minHeight: '44px',
+              minHeight: '40px',
               maxHeight: '120px',
               backgroundColor: 'rgb(243, 244, 246)',
               color: 'rgb(17, 24, 39)',
@@ -232,7 +246,7 @@ const MessageInput = ({ onSendMessage, onTyping, roomId, disabled = false }) => 
           whileHover={{ scale: isActive ? 1.05 : 1 }}
           whileTap={{ scale: isActive ? 0.95 : 1 }}
           disabled={!isActive}
-          className={`p-2.5 sm:p-2 md:p-2 rounded-xl font-semibold transition-all flex-shrink-0 min-h-10 min-w-10 flex items-center justify-center touch-target ${
+          className={`p-2 sm:p-2 md:p-2 rounded-xl font-semibold transition-all flex-shrink-0 min-h-10 min-w-10 flex items-center justify-center touch-target ${
             isActive
               ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg hover:shadow-xl'
               : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'

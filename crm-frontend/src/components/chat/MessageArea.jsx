@@ -74,7 +74,7 @@ const MessageArea = ({
   }, [])
 
   return (
-    <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-2 sm:space-y-3 md:space-y-4">
+    <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-2 sm:space-y-3 md:space-y-4 min-h-0 bg-white dark:bg-gray-800">
       {groupedMessages.length > 0 ? (
         <>
           {hasOlderMessages && (

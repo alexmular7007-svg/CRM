@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
-import { motion, AnimatePresence } from 'framer-motion'
-import { FiMessageSquare, FiArrowLeft, FiPlus } from 'react-icons/fi'
+import { motion } from 'framer-motion'
+import { FiMessageSquare, FiArrowLeft, FiPlus, FiUsers, FiInfo } from 'react-icons/fi'
 import { useChat } from '../hooks/useChat'
 import { websocketService } from '../services/websocketService'
 import ConversationSidebar from '../components/chat/ConversationSidebar'
@@ -107,15 +107,15 @@ const Chat = () => {
   // MOBILE: Show conversations list when no roomId
   if (isMobile && !roomId) {
     return (
-      <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900">
-        {/* Mobile Header */}
-        <div className="border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between bg-white dark:bg-gray-800 flex-shrink-0">
-          <h1 className="font-semibold text-gray-900 dark:text-white text-lg">Messages</h1>
+      <div className="flex flex-col h-full bg-white dark:bg-gray-800 overflow-hidden">
+        {/* Mobile Header - Conversations List */}
+        <div className="border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between bg-white dark:bg-gray-800 flex-shrink-0 h-14">
+          <h1 className="font-semibold text-gray-900 dark:text-white text-base">Messages</h1>
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={handleCreateRoom}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors min-h-10 min-w-10 flex items-center justify-center"
             aria-label="Create new conversation"
             title="New conversation"
           >
@@ -124,13 +124,14 @@ const Chat = () => {
         </div>
 
         {/* Conversations List */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto bg-white dark:bg-gray-800">
           {rooms.length > 0 ? (
             <ConversationSidebar
               rooms={rooms}
               currentRoom={null}
               onSelectRoom={handleSelectRoom}
               onCreateRoom={handleCreateRoom}
+              isCompactMobile={true}
             />
           ) : (
             <div className="flex-1 flex items-center justify-center">
@@ -185,24 +186,57 @@ const Chat = () => {
 
   // MOBILE: Show full-screen chat when roomId is set
   if (isMobile && roomId) {
+    // Get the other user for private chats
+    const getOtherUser = () => {
+      if (currentRoom?.type === 'PRIVATE') {
+        return currentRoom.participants?.find(p => p.userId !== useSelector((state) => state.auth.user)?.id)
+      }
+      return null
+    }
+
     return (
-      <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 overflow-hidden">
+      <div className="flex flex-col h-full bg-white dark:bg-gray-800 overflow-hidden">
         {currentRoom ? (
           <>
-            {/* Mobile Chat Header with Back Button */}
-            <div className="border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center gap-3 bg-white dark:bg-gray-800 flex-shrink-0 min-h-[50px]">
+            {/* Mobile Chat Header with Back Button - Optimized */}
+            <div className="border-b border-gray-200 dark:border-gray-700 px-2 py-2 flex items-center gap-2 bg-white dark:bg-gray-800 flex-shrink-0 h-14">
+              {/* Back Button */}
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 onClick={() => navigate('/chat')}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0 min-h-10 min-w-10 flex items-center justify-center"
                 aria-label="Back to conversations"
                 title="Back"
               >
                 <FiArrowLeft size={20} className="text-gray-700 dark:text-gray-300" />
               </motion.button>
-              <div className="flex-1 min-w-0">
-                <h2 className="font-semibold text-gray-900 dark:text-white truncate text-base">{currentRoom?.name}</h2>
+
+              {/* Room Info - Centered */}
+              <div className="flex-1 min-w-0 flex items-center gap-2">
+                {/* Avatar */}
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0 ${
+                  currentRoom?.type === 'PRIVATE' ? 'bg-gradient-to-br from-blue-600 to-purple-600' : 'bg-gradient-to-br from-green-600 to-teal-600'
+                }`}>
+                  {currentRoom?.type === 'GROUP' ? <FiUsers size={16} /> : (currentRoom?.name?.charAt(0).toUpperCase() || '?')}
+                </div>
+                {/* Name and Status */}
+                <div className="flex-1 min-w-0">
+                  <h2 className="font-semibold text-gray-900 dark:text-white truncate text-sm">{currentRoom?.name}</h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {currentRoom?.participants?.length || 0} {currentRoom?.type === 'PRIVATE' ? '' : 'members'}
+                  </p>
+                </div>
               </div>
+
+              {/* Mobile Header Actions - Compact */}
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0 min-h-10 min-w-10 flex items-center justify-center"
+                title="More options"
+                onClick={() => setShowInfo(!showInfo)}
+              >
+                <FiInfo size={18} className="text-gray-700 dark:text-gray-300" />
+              </motion.button>
             </div>
 
             {/* Connection Status */}
