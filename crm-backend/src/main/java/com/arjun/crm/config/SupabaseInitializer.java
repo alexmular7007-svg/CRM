@@ -25,11 +25,11 @@ public class SupabaseInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
         log.info("═══════════════════════════════════════════════════════════════");
-        log.info("🚀 Supabase Storage Initialization");
+        log.info("🚀 Supabase Storage Initialization (Graceful)");
         log.info("═══════════════════════════════════════════════════════════════");
 
         try {
-            // PHASE 2: Ensure bucket exists
+            // PHASE 2: Try to ensure bucket exists
             log.info("📦 Ensuring Supabase bucket: {}", config.getStorage().getBucketName());
             storageService.ensureBucketExists();
 
@@ -43,14 +43,17 @@ public class SupabaseInitializer implements CommandLineRunner {
                 log.info("   Max file size: {} MB", config.getStorage().getMaxFileSize() / (1024 * 1024));
                 log.info("   Signed URL expiry: {} days", config.getStorage().getSignedUrlExpiry() / 86400);
             } else {
-                log.error("❌ Supabase Storage is NOT accessible");
-                log.error("   Please check configuration and credentials");
-                throw new RuntimeException("Supabase Storage not accessible");
+                log.warn("⚠️ Supabase Storage not accessible on startup");
+                log.warn("   Storage will be available when needed (file uploads)");
+                log.warn("   Check your Supabase configuration if uploads fail");
             }
 
         } catch (Exception e) {
-            log.error("❌ Failed to initialize Supabase Storage: {}", e.getMessage());
-            throw e;
+            // Graceful failure - don't crash the application
+            log.warn("⚠️ Supabase Storage initialization failed on startup: {}", e.getMessage());
+            log.warn("   Application will continue - Storage will be initialized on first upload");
+            log.warn("   Common causes: Network unavailable, Supabase credentials not set");
+            // Don't rethrow - allow app to start anyway
         }
 
         log.info("═══════════════════════════════════════════════════════════════");
