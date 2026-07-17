@@ -232,7 +232,9 @@ const ProfileTab = ({ user }) => {
     onSuccess: (res) => {
       const updated = res?.data ?? res
       dispatch(updateUser(updated))
-      queryClient.invalidateQueries(['profile'])
+      // Invalidate all profile-related queries to ensure UI updates immediately
+      queryClient.invalidateQueries({ queryKey: ['profile'] })
+      queryClient.invalidateQueries({ queryKey: ['profile-stats'] })
       toast.success('Photo updated')
     },
     onError: () => toast.error('Failed to update photo'),
@@ -243,7 +245,9 @@ const ProfileTab = ({ user }) => {
     onSuccess: (res) => {
       const updated = res?.data ?? res
       dispatch(updateUser(updated))
-      queryClient.invalidateQueries(['profile'])
+      // Invalidate all profile-related queries to ensure UI updates immediately
+      queryClient.invalidateQueries({ queryKey: ['profile'] })
+      queryClient.invalidateQueries({ queryKey: ['profile-stats'] })
       toast.success('Photo removed')
     },
     onError: () => toast.error('Failed to remove photo'),
