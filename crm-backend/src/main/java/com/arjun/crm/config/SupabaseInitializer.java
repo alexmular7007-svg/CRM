@@ -32,6 +32,22 @@ public class SupabaseInitializer implements CommandLineRunner {
 
         // PHASE 1: Verify configuration
         config.logConfiguration();
+        
+        // Check for placeholder/corrupted service key
+        if (config.getServiceKey() != null && 
+            (config.getServiceKey().contains("XXXXXX") || 
+             config.getServiceKey().endsWith("X") ||
+             config.getServiceKey().contains("PkRzZCT1BhNnvDlW7QXnvvXX"))) {
+            log.error("═══════════════════════════════════════════════════════════════");
+            log.error("❌ CRITICAL: SUPABASE_SERVICE_KEY is a placeholder/corrupted!");
+            log.error("═══════════════════════════════════════════════════════════════");
+            log.error("File uploads will FAIL until you set a valid service key");
+            log.error("Steps:");
+            log.error("1. Go to Supabase Dashboard → Settings → API");
+            log.error("2. Copy the 'Service Role' key");
+            log.error("3. Set SUPABASE_SERVICE_KEY=<the-key> in .env or Railway");
+            log.error("═══════════════════════════════════════════════════════════════");
+        }
 
         // DIAGNOSTIC: Test basic network connectivity
         log.info("═══════════════════════════════════════════════════════════════");

@@ -316,6 +316,16 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
                 log.error("Supabase Service Key not configured");
                 throw new RuntimeException("Supabase storage is not configured - missing SUPABASE_SERVICE_KEY environment variable");
             }
+            
+            // Validate service key format - should be a valid JWT
+            if (config.getServiceKey().contains("XXXXXX") || config.getServiceKey().endsWith("X")) {
+                log.error("CRITICAL: Supabase Service Key appears to be a placeholder/corrupted");
+                log.error("Service Key (redacted): {}...{}", 
+                    config.getServiceKey().substring(0, Math.min(20, config.getServiceKey().length())),
+                    config.getServiceKey().substring(Math.max(0, config.getServiceKey().length() - 10)));
+                throw new RuntimeException("SUPABASE_SERVICE_KEY is not properly configured - appears to be a placeholder. Please set valid credentials from Supabase Dashboard → Settings → API → Service Role key");
+            }
+            
             log.info("[27] Configuration validated");
 
             // ===== DIAGNOSTIC: URL INSPECTION =====
