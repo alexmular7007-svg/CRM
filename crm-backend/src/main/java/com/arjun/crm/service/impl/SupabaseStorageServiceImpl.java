@@ -333,7 +333,7 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
             Request request = new Request.Builder()
                     .url(uploadUrl)
                     .post(body)
-                    .addHeader("Authorization", "Bearer [SERVICE_KEY]")
+                    .addHeader("Authorization", "Bearer " + config.getServiceKey())
                     .addHeader("Content-Type", contentType)
                     .build();
 
