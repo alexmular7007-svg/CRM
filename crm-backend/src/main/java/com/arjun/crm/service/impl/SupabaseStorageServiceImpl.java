@@ -308,14 +308,54 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
             }
             log.info("[27] Configuration validated");
 
+            // ===== DIAGNOSTIC: URL INSPECTION =====
+            String supabaseUrl = config.getUrl();
+            log.info("[27a] SUPABASE_URL = {}", supabaseUrl);
+            log.info("[27b] SUPABASE_URL length: {}", supabaseUrl.length());
+            log.info("[27c] Starts with https://? {}", supabaseUrl.startsWith("https://"));
+            log.info("[27d] Ends with .supabase.co? {}", supabaseUrl.endsWith(".supabase.co"));
+            log.info("[27e] Contains whitespace? {}", supabaseUrl.matches(".*\\s.*"));
+            log.info("[27f] Contains quotes? {}", supabaseUrl.contains("\""));
+            log.info("[27g] Contains newline? {}", supabaseUrl.contains("\n") || supabaseUrl.contains("\r"));
+
             log.info("[28] Building upload URL");
             String uploadUrl = String.format(
                     "%s/storage/v1/object/%s/%s",
-                    config.getUrl(),
+                    supabaseUrl,
                     config.getStorage().getBucketName(),
                     urlEncode(storagePath)
             );
-            log.info("[29] Upload URL built: {} (masked)", uploadUrl.replaceAll(config.getUrl(), "[SUPABASE_URL]"));
+            log.info("[29] Upload URL (EXACT): {}", uploadUrl);
+
+            // ===== DIAGNOSTIC: URL PARSING =====
+            try {
+                java.net.URL parsedUrl = new java.net.URL(uploadUrl);
+                log.info("[29a] URL.getHost(): {}", parsedUrl.getHost());
+                log.info("[29b] URL.getProtocol(): {}", parsedUrl.getProtocol());
+                log.info("[29c] URL.getPort(): {}", parsedUrl.getPort());
+                log.info("[29d] URL.getPath(): {}", parsedUrl.getPath());
+                
+                // ===== DIAGNOSTIC: DNS RESOLUTION =====
+                log.info("[29e] DNS resolution for host: {}", parsedUrl.getHost());
+                try {
+                    java.net.InetAddress[] addresses = java.net.InetAddress.getAllByName(parsedUrl.getHost());
+                    for (java.net.InetAddress addr : addresses) {
+                        log.info("[29f] Resolved to: {} ({})", addr.getHostAddress(), addr.getClass().getSimpleName());
+                    }
+                } catch (java.net.UnknownHostException dnsError) {
+                    log.error("[29f] DNS FAILED: {}", dnsError.getMessage());
+                    throw dnsError;
+                }
+            } catch (java.net.MalformedURLException urlError) {
+                log.error("[29X] MALFORMED URL: {}", urlError.getMessage());
+                throw new RuntimeException("Invalid upload URL: " + urlError.getMessage(), urlError);
+            }
+
+            // ===== DIAGNOSTIC: OkHttpClient INFO =====
+            log.info("[29g] OkHttpClient connectTimeout: 30 seconds");
+            log.info("[29h] OkHttpClient readTimeout: 60 seconds");
+            log.info("[29i] OkHttpClient writeTimeout: 60 seconds");
+            log.info("[29j] OkHttpClient proxy: {}", httpClient.proxy() == null ? "NONE (direct)" : httpClient.proxy());
 
             log.info("[30] Preparing request body");
             byte[] fileContent = file.getBytes();
@@ -331,6 +371,20 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
                     .addHeader("Content-Type", contentType)
                     .build();
             log.info("[33] Request built");
+
+            // ===== DIAGNOSTIC: TEST GOOGLE CONNECTIVITY =====
+            log.info("[33a] Testing network connectivity with Google DNS");
+            try {
+                Request googleTest = new Request.Builder()
+                        .url("https://www.google.com")
+                        .get()
+                        .build();
+                try (Response googleResponse = httpClient.newCall(googleTest).execute()) {
+                    log.info("[33b] Google connectivity test: HTTP {} ({})", googleResponse.code(), googleResponse.isSuccessful() ? "OK" : "FAILED");
+                }
+            } catch (Exception googleError) {
+                log.error("[33b] Google connectivity test FAILED: {} {}", googleError.getClass().getSimpleName(), googleError.getMessage());
+            }
 
             log.info("[34] Executing HTTP POST to Supabase");
             try (Response response = httpClient.newCall(request).execute()) {
