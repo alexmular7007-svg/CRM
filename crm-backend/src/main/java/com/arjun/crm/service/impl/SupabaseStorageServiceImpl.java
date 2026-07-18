@@ -101,13 +101,15 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
         log.debug("🔗 Generating signed download URL for: {}", storagePath);
 
         try {
-            // Supabase Storage signed URL endpoint
-            // Note: storagePath should be passed without additional encoding as it's already formatted
+            // Build URL correctly: forward slashes in path should be encoded
+            // storagePath format: "chat/UUID.jpg" → encode to "chat%2FUUID.jpg"
+            String encodedPath = urlEncode(storagePath);
+            
             String endpoint = String.format(
                     "%s/storage/v1/object/sign/%s/%s",
                     config.getUrl(),
                     config.getStorage().getBucketName(),
-                    storagePath  // Don't double-encode, storagePath is already properly formatted
+                    encodedPath  // ✅ Properly URL-encoded path
             );
 
             log.debug("🔗 Signed URL endpoint: {}", endpoint);
