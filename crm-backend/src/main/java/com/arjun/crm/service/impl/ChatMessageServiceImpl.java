@@ -130,71 +130,89 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     @Override
     @Transactional
     public ChatMessageResponse sendFileMessage(Long chatRoomId, MultipartFile file) {
-        User currentUser = getAuthenticatedUser();
-        log.info("📤 Uploading file to chat room {} by user {}", chatRoomId, currentUser.getEmail());
-
-        if (file.isEmpty()) throw new IllegalArgumentException("File is empty");
-        if (file.getSize() > 20L * 1024 * 1024) throw new IllegalArgumentException("File exceeds 20 MB limit");
-
-        String contentType = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
-        if (!ALLOWED_TYPES.contains(contentType)) {
-            throw new IllegalArgumentException("File type not supported: " + contentType);
-        }
-
-        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
-                .orElseThrow(() -> new ResourceNotFoundException("Chat room not found"));
-
-        if (!chatRoomRepository.isUserParticipant(chatRoomId, currentUser.getId())) {
-            throw new AccessDeniedException("You are not a participant of this chat room");
-        }
-
-        // PHASE 3-4: Upload to Supabase Storage
-        SupabaseStorageService.UploadResult uploadResult = storageService.uploadChatAttachment(file, chatRoom.getId());
-        
-        // PHASE 3: Store metadata in PostgreSQL
-        MessageType msgType = contentType.startsWith("image/") ? MessageType.IMAGE : MessageType.FILE;
-
-        ChatMessage message = ChatMessage.builder()
-                .chatRoom(chatRoom)
-                .sender(currentUser)
-                .content(uploadResult.fileName)
-                .messageType(msgType)
-                .attachmentUrl(uploadResult.storagePath)  // Store path, not direct URL
-                .attachmentName(uploadResult.fileName)
-                .attachmentType(uploadResult.mimeType)
-                .attachmentSize(uploadResult.fileSize)
-                .build();
-
-        ChatMessage saved = chatMessageRepository.save(message);
-        ChatMessageResponse response = ChatMessageResponse.fromEntity(saved);
-
-        // PHASE 4: Attempt to generate signed URL for immediate use (but don't fail if it doesn't work)
-        // Frontend can fetch signed URL on-demand via /api/attachments/{id}/url endpoint
-        if (uploadResult.storagePath != null && !uploadResult.storagePath.isEmpty()) {
-            try {
-                String signedUrl = storageService.generateSignedDownloadUrl(uploadResult.storagePath, 604800);  // 7 days
-                response.setAttachmentUrl(signedUrl);
-                log.info("✅ Signed URL generated for immediate use");
-            } catch (Exception e) {
-                log.warn("⚠️ Failed to generate signed URL for immediate use, will be generated on-demand: {}", e.getMessage());
-                // Keep storage path - frontend will fetch signed URL when needed
-            }
-        }
-
-        // PHASE 7: Broadcast via WebSocket
-        log.info("📢 Broadcasting file message to /topic/chat/{}", chatRoomId);
-        messagingTemplate.convertAndSend("/topic/chat/" + chatRoomId, response);
-        notifyParticipants(chatRoom, currentUser, "📎 " + uploadResult.fileName);
-
-        // Also create attachment metadata record
+        org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ChatMessageServiceImpl.class);
+        log.info("[3] sendFileMessage() entered");
         try {
-            attachmentService.uploadChatAttachment(file, saved.getId(), currentUser.getId());
-        } catch (Exception e) {
-            log.warn("⚠️ Failed to create attachment metadata, but file is uploaded: {}", e.getMessage());
-        }
+            log.info("[4] Getting authenticated user");
+            User currentUser = getAuthenticatedUser();
+            log.info("[5] Authenticated user: {}", currentUser.getEmail());
 
-        log.info("✅ File message saved with ID: {} → Storage: {}", saved.getId(), uploadResult.storagePath);
-        return response;
+            log.info("[6] Validating file - size: {} bytes", file.getSize());
+            if (file.isEmpty()) throw new IllegalArgumentException("File is empty");
+            if (file.getSize() > 20L * 1024 * 1024) throw new IllegalArgumentException("File exceeds 20 MB limit");
+
+            String contentType = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
+            log.info("[7] Content-Type: {}", contentType);
+            if (!ALLOWED_TYPES.contains(contentType)) {
+                throw new IllegalArgumentException("File type not supported: " + contentType);
+            }
+
+            log.info("[8] Looking up chat room: {}", chatRoomId);
+            ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Chat room not found"));
+            log.info("[9] Chat room found");
+
+            log.info("[10] Checking user participation");
+            if (!chatRoomRepository.isUserParticipant(chatRoomId, currentUser.getId())) {
+                throw new AccessDeniedException("You are not a participant of this chat room");
+            }
+            log.info("[11] User is participant");
+
+            log.info("[12] Entering uploadChatAttachment()");
+            SupabaseStorageService.UploadResult uploadResult = storageService.uploadChatAttachment(file, chatRoom.getId());
+            log.info("[13] Upload result received - path: {}", uploadResult.storagePath);
+            
+            log.info("[14] Creating ChatMessage entity");
+            MessageType msgType = contentType.startsWith("image/") ? MessageType.IMAGE : MessageType.FILE;
+
+            ChatMessage message = ChatMessage.builder()
+                    .chatRoom(chatRoom)
+                    .sender(currentUser)
+                    .content(uploadResult.fileName)
+                    .messageType(msgType)
+                    .attachmentUrl(uploadResult.storagePath)
+                    .attachmentName(uploadResult.fileName)
+                    .attachmentType(uploadResult.mimeType)
+                    .attachmentSize(uploadResult.fileSize)
+                    .build();
+            log.info("[15] ChatMessage entity created");
+
+            log.info("[16] Saving to database");
+            ChatMessage saved = chatMessageRepository.save(message);
+            log.info("[17] Database save completed - ID: {}", saved.getId());
+            
+            ChatMessageResponse response = ChatMessageResponse.fromEntity(saved);
+
+            if (uploadResult.storagePath != null && !uploadResult.storagePath.isEmpty()) {
+                try {
+                    log.info("[18] Attempting to generate signed URL");
+                    String signedUrl = storageService.generateSignedDownloadUrl(uploadResult.storagePath, 604800);
+                    response.setAttachmentUrl(signedUrl);
+                    log.info("[19] Signed URL generated");
+                } catch (Exception e) {
+                    log.warn("[19] Signed URL generation skipped: {}", e.getMessage());
+                }
+            }
+
+            log.info("[20] Sending WebSocket broadcast");
+            messagingTemplate.convertAndSend("/topic/chat/" + chatRoomId, response);
+            notifyParticipants(chatRoom, currentUser, "📎 " + uploadResult.fileName);
+            log.info("[21] WebSocket broadcast sent");
+
+            try {
+                log.info("[22] Creating attachment metadata");
+                attachmentService.uploadChatAttachment(file, saved.getId(), currentUser.getId());
+                log.info("[23] Attachment metadata created");
+            } catch (Exception e) {
+                log.warn("[23] Attachment metadata creation skipped: {}", e.getMessage());
+            }
+
+            log.info("[24] sendFileMessage() completed successfully");
+            return response;
+        } catch (Exception e) {
+            log.error("[X] FAILED in sendFileMessage()", e);
+            throw e;
+        }
     }
 
     @Override

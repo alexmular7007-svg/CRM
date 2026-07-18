@@ -293,8 +293,11 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
     }
 
     private UploadResult uploadToSupabase(MultipartFile file, String storagePath) {
+        org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(SupabaseStorageServiceImpl.class);
         try {
-            // Validate configuration
+            log.info("[25] uploadToSupabase() entered - path: {}", storagePath);
+            
+            log.info("[26] Validating configuration");
             if (config.getUrl() == null || config.getUrl().isEmpty()) {
                 log.error("Supabase URL not configured");
                 throw new RuntimeException("Supabase storage is not configured - missing SUPABASE_URL environment variable");
@@ -303,19 +306,23 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
                 log.error("Supabase Service Key not configured");
                 throw new RuntimeException("Supabase storage is not configured - missing SUPABASE_SERVICE_KEY environment variable");
             }
+            log.info("[27] Configuration validated");
 
-            // Build upload URL
+            log.info("[28] Building upload URL");
             String uploadUrl = String.format(
                     "%s/storage/v1/object/%s/%s",
                     config.getUrl(),
                     config.getStorage().getBucketName(),
                     urlEncode(storagePath)
             );
+            log.info("[29] Upload URL built: {} (masked)", uploadUrl.replaceAll(config.getUrl(), "[SUPABASE_URL]"));
 
-            // Prepare request
+            log.info("[30] Preparing request body");
             byte[] fileContent = file.getBytes();
             String contentType = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
+            log.info("[31] File size: {} bytes, Content-Type: {}", fileContent.length, contentType);
             
+            log.info("[32] Creating RequestBuilder");
             RequestBody body = RequestBody.create(fileContent, MediaType.get(contentType));
             Request request = new Request.Builder()
                     .url(uploadUrl)
@@ -323,21 +330,24 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
                     .addHeader("Authorization", "Bearer " + config.getServiceKey())
                     .addHeader("Content-Type", contentType)
                     .build();
+            log.info("[33] Request built");
 
-            // Send request to Supabase
+            log.info("[34] Executing HTTP POST to Supabase");
             try (Response response = httpClient.newCall(request).execute()) {
                 int statusCode = response.code();
+                log.info("[35] Response received - HTTP {}", statusCode);
 
                 if (!response.isSuccessful()) {
                     String errorBody = response.body() != null ? response.body().string() : "(empty)";
-                    log.error("Upload failed (HTTP {}): {}", statusCode, errorBody);
+                    log.error("[36] Upload failed - HTTP {}: {}", statusCode, errorBody);
                     throw new RuntimeException("Upload failed (HTTP " + statusCode + "): " + errorBody);
                 }
 
-                // Success
+                log.info("[37] Response is successful");
                 String contentHash = calculateHash(fileContent);
-                log.debug("File uploaded successfully: {} ({})", storagePath, contentHash.substring(0, Math.min(16, contentHash.length())));
+                log.info("[38] File hash calculated");
 
+                log.info("[39] uploadToSupabase() returning UploadResult");
                 return new UploadResult(
                         storagePath,
                         file.getOriginalFilename(),
@@ -348,20 +358,20 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
             }
 
         } catch (java.net.SocketException e) {
-            log.error("Network unreachable: {}", e.getMessage());
+            log.error("[X] Network unreachable at uploadToSupabase()", e);
             throw new RuntimeException("Network unreachable - cannot reach Supabase: " + e.getMessage(), e);
         } catch (java.net.UnknownHostException e) {
-            log.error("DNS resolution failed: {}", e.getMessage());
+            log.error("[X] DNS resolution failed at uploadToSupabase()", e);
             throw new RuntimeException("DNS resolution failed for Supabase URL: " + e.getMessage(), e);
         } catch (IOException e) {
             if (e instanceof java.net.ConnectException) {
-                log.error("Connection refused to Supabase: {}", e.getMessage());
+                log.error("[X] Connection refused at uploadToSupabase()", e);
                 throw new RuntimeException("Connection refused to Supabase: " + e.getMessage(), e);
             }
-            log.error("IO error during upload: {}", e.getMessage());
+            log.error("[X] IO error at uploadToSupabase()", e);
             throw new RuntimeException("Failed to upload file: " + e.getMessage(), e);
         } catch (Exception e) {
-            log.error("Upload error - {}: {}", e.getClass().getSimpleName(), e.getMessage());
+            log.error("[X] Unexpected error at uploadToSupabase() - {}", e.getClass().getSimpleName(), e);
             throw new RuntimeException("Failed to upload file: " + e.getMessage(), e);
         }
     }

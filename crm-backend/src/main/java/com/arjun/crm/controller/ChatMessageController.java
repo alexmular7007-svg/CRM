@@ -43,9 +43,18 @@ public class ChatMessageController {
     public ResponseEntity<ApiResponse<ChatMessageResponse>> uploadFile(
             @RequestParam("file") MultipartFile file,
             @RequestParam("roomId") Long roomId) {
-        ChatMessageResponse response = chatMessageService.sendFileMessage(roomId, file);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("File sent successfully", response));
+        org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ChatMessageController.class);
+        log.info("[1] Controller.upload() entered - roomId: {}, fileName: {}", roomId, file.getOriginalFilename());
+        try {
+            log.info("[2] MultipartFile received - size: {} bytes", file.getSize());
+            ChatMessageResponse response = chatMessageService.sendFileMessage(roomId, file);
+            log.info("[18] Response prepared - returning to client");
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.success("File sent successfully", response));
+        } catch (Exception e) {
+            log.error("[X] FAILED in Controller.upload()", e);
+            throw e;
+        }
     }
 
     /** GET /api/chat/messages/rooms/{roomId} — paginated message history */
