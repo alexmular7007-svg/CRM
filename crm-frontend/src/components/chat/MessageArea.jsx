@@ -70,7 +70,8 @@ const MessageArea = ({
       setDownloadingId(msg.id)
       
       // PHASE 4: Generate signed URL from backend
-      const signedUrl = await attachmentService.getDownloadUrl(msg.id)
+      // ✅ FIX: Use attachmentId, NOT message id
+      const signedUrl = await attachmentService.getDownloadUrl(msg.attachmentId)
       
       // Open in new tab or trigger download
       if (msg.messageType === 'IMAGE') {
@@ -172,7 +173,7 @@ const MessageArea = ({
                       } ${msg.isDeleted ? 'italic opacity-60' : ''}`}
                     >
                       {/* PHASE 4 + PHASE 6: Image attachment with signed URL */}
-                      {msg.messageType === 'IMAGE' && msg.attachmentUrl && (
+                      {msg.messageType === 'IMAGE' && msg.attachmentId && (
                         <div className="mb-2">
                           <ImageThumbnail 
                             msg={msg} 
@@ -184,7 +185,7 @@ const MessageArea = ({
                       )}
 
                       {/* PHASE 4 + PHASE 6: File attachment with signed URL */}
-                      {msg.messageType === 'FILE' && msg.attachmentUrl && (
+                      {msg.messageType === 'FILE' && msg.attachmentId && (
                         <button
                           onClick={() => handleDownloadAttachment(msg)}
                           disabled={downloadingId === msg.id}
