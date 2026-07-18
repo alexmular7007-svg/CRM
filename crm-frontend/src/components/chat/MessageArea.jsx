@@ -174,27 +174,12 @@ const MessageArea = ({
                       {/* PHASE 4 + PHASE 6: Image attachment with signed URL */}
                       {msg.messageType === 'IMAGE' && msg.attachmentUrl && (
                         <div className="mb-2">
-                          <button
-                            onClick={() => handleDownloadAttachment(msg)}
-                            disabled={downloadingId === msg.id}
-                            className="relative group"
-                            title="Click to view/download"
-                          >
-                            <img
-                              src={msg.attachmentUrl}
-                              alt={msg.attachmentName || 'image'}
-                              className="max-w-xs sm:max-w-sm md:max-w-md max-h-64 rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                              onError={(e) => {
-                                // If URL is expired or invalid, show error
-                                e.target.style.opacity = '0.5'
-                              }}
-                            />
-                            {downloadingId === msg.id && (
-                              <div className="absolute inset-0 bg-black/30 rounded-lg flex items-center justify-center">
-                                <div className="text-white text-sm">Downloading...</div>
-                              </div>
-                            )}
-                          </button>
+                          <ImageThumbnail 
+                            msg={msg} 
+                            isOwn={isOwn}
+                            downloadingId={downloadingId}
+                            onDownload={() => handleDownloadAttachment(msg)}
+                          />
                         </div>
                       )}
 
@@ -305,6 +290,72 @@ const MessageArea = ({
         </div>
       )}
     </div>
+  )
+}
+
+/**
+ * ImageThumbnail Component
+ * Handles loading images from either signed URLs or storage paths
+ * Fetches signed URL on-demand if needed
+ */
+const ImageThumbnail = ({ msg, isOwn, downloadingId, onDownload }) => {
+  const [displayUrl, setDisplayUrl] = useState(msg.attachmentUrl)
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    // If it's already a full URL, use it
+    if (attachmentService.isFullUrl(msg.attachmentUrl)) {
+      setDisplayUrl(msg.attachmentUrl)
+      return
+    }
+
+    // Otherwise, fetch signed URL from backend
+    const fetchSignedUrl = async () => {
+      try {
+        setLoading(true)
+        const signedUrl = await attachmentService.getDownloadUrl(msg.id)
+        setDisplayUrl(signedUrl)
+      } catch (error) {
+        console.error('Failed to load image URL:', error)
+        // Keep original URL as fallback
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchSignedUrl()
+  }, [msg])
+
+  return (
+    <button
+      onClick={onDownload}
+      disabled={downloadingId === msg.id}
+      className="relative group"
+      title="Click to view/download"
+    >
+      {loading && (
+        <div className="absolute inset-0 bg-gray-300 rounded-lg flex items-center justify-center">
+          <div className="text-gray-600 text-sm">Loading...</div>
+        </div>
+      )}
+      {!loading && (
+        <img
+          src={displayUrl}
+          alt={msg.attachmentName || 'image'}
+          className="max-w-xs sm:max-w-sm md:max-w-md max-h-64 rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
+          onError={(e) => {
+            // If URL fails to load, show error indicator
+            e.target.style.opacity = '0.3'
+            console.error('Failed to load image from URL:', displayUrl)
+          }}
+        />
+      )}
+      {downloadingId === msg.id && (
+        <div className="absolute inset-0 bg-black/30 rounded-lg flex items-center justify-center">
+          <div className="text-white text-sm">Downloading...</div>
+        </div>
+      )}
+    </button>
   )
 }
 

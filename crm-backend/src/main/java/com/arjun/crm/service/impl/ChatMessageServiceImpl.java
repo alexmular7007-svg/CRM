@@ -168,14 +168,17 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         ChatMessage saved = chatMessageRepository.save(message);
         ChatMessageResponse response = ChatMessageResponse.fromEntity(saved);
 
-        // PHASE 4: Generate signed URL for the response (to be displayed in frontend)
-        try {
-            String signedUrl = storageService.generateSignedDownloadUrl(uploadResult.storagePath, 604800);  // 7 days
-            response.setAttachmentUrl(signedUrl);
-            log.info("✅ Signed URL generated: {}", signedUrl);
-        } catch (Exception e) {
-            log.warn("⚠️ Failed to generate signed URL for immediate response: {}", e.getMessage());
-            // Keep storage path - frontend will fetch it later
+        // PHASE 4: Attempt to generate signed URL for immediate use (but don't fail if it doesn't work)
+        // Frontend can fetch signed URL on-demand via /api/attachments/{id}/url endpoint
+        if (uploadResult.storagePath != null && !uploadResult.storagePath.isEmpty()) {
+            try {
+                String signedUrl = storageService.generateSignedDownloadUrl(uploadResult.storagePath, 604800);  // 7 days
+                response.setAttachmentUrl(signedUrl);
+                log.info("✅ Signed URL generated for immediate use");
+            } catch (Exception e) {
+                log.warn("⚠️ Failed to generate signed URL for immediate use, will be generated on-demand: {}", e.getMessage());
+                // Keep storage path - frontend will fetch signed URL when needed
+            }
         }
 
         // PHASE 7: Broadcast via WebSocket
@@ -201,22 +204,11 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         if (!chatRoomRepository.isUserParticipant(roomId, currentUser.getId())) {
             throw new AccessDeniedException("You are not a participant of this chat room");
         }
+        // Don't generate signed URLs during message fetch - too slow and causes failures
+        // Frontend will call the dedicated /api/attachments/{id}/url endpoint when needed
         return chatMessageRepository
                 .findByChatRoomIdAndIsDeletedFalseOrderByCreatedAtDesc(roomId, pageable)
-                .map(msg -> {
-                    ChatMessageResponse response = ChatMessageResponse.fromEntity(msg);
-                    // Generate signed URL for attachments
-                    if (response.getAttachmentUrl() != null && !response.getAttachmentUrl().isEmpty()) {
-                        try {
-                            String signedUrl = storageService.generateSignedDownloadUrl(response.getAttachmentUrl(), 604800);
-                            response.setAttachmentUrl(signedUrl);
-                        } catch (Exception e) {
-                            log.warn("⚠️ Failed to generate signed URL for attachment: {}", e.getMessage());
-                            // Keep original path if URL generation fails
-                        }
-                    }
-                    return response;
-                });
+                .map(ChatMessageResponse::fromEntity);
     }
 
     @Override

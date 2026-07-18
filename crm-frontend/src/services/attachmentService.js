@@ -86,6 +86,44 @@ const attachmentService = {
   async getPublicDownloadUrl(attachmentId) {
     return this.getDownloadUrl(attachmentId)
   },
+
+  /**
+   * Check if a URL is already a signed URL (starts with https://)
+   * or a storage path that needs to be converted
+   * 
+   * @param {string} url - The URL or storage path
+   * @returns {boolean} - True if already a full URL
+   */
+  isFullUrl(url) {
+    return url && url.startsWith('https://')
+  },
+
+  /**
+   * Get a displayable URL - either use provided URL or generate signed URL
+   * 
+   * @param {string} urlOrPath - Storage path or full signed URL
+   * @param {number} attachmentId - Attachment ID for fetching signed URL if needed
+   * @returns {Promise<string>} - Full displayable URL
+   */
+  async getDisplayUrl(urlOrPath, attachmentId) {
+    // If it's already a full URL, use it directly
+    if (this.isFullUrl(urlOrPath)) {
+      return urlOrPath
+    }
+    
+    // Otherwise, fetch signed URL from backend
+    if (attachmentId) {
+      try {
+        return await this.getDownloadUrl(attachmentId)
+      } catch (error) {
+        console.error('Failed to get display URL:', error)
+        // Return original path as fallback
+        return urlOrPath
+      }
+    }
+    
+    return urlOrPath
+  },
 }
 
 export default attachmentService
