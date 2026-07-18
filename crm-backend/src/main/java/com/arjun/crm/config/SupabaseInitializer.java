@@ -47,6 +47,8 @@ public class SupabaseInitializer implements CommandLineRunner {
             log.error("2. Copy the 'Service Role' key");
             log.error("3. Set SUPABASE_SERVICE_KEY=<the-key> in .env or Railway");
             log.error("═══════════════════════════════════════════════════════════════");
+            log.warn("⚠️ TEXT MESSAGES WILL WORK - Only FILE UPLOADS will fail");
+            return;  // Skip the rest of initialization, text messages should still work
         }
 
         // DIAGNOSTIC: Test basic network connectivity
