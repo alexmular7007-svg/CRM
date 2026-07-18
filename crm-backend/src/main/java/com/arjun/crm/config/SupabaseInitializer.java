@@ -5,6 +5,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Application Startup Hook
@@ -28,6 +32,12 @@ public class SupabaseInitializer implements CommandLineRunner {
 
         // PHASE 1: Verify configuration
         config.logConfiguration();
+
+        // DIAGNOSTIC: Test basic network connectivity
+        log.info("═══════════════════════════════════════════════════════════════");
+        log.info("🌐 NETWORK CONNECTIVITY TEST");
+        log.info("═══════════════════════════════════════════════════════════════");
+        testGoogleConnectivity();
 
         try {
             // PHASE 2: Try to initialize storage
@@ -57,5 +67,42 @@ public class SupabaseInitializer implements CommandLineRunner {
         }
 
         log.info("═══════════════════════════════════════════════════════════════");
+    }
+
+    private void testGoogleConnectivity() {
+        try {
+            okhttp3.OkHttpClient client = new okhttp3.OkHttpClient.Builder()
+                    .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+                    .readTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+                    .build();
+
+            log.info("[NETWORK] OkHttpClient created");
+            log.info("[NETWORK] Proxy: {}", client.proxy() == null ? "NONE (direct)" : client.proxy());
+
+            okhttp3.Request request = new okhttp3.Request.Builder()
+                    .url("https://www.google.com")
+                    .get()
+                    .build();
+
+            log.info("[NETWORK] Sending GET https://www.google.com");
+            try (okhttp3.Response response = client.newCall(request).execute()) {
+                log.info("[NETWORK] ✅ Google Status = {}", response.code());
+                if (response.code() == 200) {
+                    log.info("[NETWORK] ✅ Railway networking is WORKING");
+                    log.info("[NETWORK] ✅ Outbound HTTPS connections are allowed");
+                } else {
+                    log.warn("[NETWORK] Google returned HTTP {}", response.code());
+                }
+            }
+        } catch (java.net.SocketException e) {
+            log.error("[NETWORK] ❌ SocketException: Network unreachable");
+            log.error("[NETWORK] ❌ Railway has NO outbound network access");
+            log.error("[NETWORK] Exception: {}", e.getMessage());
+        } catch (java.net.UnknownHostException e) {
+            log.error("[NETWORK] ❌ DNS resolution failed for www.google.com");
+            log.error("[NETWORK] Exception: {}", e.getMessage());
+        } catch (Exception e) {
+            log.error("[NETWORK] ❌ Google connectivity test failed: {} - {}", e.getClass().getSimpleName(), e.getMessage());
+        }
     }
 }

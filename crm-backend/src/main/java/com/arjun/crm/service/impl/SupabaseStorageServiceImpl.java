@@ -64,6 +64,16 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
                 .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
                 .writeTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
                 .build();
+        
+        // Log OkHttpClient configuration
+        org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(SupabaseStorageServiceImpl.class);
+        log.info("[OKHTTP] OkHttpClient initialized:");
+        log.info("[OKHTTP] - Connect timeout: 30 seconds");
+        log.info("[OKHTTP] - Read timeout: 60 seconds");
+        log.info("[OKHTTP] - Write timeout: 60 seconds");
+        log.info("[OKHTTP] - Proxy: {}", this.httpClient.proxy() == null ? "NONE (direct connection)" : this.httpClient.proxy());
+        log.info("[OKHTTP] - Dispatcher: {}", this.httpClient.dispatcher());
+        log.info("[OKHTTP] - Connection Pool: {}", this.httpClient.connectionPool());
     }
 
     @Override
