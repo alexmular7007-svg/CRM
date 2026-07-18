@@ -294,38 +294,25 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
 
     private UploadResult uploadToSupabase(MultipartFile file, String storagePath) {
         try {
-            // PHASE 1: Validate configuration
+            // Validate configuration
             if (config.getUrl() == null || config.getUrl().isEmpty()) {
-                log.error("❌ PHASE 1 FAILED: Supabase URL not configured");
+                log.error("Supabase URL not configured");
                 throw new RuntimeException("Supabase storage is not configured - missing SUPABASE_URL environment variable");
             }
             if (config.getServiceKey() == null || config.getServiceKey().isEmpty()) {
-                log.error("❌ PHASE 1 FAILED: Supabase Service Key not configured");
+                log.error("Supabase Service Key not configured");
                 throw new RuntimeException("Supabase storage is not configured - missing SUPABASE_SERVICE_KEY environment variable");
             }
 
-            log.info("✅ PHASE 1: Configuration verified");
-
-            // PHASE 2: Build correct URL
-            log.info("📤 Starting file upload: {} ({} bytes)", file.getOriginalFilename(), file.getSize());
-            log.info("   File type: {}", file.getContentType());
-
+            // Build upload URL
             String uploadUrl = String.format(
                     "%s/storage/v1/object/%s/%s",
                     config.getUrl(),
                     config.getStorage().getBucketName(),
                     urlEncode(storagePath)
             );
-            
-            // Log URL without secrets - show format only
-            String urlForLogging = uploadUrl
-                    .replaceAll(config.getUrl(), "[SUPABASE_URL]")
-                    .replaceAll(config.getServiceKey(), "[SERVICE_KEY]");
-            log.info("✅ PHASE 2: URL constructed correctly");
-            log.info("   Upload endpoint: {}", urlForLogging);
-            log.info("   Storage path: {}", storagePath);
 
-            // PHASE 3: Prepare request
+            // Prepare request
             byte[] fileContent = file.getBytes();
             String contentType = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
             
@@ -337,31 +324,19 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
                     .addHeader("Content-Type", contentType)
                     .build();
 
-            log.info("✅ PHASE 3: HTTP request prepared");
-            log.info("   Method: POST");
-            log.info("   Content-Type: {}", contentType);
-            log.info("   Payload size: {} bytes", fileContent.length);
-
-            // PHASE 4: Send request to Supabase
-            log.info("📨 PHASE 4: Sending request to Supabase Storage API...");
+            // Send request to Supabase
             try (Response response = httpClient.newCall(request).execute()) {
                 int statusCode = response.code();
-                String statusMessage = response.message();
-                
-                log.info("📥 Response received: HTTP {}", statusCode);
 
                 if (!response.isSuccessful()) {
                     String errorBody = response.body() != null ? response.body().string() : "(empty)";
-                    log.error("❌ PHASE 4 FAILED: Upload returned error HTTP {}", statusCode);
-                    log.error("   Error response: {}", errorBody);
+                    log.error("Upload failed (HTTP {}): {}", statusCode, errorBody);
                     throw new RuntimeException("Upload failed (HTTP " + statusCode + "): " + errorBody);
                 }
 
-                // PHASE 5: Success
+                // Success
                 String contentHash = calculateHash(fileContent);
-                log.info("✅ PHASE 5: File uploaded successfully to Supabase");
-                log.info("   Storage path: {}", storagePath);
-                log.info("   File hash: {}", contentHash.substring(0, Math.min(16, contentHash.length())) + "...");
+                log.debug("File uploaded successfully: {} ({})", storagePath, contentHash.substring(0, Math.min(16, contentHash.length())));
 
                 return new UploadResult(
                         storagePath,
@@ -373,36 +348,20 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
             }
 
         } catch (java.net.SocketException e) {
-            log.error("❌ PHASE 3 FAILED: Socket error (network unreachable)");
-            log.error("   Error: {}", e.getMessage());
-            log.error("   Possible causes:");
-            log.error("   - No internet connection from Railway container");
-            log.error("   - Firewall blocking outbound connections");
-            log.error("   - Wrong SUPABASE_URL format");
+            log.error("Network unreachable: {}", e.getMessage());
             throw new RuntimeException("Network unreachable - cannot reach Supabase: " + e.getMessage(), e);
         } catch (java.net.UnknownHostException e) {
-            log.error("❌ PHASE 2 FAILED: DNS resolution error");
-            log.error("   Error: {}", e.getMessage());
-            log.error("   Possible causes:");
-            log.error("   - SUPABASE_URL domain is invalid");
-            log.error("   - DNS service is unavailable");
+            log.error("DNS resolution failed: {}", e.getMessage());
             throw new RuntimeException("DNS resolution failed for Supabase URL: " + e.getMessage(), e);
         } catch (IOException e) {
             if (e instanceof java.net.ConnectException) {
-                log.error("❌ PHASE 3 FAILED: Connection refused");
-                log.error("   Error: {}", e.getMessage());
-                log.error("   Possible causes:");
-                log.error("   - Supabase API is down or unreachable");
-                log.error("   - SUPABASE_URL is incorrect");
-                log.error("   - Firewall blocking connection");
+                log.error("Connection refused to Supabase: {}", e.getMessage());
                 throw new RuntimeException("Connection refused to Supabase: " + e.getMessage(), e);
             }
-            log.error("❌ PHASE 3 FAILED: IO error");
-            log.error("   Error: {}", e.getMessage());
+            log.error("IO error during upload: {}", e.getMessage());
             throw new RuntimeException("Failed to upload file: " + e.getMessage(), e);
         } catch (Exception e) {
-            log.error("❌ UNEXPECTED ERROR: {}", e.getClass().getSimpleName());
-            log.error("   Error: {}", e.getMessage());
+            log.error("Upload error - {}: {}", e.getClass().getSimpleName(), e.getMessage());
             throw new RuntimeException("Failed to upload file: " + e.getMessage(), e);
         }
     }
