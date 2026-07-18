@@ -15,6 +15,17 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
 
     Page<ChatMessage> findByChatRoomIdAndIsDeletedFalseOrderByCreatedAtDesc(Long chatRoomId, Pageable pageable);
 
+    /**
+     * PHASE 4: Fetch chat messages with eager loading of attachments
+     * Prevents N+1 queries and ensures attachmentId is populated in responses
+     */
+    @Query("SELECT m FROM ChatMessage m " +
+           "LEFT JOIN FETCH m.attachment " +
+           "WHERE m.chatRoom.id = :roomId " +
+           "AND m.isDeleted = false " +
+           "ORDER BY m.createdAt DESC")
+    Page<ChatMessage> findByChatRoomIdWithAttachments(@Param("roomId") Long roomId, Pageable pageable);
+
     @Query("SELECT m FROM ChatMessage m " +
            "WHERE m.chatRoom.id = :roomId " +
            "AND m.isDeleted = false " +

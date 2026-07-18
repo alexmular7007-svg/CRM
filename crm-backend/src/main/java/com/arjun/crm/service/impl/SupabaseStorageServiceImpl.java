@@ -102,12 +102,15 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
 
         try {
             // Supabase Storage signed URL endpoint
+            // Note: storagePath should be passed without additional encoding as it's already formatted
             String endpoint = String.format(
                     "%s/storage/v1/object/sign/%s/%s",
                     config.getUrl(),
                     config.getStorage().getBucketName(),
-                    urlEncode(storagePath)
+                    storagePath  // Don't double-encode, storagePath is already properly formatted
             );
+
+            log.debug("🔗 Signed URL endpoint: {}", endpoint);
 
             // POST request with expirySeconds
             String jsonBody = String.format("{\"expiresIn\": %d}", expirySeconds);
@@ -120,17 +123,24 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
 
             try (Response response = httpClient.newCall(request).execute()) {
                 if (!response.isSuccessful()) {
-                    log.error("❌ Failed to generate signed URL: {} {}", response.code(), response.message());
-                    throw new RuntimeException("Failed to generate signed URL");
+                    String errorBody = response.body() != null ? response.body().string() : "(empty)";
+                    log.error("❌ Failed to generate signed URL: {} {} - {}", response.code(), response.message(), errorBody);
+                    throw new RuntimeException("Failed to generate signed URL: HTTP " + response.code());
                 }
 
                 String responseBody = response.body().string();
+                log.debug("Response body: {}", responseBody);
                 // Parse JSON response: {"signedURL":"..."}
                 String signedPath = extractJsonField(responseBody, "signedURL");
+                if (signedPath == null || signedPath.isEmpty()) {
+                    log.error("❌ No signedURL in response: {}", responseBody);
+                    throw new RuntimeException("Invalid response from Supabase: missing signedURL");
+                }
+                
                 String publicUrl = config.getUrl() + "/storage/v1/object/sign/" +
                         config.getStorage().getBucketName() + "/" + signedPath;
 
-                log.info("✅ Signed URL generated: {}", publicUrl);
+                log.info("✅ Signed URL generated successfully");
                 return publicUrl;
             }
         } catch (Exception e) {

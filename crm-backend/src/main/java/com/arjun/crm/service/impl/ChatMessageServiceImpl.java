@@ -217,8 +217,9 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         }
         // Don't generate signed URLs during message fetch - too slow and causes failures
         // Frontend will call the dedicated /api/attachments/{id}/url endpoint when needed
+        // IMPORTANT: Use query with eager loading of attachments
         return chatMessageRepository
-                .findByChatRoomIdAndIsDeletedFalseOrderByCreatedAtDesc(roomId, pageable)
+                .findByChatRoomIdWithAttachments(roomId, pageable)
                 .map(ChatMessageResponse::fromEntity);
     }
 
