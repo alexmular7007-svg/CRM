@@ -146,6 +146,12 @@ public class ChatMessageServiceImpl implements ChatMessageService {
             if (!ALLOWED_TYPES.contains(contentType)) {
                 throw new IllegalArgumentException("File type not supported: " + contentType);
             }
+            
+            // Validate Supabase is configured
+            log.info("[7a] Checking Supabase configuration");
+            if (storageService == null) {
+                throw new RuntimeException("File upload service is not available. Contact administrator.");
+            }
 
             log.info("[8] Looking up chat room: {}", chatRoomId);
             ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
