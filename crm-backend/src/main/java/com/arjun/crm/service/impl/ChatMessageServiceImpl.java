@@ -215,11 +215,10 @@ public class ChatMessageServiceImpl implements ChatMessageService {
         if (!chatRoomRepository.isUserParticipant(roomId, currentUser.getId())) {
             throw new AccessDeniedException("You are not a participant of this chat room");
         }
-        // Don't generate signed URLs during message fetch - too slow and causes failures
-        // Frontend will call the dedicated /api/attachments/{id}/url endpoint when needed
-        // IMPORTANT: Use query with eager loading of attachments
+        // IMPORTANT: Use custom query with eager loading of attachments
+        // This ensures attachmentId is populated in response for FILE/IMAGE messages
         return chatMessageRepository
-                .findByChatRoomIdWithAttachments(roomId, pageable)
+                .findByChatRoomIdAndIsDeletedFalseOrderByCreatedAtDesc(roomId, pageable)
                 .map(ChatMessageResponse::fromEntity);
     }
 
