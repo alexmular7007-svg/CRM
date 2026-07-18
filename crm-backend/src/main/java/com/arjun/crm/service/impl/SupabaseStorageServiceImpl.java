@@ -296,54 +296,101 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
         try {
             // Validate Supabase configuration
             if (config.getUrl() == null || config.getUrl().isEmpty()) {
-                log.error("❌ Supabase URL not configured");
+                log.error("❌ Supabase URL not configured - SUPABASE_URL environment variable missing");
                 throw new RuntimeException("Supabase storage is not configured - missing SUPABASE_URL environment variable");
             }
             if (config.getServiceKey() == null || config.getServiceKey().isEmpty()) {
-                log.error("❌ Supabase Service Key not configured");
+                log.error("❌ Supabase Service Key not configured - SUPABASE_SERVICE_KEY environment variable missing");
                 throw new RuntimeException("Supabase storage is not configured - missing SUPABASE_SERVICE_KEY environment variable");
             }
 
-            log.debug("🚀 Uploading to Supabase: {} bytes → {}", file.getSize(), storagePath);
+            log.info("📤 Starting upload: {} ({} bytes) → {}", file.getOriginalFilename(), file.getSize(), storagePath);
+            log.info("🪣 Bucket: {}", config.getStorage().getBucketName());
 
-            String url = String.format(
+            // Build URL (log without secrets)
+            String uploadUrl = String.format(
                     "%s/storage/v1/object/%s/%s",
                     config.getUrl(),
                     config.getStorage().getBucketName(),
                     urlEncode(storagePath)
             );
+            log.debug("📍 Upload URL (redacted): {}...", uploadUrl.substring(0, Math.min(100, uploadUrl.length())));
 
-            // Prepare request with file content
+            // Prepare file content
             byte[] fileContent = file.getBytes();
-            RequestBody body = RequestBody.create(fileContent, MediaType.get(file.getContentType()));
+            String contentType = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
+            
+            log.debug("📊 File details: size={} bytes, type={}", fileContent.length, contentType);
 
+            // Build request
+            RequestBody body = RequestBody.create(fileContent, MediaType.get(contentType));
             Request request = new Request.Builder()
-                    .url(url)
+                    .url(uploadUrl)
                     .post(body)
                     .addHeader("Authorization", "Bearer " + config.getServiceKey())
-                    .addHeader("Content-Type", file.getContentType() != null ? file.getContentType() : "application/octet-stream")
+                    .addHeader("Content-Type", contentType)
                     .build();
 
+            log.debug("🔐 Authorization: Bearer [SERVICE_KEY]");
+            log.debug("🔗 Request headers prepared");
+
+            // Execute upload
+            log.info("🚀 Sending upload request to Supabase...");
             try (Response response = httpClient.newCall(request).execute()) {
+                int statusCode = response.code();
+                String statusMessage = response.message();
+                
+                log.info("📥 Response received: HTTP {} {}", statusCode, statusMessage);
+
                 if (!response.isSuccessful()) {
-                    log.error("❌ Upload failed: {} {}", response.code(), response.message());
-                    String errorBody = response.body() != null ? response.body().string() : "Unknown error";
-                    throw new RuntimeException("Upload failed (HTTP " + response.code() + "): " + errorBody);
+                    String errorBody = response.body() != null ? response.body().string() : "(empty body)";
+                    log.error("❌ Upload failed: HTTP {} - {}", statusCode, errorBody);
+                    throw new RuntimeException("Upload failed (HTTP " + statusCode + "): " + errorBody);
                 }
 
+                // Success
                 String contentHash = calculateHash(fileContent);
-                log.info("✅ File uploaded successfully: {} → {}", file.getOriginalFilename(), storagePath);
+                log.info("✅ Upload successful!");
+                log.info("📝 Storage path: {}", storagePath);
+                log.info("🔐 Content hash (SHA-256): {}", contentHash);
 
                 return new UploadResult(
                         storagePath,
                         file.getOriginalFilename(),
-                        file.getContentType(),
+                        contentType,
                         file.getSize(),
                         contentHash
                 );
             }
+
+        } catch (java.net.SocketException e) {
+            log.error("❌ Socket error (network unreachable): {}", e.getMessage(), e);
+            log.error("   This typically means:");
+            log.error("   - No internet connection from Railway container");
+            log.error("   - Firewall blocking outbound connections");
+            log.error("   - Wrong SUPABASE_URL format");
+            throw new RuntimeException("Network unreachable - cannot reach Supabase: " + e.getMessage(), e);
+        } catch (java.net.UnknownHostException e) {
+            log.error("❌ DNS resolution failed: {}", e.getMessage(), e);
+            log.error("   This typically means:");
+            log.error("   - SUPABASE_URL domain is invalid");
+            log.error("   - DNS service is unavailable");
+            log.error("   - Network connection to DNS is blocked");
+            throw new RuntimeException("DNS resolution failed for Supabase URL: " + e.getMessage(), e);
         } catch (IOException e) {
-            log.error("❌ Upload error:", e);
+            // Catches all IO errors including ConnectException
+            if (e instanceof java.net.ConnectException) {
+                log.error("❌ Connection refused: {}", e.getMessage(), e);
+                log.error("   This typically means:");
+                log.error("   - Supabase API is down");
+                log.error("   - SUPABASE_URL is incorrect");
+                log.error("   - Firewall is blocking the connection");
+                throw new RuntimeException("Connection refused to Supabase: " + e.getMessage(), e);
+            }
+            log.error("❌ IO error during upload: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to upload file: " + e.getMessage(), e);
+        } catch (Exception e) {
+            log.error("❌ Unexpected error: {}", e.getClass().getSimpleName(), e);
             throw new RuntimeException("Failed to upload file: " + e.getMessage(), e);
         }
     }
