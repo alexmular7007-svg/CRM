@@ -9,10 +9,8 @@ import org.springframework.stereotype.Component;
 /**
  * Application Startup Hook
  * 
- * PHASE 2: Initialize Supabase Storage on application startup
- * - Ensure bucket exists
- * - Verify connectivity
- * - Log configuration
+ * Phase 1: Verify Supabase configuration is loaded
+ * Phase 2: Initialize Supabase Storage
  */
 @Component
 @RequiredArgsConstructor
@@ -25,11 +23,14 @@ public class SupabaseInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
         log.info("═══════════════════════════════════════════════════════════════");
-        log.info("🚀 Supabase Storage Initialization (Graceful)");
+        log.info("🚀 Supabase Storage Initialization");
         log.info("═══════════════════════════════════════════════════════════════");
 
+        // PHASE 1: Verify configuration
+        config.logConfiguration();
+
         try {
-            // PHASE 2: Try to ensure bucket exists
+            // PHASE 2: Try to initialize storage
             log.info("📦 Ensuring Supabase bucket: {}", config.getStorage().getBucketName());
             storageService.ensureBucketExists();
 
@@ -53,7 +54,6 @@ public class SupabaseInitializer implements CommandLineRunner {
             log.warn("⚠️ Supabase Storage initialization failed on startup: {}", e.getMessage());
             log.warn("   Application will continue - Storage will be initialized on first upload");
             log.warn("   Common causes: Network unavailable, Supabase credentials not set");
-            // Don't rethrow - allow app to start anyway
         }
 
         log.info("═══════════════════════════════════════════════════════════════");

@@ -294,65 +294,74 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
 
     private UploadResult uploadToSupabase(MultipartFile file, String storagePath) {
         try {
-            // Validate Supabase configuration
+            // PHASE 1: Validate configuration
             if (config.getUrl() == null || config.getUrl().isEmpty()) {
-                log.error("❌ Supabase URL not configured - SUPABASE_URL environment variable missing");
+                log.error("❌ PHASE 1 FAILED: Supabase URL not configured");
                 throw new RuntimeException("Supabase storage is not configured - missing SUPABASE_URL environment variable");
             }
             if (config.getServiceKey() == null || config.getServiceKey().isEmpty()) {
-                log.error("❌ Supabase Service Key not configured - SUPABASE_SERVICE_KEY environment variable missing");
+                log.error("❌ PHASE 1 FAILED: Supabase Service Key not configured");
                 throw new RuntimeException("Supabase storage is not configured - missing SUPABASE_SERVICE_KEY environment variable");
             }
 
-            log.info("📤 Starting upload: {} ({} bytes) → {}", file.getOriginalFilename(), file.getSize(), storagePath);
-            log.info("🪣 Bucket: {}", config.getStorage().getBucketName());
+            log.info("✅ PHASE 1: Configuration verified");
 
-            // Build URL (log without secrets)
+            // PHASE 2: Build correct URL
+            log.info("📤 Starting file upload: {} ({} bytes)", file.getOriginalFilename(), file.getSize());
+            log.info("   File type: {}", file.getContentType());
+
             String uploadUrl = String.format(
                     "%s/storage/v1/object/%s/%s",
                     config.getUrl(),
                     config.getStorage().getBucketName(),
                     urlEncode(storagePath)
             );
-            log.debug("📍 Upload URL (redacted): {}...", uploadUrl.substring(0, Math.min(100, uploadUrl.length())));
+            
+            // Log URL without secrets - show format only
+            String urlForLogging = uploadUrl
+                    .replaceAll(config.getUrl(), "[SUPABASE_URL]")
+                    .replaceAll(config.getServiceKey(), "[SERVICE_KEY]");
+            log.info("✅ PHASE 2: URL constructed correctly");
+            log.info("   Upload endpoint: {}", urlForLogging);
+            log.info("   Storage path: {}", storagePath);
 
-            // Prepare file content
+            // PHASE 3: Prepare request
             byte[] fileContent = file.getBytes();
             String contentType = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
             
-            log.debug("📊 File details: size={} bytes, type={}", fileContent.length, contentType);
-
-            // Build request
             RequestBody body = RequestBody.create(fileContent, MediaType.get(contentType));
             Request request = new Request.Builder()
                     .url(uploadUrl)
                     .post(body)
-                    .addHeader("Authorization", "Bearer " + config.getServiceKey())
+                    .addHeader("Authorization", "Bearer [SERVICE_KEY]")
                     .addHeader("Content-Type", contentType)
                     .build();
 
-            log.debug("🔐 Authorization: Bearer [SERVICE_KEY]");
-            log.debug("🔗 Request headers prepared");
+            log.info("✅ PHASE 3: HTTP request prepared");
+            log.info("   Method: POST");
+            log.info("   Content-Type: {}", contentType);
+            log.info("   Payload size: {} bytes", fileContent.length);
 
-            // Execute upload
-            log.info("🚀 Sending upload request to Supabase...");
+            // PHASE 4: Send request to Supabase
+            log.info("📨 PHASE 4: Sending request to Supabase Storage API...");
             try (Response response = httpClient.newCall(request).execute()) {
                 int statusCode = response.code();
                 String statusMessage = response.message();
                 
-                log.info("📥 Response received: HTTP {} {}", statusCode, statusMessage);
+                log.info("📥 Response received: HTTP {}", statusCode);
 
                 if (!response.isSuccessful()) {
-                    String errorBody = response.body() != null ? response.body().string() : "(empty body)";
-                    log.error("❌ Upload failed: HTTP {} - {}", statusCode, errorBody);
+                    String errorBody = response.body() != null ? response.body().string() : "(empty)";
+                    log.error("❌ PHASE 4 FAILED: Upload returned error HTTP {}", statusCode);
+                    log.error("   Error response: {}", errorBody);
                     throw new RuntimeException("Upload failed (HTTP " + statusCode + "): " + errorBody);
                 }
 
-                // Success
+                // PHASE 5: Success
                 String contentHash = calculateHash(fileContent);
-                log.info("✅ Upload successful!");
-                log.info("📝 Storage path: {}", storagePath);
-                log.info("🔐 Content hash (SHA-256): {}", contentHash);
+                log.info("✅ PHASE 5: File uploaded successfully to Supabase");
+                log.info("   Storage path: {}", storagePath);
+                log.info("   File hash: {}", contentHash.substring(0, Math.min(16, contentHash.length())) + "...");
 
                 return new UploadResult(
                         storagePath,
@@ -364,33 +373,36 @@ public class SupabaseStorageServiceImpl implements SupabaseStorageService {
             }
 
         } catch (java.net.SocketException e) {
-            log.error("❌ Socket error (network unreachable): {}", e.getMessage(), e);
-            log.error("   This typically means:");
+            log.error("❌ PHASE 3 FAILED: Socket error (network unreachable)");
+            log.error("   Error: {}", e.getMessage());
+            log.error("   Possible causes:");
             log.error("   - No internet connection from Railway container");
             log.error("   - Firewall blocking outbound connections");
             log.error("   - Wrong SUPABASE_URL format");
             throw new RuntimeException("Network unreachable - cannot reach Supabase: " + e.getMessage(), e);
         } catch (java.net.UnknownHostException e) {
-            log.error("❌ DNS resolution failed: {}", e.getMessage(), e);
-            log.error("   This typically means:");
+            log.error("❌ PHASE 2 FAILED: DNS resolution error");
+            log.error("   Error: {}", e.getMessage());
+            log.error("   Possible causes:");
             log.error("   - SUPABASE_URL domain is invalid");
             log.error("   - DNS service is unavailable");
-            log.error("   - Network connection to DNS is blocked");
             throw new RuntimeException("DNS resolution failed for Supabase URL: " + e.getMessage(), e);
         } catch (IOException e) {
-            // Catches all IO errors including ConnectException
             if (e instanceof java.net.ConnectException) {
-                log.error("❌ Connection refused: {}", e.getMessage(), e);
-                log.error("   This typically means:");
-                log.error("   - Supabase API is down");
+                log.error("❌ PHASE 3 FAILED: Connection refused");
+                log.error("   Error: {}", e.getMessage());
+                log.error("   Possible causes:");
+                log.error("   - Supabase API is down or unreachable");
                 log.error("   - SUPABASE_URL is incorrect");
-                log.error("   - Firewall is blocking the connection");
+                log.error("   - Firewall blocking connection");
                 throw new RuntimeException("Connection refused to Supabase: " + e.getMessage(), e);
             }
-            log.error("❌ IO error during upload: {}", e.getMessage(), e);
+            log.error("❌ PHASE 3 FAILED: IO error");
+            log.error("   Error: {}", e.getMessage());
             throw new RuntimeException("Failed to upload file: " + e.getMessage(), e);
         } catch (Exception e) {
-            log.error("❌ Unexpected error: {}", e.getClass().getSimpleName(), e);
+            log.error("❌ UNEXPECTED ERROR: {}", e.getClass().getSimpleName());
+            log.error("   Error: {}", e.getMessage());
             throw new RuntimeException("Failed to upload file: " + e.getMessage(), e);
         }
     }
