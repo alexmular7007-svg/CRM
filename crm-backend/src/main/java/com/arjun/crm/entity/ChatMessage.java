@@ -48,20 +48,30 @@ public class ChatMessage {
     @Builder.Default
     private Boolean isDeleted = false;
 
-    /** Server-relative download URL for FILE / IMAGE messages. Null for TEXT. */
+    /** Foreign key to attachment metadata (for FILE/IMAGE messages). Null for TEXT. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "attachment_id")
+    private Attachment attachment;
+
+    // Legacy fields - kept for backward compatibility during migration
+    /** DEPRECATED: Use attachment.storagePath instead. Kept temporarily. */
     @Column(name = "attachment_url", length = 1000)
+    @Deprecated
     private String attachmentUrl;
 
-    /** Original filename shown to the receiver. */
+    /** DEPRECATED: Use attachment.originalFilename instead. Kept temporarily. */
     @Column(name = "attachment_name", length = 500)
+    @Deprecated
     private String attachmentName;
 
-    /** MIME type, e.g. application/pdf, image/png. */
+    /** DEPRECATED: Use attachment.mimeType instead. Kept temporarily. */
     @Column(name = "attachment_type", length = 200)
+    @Deprecated
     private String attachmentType;
 
-    /** File size in bytes. */
+    /** DEPRECATED: Use attachment.fileSize instead. Kept temporarily. */
     @Column(name = "attachment_size")
+    @Deprecated
     private Long attachmentSize;
 
     /**

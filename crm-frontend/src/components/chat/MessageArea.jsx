@@ -295,36 +295,39 @@ const MessageArea = ({
 
 /**
  * ImageThumbnail Component
- * Handles loading images from either signed URLs or storage paths
- * Fetches signed URL on-demand if needed
+ * Handles loading images from signed URLs obtained via attachment ID
  */
 const ImageThumbnail = ({ msg, isOwn, downloadingId, onDownload }) => {
-  const [displayUrl, setDisplayUrl] = useState(msg.attachmentUrl)
-  const [loading, setLoading] = useState(false)
+  const [displayUrl, setDisplayUrl] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
   useEffect(() => {
-    // If it's already a full URL, use it
-    if (attachmentService.isFullUrl(msg.attachmentUrl)) {
-      setDisplayUrl(msg.attachmentUrl)
+    // MUST use attachmentId, NOT attachmentUrl or filename
+    if (!msg.attachmentId) {
+      console.error('Missing attachmentId for image:', msg.id)
+      setError(true)
+      setLoading(false)
       return
     }
 
-    // Otherwise, fetch signed URL from backend
+    // Fetch signed URL from backend using attachment ID
     const fetchSignedUrl = async () => {
       try {
         setLoading(true)
-        const signedUrl = await attachmentService.getDownloadUrl(msg.id)
+        setError(false)
+        const signedUrl = await attachmentService.getDownloadUrl(msg.attachmentId)
         setDisplayUrl(signedUrl)
-      } catch (error) {
-        console.error('Failed to load image URL:', error)
-        // Keep original URL as fallback
+      } catch (err) {
+        console.error('Failed to get signed URL for attachment', msg.attachmentId, err)
+        setError(true)
       } finally {
         setLoading(false)
       }
     }
 
     fetchSignedUrl()
-  }, [msg])
+  }, [msg.attachmentId, msg.id])
 
   return (
     <button
@@ -334,24 +337,29 @@ const ImageThumbnail = ({ msg, isOwn, downloadingId, onDownload }) => {
       title="Click to view/download"
     >
       {loading && (
-        <div className="absolute inset-0 bg-gray-300 rounded-lg flex items-center justify-center">
-          <div className="text-gray-600 text-sm">Loading...</div>
+        <div className="absolute inset-0 bg-gray-300 rounded-lg flex items-center justify-center z-10">
+          <div className="text-gray-600 text-sm">Loading image...</div>
         </div>
       )}
-      {!loading && (
+      {error && (
+        <div className="absolute inset-0 bg-red-100 rounded-lg flex items-center justify-center z-10">
+          <div className="text-red-600 text-sm">Failed to load image</div>
+        </div>
+      )}
+      {!loading && displayUrl && (
         <img
           src={displayUrl}
           alt={msg.attachmentName || 'image'}
           className="max-w-xs sm:max-w-sm md:max-w-md max-h-64 rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
           onError={(e) => {
-            // If URL fails to load, show error indicator
             e.target.style.opacity = '0.3'
-            console.error('Failed to load image from URL:', displayUrl)
+            console.error('Image failed to load from signed URL:', displayUrl)
+            setError(true)
           }}
         />
       )}
       {downloadingId === msg.id && (
-        <div className="absolute inset-0 bg-black/30 rounded-lg flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/30 rounded-lg flex items-center justify-center z-20">
           <div className="text-white text-sm">Downloading...</div>
         </div>
       )}

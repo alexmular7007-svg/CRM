@@ -171,49 +171,36 @@ public class ChatMessageServiceImpl implements ChatMessageService {
             log.info("[14] Creating ChatMessage entity");
             MessageType msgType = contentType.startsWith("image/") ? MessageType.IMAGE : MessageType.FILE;
 
+            // Create message first WITHOUT attachment
             ChatMessage message = ChatMessage.builder()
                     .chatRoom(chatRoom)
                     .sender(currentUser)
                     .content(uploadResult.fileName)
                     .messageType(msgType)
-                    .attachmentUrl(uploadResult.storagePath)
-                    .attachmentName(uploadResult.fileName)
-                    .attachmentType(uploadResult.mimeType)
-                    .attachmentSize(uploadResult.fileSize)
                     .build();
-            log.info("[15] ChatMessage entity created");
-
-            log.info("[16] Saving to database");
-            ChatMessage saved = chatMessageRepository.save(message);
-            log.info("[17] Database save completed - ID: {}", saved.getId());
             
-            ChatMessageResponse response = ChatMessageResponse.fromEntity(saved);
+            log.info("[15] Saving ChatMessage to database (before attachment)");
+            ChatMessage savedMessage = chatMessageRepository.save(message);
+            log.info("[15a] ChatMessage saved with ID: {}", savedMessage.getId());
 
-            if (uploadResult.storagePath != null && !uploadResult.storagePath.isEmpty()) {
-                try {
-                    log.info("[18] Attempting to generate signed URL");
-                    String signedUrl = storageService.generateSignedDownloadUrl(uploadResult.storagePath, 604800);
-                    response.setAttachmentUrl(signedUrl);
-                    log.info("[19] Signed URL generated");
-                } catch (Exception e) {
-                    log.warn("[19] Signed URL generation skipped: {}", e.getMessage());
-                }
-            }
+            log.info("[16] Creating attachment metadata");
+            Attachment attachment = attachmentService.uploadChatAttachment(file, savedMessage.getId(), currentUser.getId());
+            log.info("[16a] Attachment saved with ID: {}", attachment.getId());
 
-            log.info("[20] Sending WebSocket broadcast");
+            // Link attachment to message
+            log.info("[16b] Linking attachment to message");
+            savedMessage.setAttachment(attachment);
+            ChatMessage finalMessage = chatMessageRepository.save(savedMessage);
+            log.info("[17] ChatMessage updated with attachment - Final ID: {}", finalMessage.getId());
+            
+            ChatMessageResponse response = ChatMessageResponse.fromEntity(finalMessage);
+
+            log.info("[18] Sending WebSocket broadcast");
             messagingTemplate.convertAndSend("/topic/chat/" + chatRoomId, response);
             notifyParticipants(chatRoom, currentUser, "📎 " + uploadResult.fileName);
-            log.info("[21] WebSocket broadcast sent");
+            log.info("[19] WebSocket broadcast sent");
 
-            try {
-                log.info("[22] Creating attachment metadata");
-                attachmentService.uploadChatAttachment(file, saved.getId(), currentUser.getId());
-                log.info("[23] Attachment metadata created");
-            } catch (Exception e) {
-                log.warn("[23] Attachment metadata creation skipped: {}", e.getMessage());
-            }
-
-            log.info("[24] sendFileMessage() completed successfully");
+            log.info("[20] sendFileMessage() completed successfully");
             return response;
         } catch (Exception e) {
             log.error("[X] FAILED in sendFileMessage()", e);
