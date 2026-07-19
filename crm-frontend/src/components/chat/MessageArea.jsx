@@ -327,8 +327,9 @@ const ImageThumbnail = ({ msg, isOwn, downloadingId, onDownload }) => {
       try {
         setLoading(true)
         setError(false)
-        const signedUrl = await attachmentService.getDownloadUrl(msg.attachmentId)
-        setDisplayUrl(signedUrl)
+        const urlData = await attachmentService.getDownloadUrl(msg.attachmentId)
+        // ✅ Extract downloadUrl from response object
+        setDisplayUrl(urlData.downloadUrl)
       } catch (err) {
         console.error('Failed to get signed URL for attachment', msg.attachmentId, err)
         setError(true)
