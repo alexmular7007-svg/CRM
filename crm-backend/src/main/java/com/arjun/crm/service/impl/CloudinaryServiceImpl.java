@@ -326,6 +326,7 @@ public class CloudinaryServiceImpl implements CloudinaryService {
         // Sanitize filename
         nameWithoutExtension = nameWithoutExtension.replaceAll("[^a-zA-Z0-9._-]", "_");
 
-        return uuid + "-" + nameWithoutExtension;
+        // ✅ CRITICAL FIX: Include folder path in public ID
+        return folder + "/" + uuid + "-" + nameWithoutExtension;
     }
 }
