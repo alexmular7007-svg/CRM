@@ -67,26 +67,27 @@ const MessageArea = ({
    * 
    * For Cloudinary: all files are served via secure URLs
    * - Images open in new tab for preview
-   * - PDFs/Videos can be downloaded or viewed via secure URL
+   * - PDFs/Videos downloaded with proper filename and extension
    */
   const handleDownloadAttachment = async (msg) => {
     try {
       setDownloadingId(msg.id)
       
-      // Get signed URL from backend (validates permissions)
-      const signedUrl = await attachmentService.getDownloadUrl(msg.attachmentId)
+      // Get signed URL + metadata from backend (validates permissions)
+      const urlData = await attachmentService.getDownloadUrl(msg.attachmentId)
+      const downloadUrl = urlData.downloadUrl
+      const filename = urlData.filename || msg.attachmentName || 'download'
       
       // For ALL file types, use the Cloudinary secure URL directly
-      // Cloudinary handles the download/preview based on browser and content-type
       if (msg.messageType === 'IMAGE') {
         // Images open in new tab for preview
-        window.open(signedUrl, '_blank')
+        window.open(downloadUrl, '_blank')
       } else {
-        // PDFs and other files: download via secure URL
+        // PDFs and other files: download via secure URL with original filename
         // Browser will handle the download based on Content-Type header from Cloudinary
         const link = document.createElement('a')
-        link.href = signedUrl
-        link.download = msg.attachmentName || 'download'
+        link.href = downloadUrl
+        link.download = filename  // ✅ Use original filename with extension
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)

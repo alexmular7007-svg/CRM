@@ -10,23 +10,34 @@ import api from './api'
 
 const attachmentService = {
   /**
-   * Get a signed download URL for an attachment
+   * Get a signed download URL for an attachment with metadata
    * 
    * PHASE 4 + PHASE 8: Security - backend validates permissions before generating URL
    * 
    * @param {number} attachmentId - The attachment ID
-   * @returns {Promise<string>} - Signed download URL valid for 7 days
+   * @returns {Promise<Object>} - Object with { downloadUrl, filename, mimeType, fileSize, resourceType }
    */
   async getDownloadUrl(attachmentId) {
     try {
       const response = await api.get(`/attachments/${attachmentId}/url`)
       // response is already unwrapped by api.js interceptor to ApiResponse<DownloadUrlResponse>
-      // response.data contains the DownloadUrlResponse object
-      return response.data.downloadUrl
+      // response.data contains the DownloadUrlResponse object with all metadata
+      return response.data
     } catch (error) {
       console.error('Failed to get download URL:', error)
       throw error
     }
+  },
+
+  /**
+   * Get just the URL string (for backward compatibility)
+   * 
+   * @param {number} attachmentId - The attachment ID
+   * @returns {Promise<string>} - Just the download URL
+   */
+  async getDownloadUrlString(attachmentId) {
+    const response = await this.getDownloadUrl(attachmentId)
+    return response.downloadUrl
   },
 
   /**
