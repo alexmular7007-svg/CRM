@@ -129,6 +129,12 @@ public class CloudinaryServiceImpl implements CloudinaryService {
                 if (!pdfSignature.startsWith("%PDF")) {
                     log.error("❌ CORRUPTED: File does not start with %PDF signature!");
                 }
+                
+                // Also check last bytes (EOF marker)
+                int lastBytes = Math.min(10, fileBytes.length);
+                String endBytes = new String(fileBytes, fileBytes.length - lastBytes, lastBytes);
+                log.info("     Last 10 bytes: {} (hex)", bytesToHex(fileBytes, fileBytes.length - lastBytes, lastBytes));
+                log.info("     Ends with %%EOF: {}", endBytes.contains("%%EOF") ? "✅ YES" : "⚠️ NO");
             }
 
             // Determine resource type and validate
@@ -155,12 +161,16 @@ public class CloudinaryServiceImpl implements CloudinaryService {
                     "invalidate", true,                       // Invalidate CDN cache
                     "timeout", 60000,                         // 60 second timeout
                     "use_filename", false,                    // Don't use original filename
-                    "unique_filename", false                  // Use our UUID naming
+                    "unique_filename", false,                 // Use our UUID naming
+                    "type", "upload"                          // Explicit upload type
             );
 
             log.info("📋 [4] UPLOADING TO CLOUDINARY:");
             log.info("     Upload params: {}", uploadParams);
+            log.info("     File bytes to send: {} bytes", fileBytes.length);
+            log.info("     Sending byte array directly (NOT a stream wrapper)");
             
+            // ✅ Critical: Pass raw bytes directly, NOT wrapped in any wrapper
             Map<String, Object> uploadResult = cloudinary.uploader().upload(fileBytes, uploadParams);
 
             // ═══════════════════════════════════════════════════════════════
@@ -169,15 +179,23 @@ public class CloudinaryServiceImpl implements CloudinaryService {
             String resultPublicId = (String) uploadResult.get("public_id");
             String secureUrl = (String) uploadResult.get("secure_url");
             String resultResourceType = (String) uploadResult.get("resource_type");
+            String format = (String) uploadResult.get("format");
             Long cloudinaryBytes = (Long) uploadResult.get("bytes");
 
             log.info("📋 [5] CLOUDINARY RESPONSE:");
             log.info("     Public ID: {}", resultPublicId);
             log.info("     Resource Type: {}", resultResourceType);
+            log.info("     Format: {}", format);
             log.info("     Secure URL: {}", secureUrl);
             log.info("     Cloudinary bytes: {}", cloudinaryBytes);
             log.info("     Original bytes: {}", fileSizeBytes);
             log.info("     Bytes match: {}", cloudinaryBytes != null && cloudinaryBytes.equals(fileSizeBytes) ? "✅ YES" : "❌ NO");
+            
+            // ═══════════════════════════════════════════════════════════════
+            // DIAGNOSTIC 4: Full response for debugging
+            // ═══════════════════════════════════════════════════════════════
+            log.info("📋 [6] FULL CLOUDINARY RESPONSE:");
+            uploadResult.forEach((key, value) -> log.info("     {}: {}", key, value));
 
             log.info("✅ Upload successful: publicId={}", resultPublicId);
             log.info("📋 ━━━━━ UPLOAD DIAGNOSTICS END ━━━━━");
