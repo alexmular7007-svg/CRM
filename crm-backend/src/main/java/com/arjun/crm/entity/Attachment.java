@@ -10,20 +10,22 @@ import java.time.Instant;
 /**
  * Attachment Entity - Stores metadata for uploaded files
  * 
- * PHASE 3: Stores attachment metadata in PostgreSQL
+ * PHASE 4: Stores attachment metadata in PostgreSQL
  * - original filename
- * - stored filename (UUID)
  * - MIME type
  * - file size
- * - storage path (Supabase)
+ * - Cloudinary public ID (immutable, unique)
+ * - Cloudinary secure URL (delivery URL)
+ * - Cloudinary resource type (image, video, raw)
  * - uploader
  * - uploaded date
  * 
- * Files are stored in Supabase Storage, only metadata is in DB
+ * Files are stored in Cloudinary, only metadata is in PostgreSQL
+ * All URLs are served directly from Cloudinary CDN
  */
 @Entity
 @Table(name = "attachments", indexes = {
-        @Index(name = "idx_storage_path", columnList = "storage_path", unique = true),
+        @Index(name = "idx_cloudinary_public_id", columnList = "cloudinary_public_id", unique = true),
         @Index(name = "idx_uploaded_by", columnList = "uploaded_by"),
         @Index(name = "idx_chat_message_id", columnList = "chat_message_id"),
         @Index(name = "idx_task_id", columnList = "task_id"),
@@ -41,10 +43,26 @@ public class Attachment {
     private Long id;
 
     /**
-     * Supabase Storage path (e.g., "chat/550e8400-e29b-41d4-a716-446655440000.pdf")
+     * Cloudinary Public ID (unique, immutable)
+     * E.g., "chat/550e8400-e29b-41d4-a716-446655440000"
+     * Used for Cloudinary API operations
      */
-    @Column(name = "storage_path", nullable = false, unique = true, length = 1000)
-    private String storagePath;
+    @Column(name = "cloudinary_public_id", nullable = false, unique = true, length = 500)
+    private String cloudinaryPublicId;
+
+    /**
+     * Cloudinary Secure URL (HTTPS delivery URL)
+     * E.g., "https://res.cloudinary.com/lb7tu53k/image/upload/v1234567890/chat/550e8400..."
+     * Served directly to frontend for download/preview
+     */
+    @Column(name = "secure_url", nullable = false, length = 1000)
+    private String secureUrl;
+
+    /**
+     * Cloudinary Resource Type (image, video, raw)
+     */
+    @Column(name = "resource_type", nullable = false, length = 50)
+    private String resourceType;
 
     /**
      * Original filename as uploaded by user (e.g., "document.pdf")
@@ -110,13 +128,6 @@ public class Attachment {
      */
     @Column(name = "last_downloaded_at")
     private Instant lastDownloadedAt;
-
-    /**
-     * Indicates if file still exists in Supabase Storage
-     */
-    @Column(name = "is_deleted", nullable = false)
-    @Builder.Default
-    private Boolean isDeleted = false;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

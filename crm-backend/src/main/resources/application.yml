@@ -288,37 +288,34 @@ file:
     create-dir-if-not-exists: true
 
 # ───────────────────────────────────────────────────────────────────────────
-# Supabase Configuration (NEW - Production Storage)
+# Cloudinary Configuration - Cloud Storage Service for Chat & Task Attachments
 # ───────────────────────────────────────────────────────────────────────────
-supabase:
-  # Supabase Project URL
-  url: ${SUPABASE_URL:https://db.xkzpzcvwzqjavftrnxjl.supabase.co}
+cloudinary:
+  # Cloudinary Cloud Name
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:}
   
-  # Supabase Anon Key (client-side safe)
-  anon-key: ${SUPABASE_ANON_KEY:}
+  # Cloudinary API Key (server-side only)
+  api-key: ${CLOUDINARY_API_KEY:}
   
-  # Supabase Service Role Key (server-side only - admin access)
-  service-key: ${SUPABASE_SERVICE_KEY:}
+  # Cloudinary API Secret (server-side only)
+  api-secret: ${CLOUDINARY_API_SECRET:}
   
   # Storage Configuration
   storage:
-    # Chat attachments bucket
-    bucket-name: ${SUPABASE_STORAGE_BUCKET:chat-attachments}
+    # Maximum file size in bytes (100MB)
+    max-file-size: ${CLOUDINARY_MAX_FILE_SIZE:104857600}
     
-    # Chat attachment folder prefix
-    chat-folder: ${SUPABASE_CHAT_FOLDER:chat}
+    # Allowed file types
+    allowed-resources-types: ${CLOUDINARY_ALLOWED_RESOURCE_TYPES:image,video,raw}
     
-    # Task attachment folder prefix
-    task-folder: ${SUPABASE_TASK_FOLDER:tasks}
+    # Folder for chat attachments
+    chat-folder: ${CLOUDINARY_CHAT_FOLDER:chat}
     
-    # Maximum file size in bytes (20MB)
-    max-file-size: ${SUPABASE_MAX_FILE_SIZE:20971520}
+    # Folder for task attachments
+    task-folder: ${CLOUDINARY_TASK_FOLDER:tasks}
     
-    # URL expiration in seconds (7 days)
-    signed-url-expiry: ${SUPABASE_SIGNED_URL_EXPIRY:604800}
-    
-    # Bucket is private (signed URLs required)
-    is-public: ${SUPABASE_BUCKET_PUBLIC:false}
+    # Enable auto cleanup of unused files (optional)
+    auto-cleanup-enabled: ${CLOUDINARY_AUTO_CLEANUP:false}
 
 # ───────────────────────────────────────────────────────────────────────────
 # AI Configuration (xAI)

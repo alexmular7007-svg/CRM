@@ -20,7 +20,6 @@ import com.arjun.crm.service.ChatMessageService;
 import com.arjun.crm.service.NotificationService;
 import com.arjun.crm.service.CacheEvictionService;
 import com.arjun.crm.service.AttachmentService;
-import com.arjun.crm.service.SupabaseStorageService;
 import com.arjun.crm.entity.Attachment;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -58,7 +57,6 @@ public class ChatMessageServiceImpl implements ChatMessageService {
     private final BlockedUserRepository blockedUserRepository;
     private final CacheEvictionService cacheEvictionService;
     private final AttachmentService attachmentService;
-    private final SupabaseStorageService storageService;
 
     @Value("${file.upload.dir:uploads/task-attachments}")
     private String uploadDir;
@@ -146,12 +144,6 @@ public class ChatMessageServiceImpl implements ChatMessageService {
             if (!ALLOWED_TYPES.contains(contentType)) {
                 throw new IllegalArgumentException("File type not supported: " + contentType);
             }
-            
-            // Validate Supabase is configured
-            log.info("[7a] Checking Supabase configuration");
-            if (storageService == null) {
-                throw new RuntimeException("File upload service is not available. Contact administrator.");
-            }
 
             log.info("[8] Looking up chat room: {}", chatRoomId);
             ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
@@ -164,10 +156,6 @@ public class ChatMessageServiceImpl implements ChatMessageService {
             }
             log.info("[11] User is participant");
 
-            log.info("[12] Entering uploadChatAttachment()");
-            SupabaseStorageService.UploadResult uploadResult = storageService.uploadChatAttachment(file, chatRoom.getId());
-            log.info("[13] Upload result received - path: {}", uploadResult.storagePath);
-            
             log.info("[14] Creating ChatMessage entity");
             MessageType msgType = contentType.startsWith("image/") ? MessageType.IMAGE : MessageType.FILE;
 
@@ -175,7 +163,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
             ChatMessage message = ChatMessage.builder()
                     .chatRoom(chatRoom)
                     .sender(currentUser)
-                    .content(uploadResult.fileName)
+                    .content(file.getOriginalFilename())
                     .messageType(msgType)
                     .build();
             
@@ -183,7 +171,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
             ChatMessage savedMessage = chatMessageRepository.save(message);
             log.info("[15a] ChatMessage saved with ID: {}", savedMessage.getId());
 
-            log.info("[16] Creating attachment metadata");
+            log.info("[16] Uploading to Cloudinary via AttachmentService");
             Attachment attachment = attachmentService.uploadChatAttachment(file, savedMessage.getId(), currentUser.getId());
             log.info("[16a] Attachment saved with ID: {}", attachment.getId());
 
@@ -197,7 +185,7 @@ public class ChatMessageServiceImpl implements ChatMessageService {
 
             log.info("[18] Sending WebSocket broadcast");
             messagingTemplate.convertAndSend("/topic/chat/" + chatRoomId, response);
-            notifyParticipants(chatRoom, currentUser, "📎 " + uploadResult.fileName);
+            notifyParticipants(chatRoom, currentUser, "📎 " + file.getOriginalFilename());
             log.info("[19] WebSocket broadcast sent");
 
             log.info("[20] sendFileMessage() completed successfully");

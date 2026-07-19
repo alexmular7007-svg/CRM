@@ -8,30 +8,27 @@ import com.arjun.crm.repository.UserRepository;
 import com.arjun.crm.service.AttachmentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.io.InputStreamResource;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.InputStream;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
 /**
- * PHASE 4: Attachment Download Controller
+ * Attachment Download Controller - Cloudinary Edition
  * 
- * Handles secure downloads of chat/task attachments from Supabase Storage.
- * Verifies user permissions before generating signed URLs or streaming downloads.
+ * Handles secure downloads of chat/task attachments.
+ * Verifies user permissions before returning download URLs.
+ * 
+ * Cloudinary serves files directly via secure URLs, so we just verify
+ * permissions and return the secure URL for the frontend to handle.
  * 
  * Endpoints:
- * - GET /api/attachments/{id}/download - Download file with permission check
- * - GET /api/attachments/{id}/url - Get signed download URL
+ * - GET /api/attachments/{id}/url - Get download URL
  * - DELETE /api/attachments/{id} - Delete attachment
  */
 @RestController
@@ -44,80 +41,51 @@ public class AttachmentDownloadController {
     private final UserRepository userRepository;
 
     /**
-     * PHASE 4 + PHASE 8: Download attachment with security validation
+     * Get download URL for attachment
      * 
      * Verifies:
      * - User is authenticated
-     * - User belongs to workspace
-     * - User belongs to conversation
-     * - Attachment exists
+     * - User has permission to access attachment
+     * - Attachment exists in Cloudinary
      * 
-     * Returns file stream with correct content type and headers
-     */
-    @GetMapping("/{id}/download")
-    public ResponseEntity<Resource> downloadAttachment(
-            @PathVariable Long id) {
-        log.info("⬇️ Download request: attachment_id={}", id);
-
-        try {
-            User currentUser = getAuthenticatedUser();
-            Attachment attachment = attachmentService.getAttachmentWithPermissionCheck(id, currentUser.getId());
-
-            InputStream inputStream = attachmentService.downloadFileStream(id, currentUser.getId());
-            Resource resource = new InputStreamResource(inputStream);
-
-            // Set headers for download
-            String filename = URLEncoder.encode(attachment.getOriginalFilename(), StandardCharsets.UTF_8);
-            return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType(attachment.getMimeType()))
-                    .contentLength(attachment.getFileSize())
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename*=UTF-8''" + filename)
-                    .body(resource);
-        } catch (Exception e) {
-            log.error("❌ Download failed:", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-
-    /**
-     * PHASE 4 + PHASE 8: Generate signed download URL
-     * 
-     * Returns a temporary public URL (valid for 7 days) that can be shared
-     * within the workspace. URL is signed to prevent tampering.
+     * Returns the secure Cloudinary URL for download
      */
     @GetMapping("/{id}/url")
     public ResponseEntity<ApiResponse<DownloadUrlResponse>> getDownloadUrl(
             @PathVariable Long id) {
-        log.info("🔗 Signed URL request: attachment_id={}", id);
+        log.info("🔗 Download URL request: attachment_id={}", id);
 
         try {
             User currentUser = getAuthenticatedUser();
-            String signedUrl = attachmentService.generateDownloadUrl(id, currentUser.getId());
+            String downloadUrl = attachmentService.getDownloadUrl(id, currentUser.getId());
+            Attachment attachment = attachmentService.getAttachmentWithPermissionCheck(id, currentUser.getId());
             
             DownloadUrlResponse response = DownloadUrlResponse.builder()
-                    .downloadUrl(signedUrl)
-                    .expiresIn(7 * 24 * 60 * 60)  // 7 days in seconds
+                    .downloadUrl(downloadUrl)
+                    .filename(attachment.getOriginalFilename())
+                    .mimeType(attachment.getMimeType())
+                    .fileSize(attachment.getFileSize())
+                    .resourceType(attachment.getResourceType())
                     .build();
 
-            return ResponseEntity.ok(ApiResponse.success("Download URL generated", response));
+            return ResponseEntity.ok(ApiResponse.success("Download URL retrieved", response));
         } catch (Exception e) {
-            log.error("❌ URL generation failed:", e);
+            log.error("❌ URL retrieval failed:", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to generate download URL"));
+                    .body(ApiResponse.error("Failed to retrieve download URL: " + e.getMessage()));
         }
     }
 
     /**
-     * PHASE 5 + PHASE 8: Delete attachment
+     * Delete attachment
      * 
      * Only attachment owner can delete.
-     * Marks as deleted soft-delete and triggers async storage cleanup.
+     * Deletes from both Cloudinary and database immediately.
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteAttachment(
             @PathVariable Long id) {
-        log.info("🗑️ Delete request: attachment_id={}", id);
+        log.info("🗑️ Delete attachment request: id={}", id);
 
         try {
             User currentUser = getAuthenticatedUser();
@@ -126,7 +94,7 @@ public class AttachmentDownloadController {
         } catch (Exception e) {
             log.error("❌ Delete failed:", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to delete attachment"));
+                    .body(ApiResponse.error("Failed to delete attachment: " + e.getMessage()));
         }
     }
 
@@ -144,14 +112,17 @@ public class AttachmentDownloadController {
     }
 
     /**
-     * Response DTO for signed download URL
+     * Response DTO for download URL
      */
     @lombok.Data
     @lombok.Builder
     @lombok.NoArgsConstructor
     @lombok.AllArgsConstructor
     public static class DownloadUrlResponse {
-        private String downloadUrl;
-        private Integer expiresIn;  // in seconds
+        private String downloadUrl;           // Cloudinary secure URL
+        private String filename;              // Original filename
+        private String mimeType;              // Content type
+        private Long fileSize;                // File size in bytes
+        private String resourceType;          // image, video, raw
     }
 }
