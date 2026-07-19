@@ -180,7 +180,10 @@ public class CloudinaryServiceImpl implements CloudinaryService {
             String secureUrl = (String) uploadResult.get("secure_url");
             String resultResourceType = (String) uploadResult.get("resource_type");
             String format = (String) uploadResult.get("format");
-            Long cloudinaryBytes = (Long) uploadResult.get("bytes");
+            
+            // ✅ CRITICAL FIX: Cloudinary returns "bytes" as Integer, not Long
+            Number bytesNumber = (Number) uploadResult.get("bytes");
+            Long cloudinaryBytes = bytesNumber != null ? bytesNumber.longValue() : 0L;
 
             log.info("📋 [5] CLOUDINARY RESPONSE:");
             log.info("     Public ID: {}", resultPublicId);
