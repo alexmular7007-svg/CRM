@@ -43,11 +43,19 @@ public class Attachment {
     private Long id;
 
     /**
+     * Storage path (legacy field for database compatibility)
+     * DEPRECATED: kept for backward compatibility with old schema
+     * New uploads use cloudinaryPublicId instead
+     */
+    @Column(name = "storage_path", length = 500)
+    private String storagePath;
+
+    /**
      * Cloudinary Public ID (unique, immutable)
      * E.g., "chat/550e8400-e29b-41d4-a716-446655440000"
      * Used for Cloudinary API operations
      */
-    @Column(name = "cloudinary_public_id", nullable = false, unique = true, length = 500)
+    @Column(name = "cloudinary_public_id", length = 500, unique = true)
     private String cloudinaryPublicId;
 
     /**

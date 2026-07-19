@@ -66,6 +66,7 @@ public class AttachmentServiceImpl implements AttachmentService {
 
         // Save attachment metadata to database
         Attachment attachment = Attachment.builder()
+                .storagePath(uploadResult.publicId())  // Use cloudinaryPublicId as storagePath for compatibility
                 .cloudinaryPublicId(uploadResult.publicId())
                 .secureUrl(uploadResult.secureUrl())
                 .resourceType(uploadResult.resourceType())
@@ -75,6 +76,7 @@ public class AttachmentServiceImpl implements AttachmentService {
                 .uploadedBy(uploader)
                 .chatMessage(chatMessage)
                 .isPublic(false)  // Chat attachments are private to workspace
+                .isDeleted(false)  // Explicitly set for database compatibility
                 .downloadCount(0)
                 .build();
 
@@ -109,6 +111,7 @@ public class AttachmentServiceImpl implements AttachmentService {
 
         // Save attachment metadata to database
         Attachment attachment = Attachment.builder()
+                .storagePath(uploadResult.publicId())  // Use cloudinaryPublicId as storagePath for compatibility
                 .cloudinaryPublicId(uploadResult.publicId())
                 .secureUrl(uploadResult.secureUrl())
                 .resourceType(uploadResult.resourceType())
@@ -118,6 +121,7 @@ public class AttachmentServiceImpl implements AttachmentService {
                 .uploadedBy(uploader)
                 .task(task)
                 .isPublic(false)
+                .isDeleted(false)  // Explicitly set for database compatibility
                 .downloadCount(0)
                 .build();
 
