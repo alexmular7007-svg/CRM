@@ -2,6 +2,8 @@ package com.arjun.crm.controller;
 
 import com.arjun.crm.dto.response.ApiResponse;
 import com.arjun.crm.entity.Attachment;
+import com.arjun.crm.exception.ResourceNotFoundException;
+import com.arjun.crm.repository.UserRepository;
 import com.arjun.crm.service.AttachmentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -9,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -36,6 +39,7 @@ import java.util.List;
 public class AttachmentController {
 
     private final AttachmentService attachmentService;
+    private final UserRepository userRepository;
 
     /**
      * Upload attachment for a chat message
@@ -230,13 +234,40 @@ public class AttachmentController {
 
     /**
      * Extract user ID from authentication context
+     * 
+     * FIXED: Principal is UserDetails, not a Number
+     * Must extract email and query database for user ID
      */
     private Long extractUserId(Authentication auth) {
         if (auth == null || auth.getPrincipal() == null) {
             throw new IllegalArgumentException("User not authenticated");
         }
-        // Assuming the principal contains user ID - adjust based on your auth implementation
-        return ((Number) auth.getPrincipal()).longValue();
+        
+        // DEBUG: Log authentication details
+        Object principal = auth.getPrincipal();
+        log.debug("🔐 Authentication Debug:");
+        log.debug("  Auth Class: {}", auth.getClass().getName());
+        log.debug("  Principal Class: {}", principal.getClass().getName());
+        log.debug("  Principal: {}", principal);
+        
+        // Principal is UserDetails (from JWT or OAuth2), NOT a number
+        if (principal instanceof org.springframework.security.core.userdetails.UserDetails) {
+            String email = ((org.springframework.security.core.userdetails.UserDetails) principal).getUsername();
+            log.debug("  Email extracted: {}", email);
+            
+            com.arjun.crm.entity.User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> {
+                        log.error("❌ User not found for email: {}", email);
+                        return new com.arjun.crm.exception.ResourceNotFoundException("User not found: " + email);
+                    });
+            
+            log.debug("  User ID resolved: {}", user.getId());
+            return user.getId();
+        }
+        
+        // Fallback for unexpected principal types
+        log.error("❌ Unexpected principal type: {}", principal.getClass().getName());
+        throw new IllegalArgumentException("Cannot extract user ID from principal of type: " + principal.getClass().getSimpleName());
     }
 
     /**
