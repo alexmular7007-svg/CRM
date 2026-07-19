@@ -8,27 +8,21 @@ import com.arjun.crm.exception.ResourceNotFoundException;
 import com.arjun.crm.exception.AccessDeniedException;
 import com.arjun.crm.repository.*;
 import com.arjun.crm.service.AttachmentService;
-import com.arjun.crm.service.SupabaseStorageService;
+import com.arjun.crm.service.CloudinaryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.InputStream;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 /**
  * Attachment Service Implementation
  *
- * Handles file uploads to Supabase Storage with metadata tracking in PostgreSQL.
+ * Handles file uploads to Cloudinary with metadata tracking in PostgreSQL.
  * Enforces permission checks on download/delete operations.
- * Manages attachment lifecycle including cleanup of deleted files.
- *
- * PHASE 8: Security - verifies workspace and conversation membership before download
- * PHASE 9: Performance - uses streaming for large file operations
+ * Manages attachment lifecycle using Cloudinary as the storage backend.
  */
 @Service
 @RequiredArgsConstructor
@@ -40,15 +34,13 @@ public class AttachmentServiceImpl implements AttachmentService {
     private final TaskRepository taskRepository;
     private final UserRepository userRepository;
     private final ChatRoomRepository chatRoomRepository;
-    private final SupabaseStorageService storageService;
-
-    // Retention period for deleted attachments (30 days)
-    private static final long DELETED_ATTACHMENT_RETENTION_DAYS = 30;
+    private final CloudinaryService cloudinaryService;
 
     @Override
     @Transactional
     public Attachment uploadChatAttachment(MultipartFile file, Long chatMessageId, Long userId) {
-        log.info("📤 Uploading chat attachment: msg_id={}, user_id={}, file={}", chatMessageId, userId, file.getOriginalFilename());
+        log.info("📤 Uploading chat attachment: msg_id={}, user_id={}, file={}", 
+                chatMessageId, userId, file.getOriginalFilename());
 
         // Validate chat message exists
         ChatMessage chatMessage = chatMessageRepository.findById(chatMessageId)
@@ -56,33 +48,39 @@ public class AttachmentServiceImpl implements AttachmentService {
 
         // Validate user is participant in the chat room
         if (!chatRoomRepository.isUserParticipant(chatMessage.getChatRoom().getId(), userId)) {
-            log.warn("⚠️ Access denied: user {} not participant in chat room {}", userId, chatMessage.getChatRoom().getId());
+            log.warn("⚠️ Access denied: user {} not participant in chat room {}", 
+                    userId, chatMessage.getChatRoom().getId());
             throw new AccessDeniedException("You are not a participant of this chat room");
         }
 
-        // Upload to Supabase
-        SupabaseStorageService.UploadResult uploadResult = storageService.uploadChatAttachment(file, chatMessage.getChatRoom().getId());
+        // Upload to Cloudinary
+        log.debug("🚀 Starting Cloudinary upload for chat attachment");
+        CloudinaryService.UploadResult uploadResult = cloudinaryService.uploadChatAttachment(
+                file, chatMessage.getChatRoom().getId());
+
+        log.debug("✅ Cloudinary upload completed - publicId: {}", uploadResult.publicId());
 
         // Get uploader user
         User uploader = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        // Save attachment metadata to DB
+        // Save attachment metadata to database
         Attachment attachment = Attachment.builder()
-                .storagePath(uploadResult.storagePath)
-                .originalFilename(uploadResult.fileName)
-                .mimeType(uploadResult.mimeType)
-                .fileSize(uploadResult.fileSize)
-                .contentHash(uploadResult.contentHash)
+                .cloudinaryPublicId(uploadResult.publicId())
+                .secureUrl(uploadResult.secureUrl())
+                .resourceType(uploadResult.resourceType())
+                .originalFilename(uploadResult.filename())
+                .mimeType(uploadResult.mimeType())
+                .fileSize(uploadResult.fileSize())
                 .uploadedBy(uploader)
                 .chatMessage(chatMessage)
                 .isPublic(false)  // Chat attachments are private to workspace
                 .downloadCount(0)
-                .isDeleted(false)
                 .build();
 
         Attachment saved = attachmentRepository.save(attachment);
-        log.info("✅ Chat attachment saved: id={}, path={}", saved.getId(), saved.getStoragePath());
+        log.info("✅ Chat attachment saved to database: id={}, publicId={}", 
+                saved.getId(), saved.getCloudinaryPublicId());
 
         return saved;
     }
@@ -90,38 +88,42 @@ public class AttachmentServiceImpl implements AttachmentService {
     @Override
     @Transactional
     public Attachment uploadTaskAttachment(MultipartFile file, Long taskId, Long userId) {
-        log.info("📤 Uploading task attachment: task_id={}, user_id={}, file={}", taskId, userId, file.getOriginalFilename());
+        log.info("📤 Uploading task attachment: task_id={}, user_id={}, file={}", 
+                taskId, userId, file.getOriginalFilename());
 
         // Validate task exists
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
 
         // TODO: Add workspace permission check for task
-        // For now, just verify task exists
 
-        // Upload to Supabase
-        SupabaseStorageService.UploadResult uploadResult = storageService.uploadTaskAttachment(file, taskId);
+        // Upload to Cloudinary
+        log.debug("🚀 Starting Cloudinary upload for task attachment");
+        CloudinaryService.UploadResult uploadResult = cloudinaryService.uploadTaskAttachment(file, taskId);
+
+        log.debug("✅ Cloudinary upload completed - publicId: {}", uploadResult.publicId());
 
         // Get uploader user
         User uploader = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        // Save attachment metadata to DB
+        // Save attachment metadata to database
         Attachment attachment = Attachment.builder()
-                .storagePath(uploadResult.storagePath)
-                .originalFilename(uploadResult.fileName)
-                .mimeType(uploadResult.mimeType)
-                .fileSize(uploadResult.fileSize)
-                .contentHash(uploadResult.contentHash)
+                .cloudinaryPublicId(uploadResult.publicId())
+                .secureUrl(uploadResult.secureUrl())
+                .resourceType(uploadResult.resourceType())
+                .originalFilename(uploadResult.filename())
+                .mimeType(uploadResult.mimeType())
+                .fileSize(uploadResult.fileSize())
                 .uploadedBy(uploader)
                 .task(task)
                 .isPublic(false)
                 .downloadCount(0)
-                .isDeleted(false)
                 .build();
 
         Attachment saved = attachmentRepository.save(attachment);
-        log.info("✅ Task attachment saved: id={}, path={}", saved.getId(), saved.getStoragePath());
+        log.info("✅ Task attachment saved to database: id={}, publicId={}", 
+                saved.getId(), saved.getCloudinaryPublicId());
 
         return saved;
     }
@@ -134,7 +136,7 @@ public class AttachmentServiceImpl implements AttachmentService {
         Attachment attachment = attachmentRepository.findById(attachmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Attachment not found"));
 
-        // PHASE 8: Security - verify user has access to this attachment
+        // Verify user has access to this attachment
         if (!canUserAccessAttachment(attachment, userId)) {
             log.warn("⚠️ Access denied: user {} cannot access attachment {}", userId, attachmentId);
             throw new AccessDeniedException("You do not have permission to access this attachment");
@@ -145,50 +147,21 @@ public class AttachmentServiceImpl implements AttachmentService {
 
     @Override
     @Transactional
-    public String generateDownloadUrl(Long attachmentId, Long userId) {
-        log.info("🔗 Generating download URL: id={}, user_id={}", attachmentId, userId);
+    public String getDownloadUrl(Long attachmentId, Long userId) {
+        log.info("🔗 Getting download URL: id={}, user_id={}", attachmentId, userId);
 
         // Verify access with permission check
         Attachment attachment = getAttachmentWithPermissionCheck(attachmentId, userId);
 
-        // Generate signed URL (valid for 7 days)
-        String signedUrl = storageService.generateSignedDownloadUrl(
-                attachment.getStoragePath(),
-                7 * 24 * 60 * 60  // 7 days in seconds
-        );
-
-        // Update download tracking
+        // Track download
         attachment.setDownloadCount(attachment.getDownloadCount() + 1);
-        attachment.setLastDownloadedAt(Instant.now());
+        attachment.setLastDownloadedAt(java.time.Instant.now());
         attachmentRepository.save(attachment);
 
-        log.info("✅ Download URL generated: {}", attachmentId);
-        return signedUrl;
-    }
-
-    @Override
-    @Transactional
-    public InputStream downloadFileStream(Long attachmentId, Long userId) {
-        log.info("⬇️ Downloading file stream: id={}, user_id={}", attachmentId, userId);
-
-        // Verify access with permission check
-        Attachment attachment = getAttachmentWithPermissionCheck(attachmentId, userId);
-
-        if (attachment.getIsDeleted()) {
-            log.warn("⚠️ Attempted download of deleted attachment: {}", attachmentId);
-            throw new ResourceNotFoundException("This attachment has been deleted");
-        }
-
-        // Download from Supabase
-        InputStream stream = storageService.downloadFile(attachment.getStoragePath());
-
-        // Update download tracking (async in production)
-        attachment.setDownloadCount(attachment.getDownloadCount() + 1);
-        attachment.setLastDownloadedAt(Instant.now());
-        attachmentRepository.save(attachment);
-
-        log.info("✅ File stream ready for download: {}", attachmentId);
-        return stream;
+        log.info("✅ Download URL retrieved: {} (secureUrl: {})", attachmentId, attachment.getSecureUrl());
+        
+        // Return the secure URL directly from Cloudinary
+        return attachment.getSecureUrl();
     }
 
     @Override
@@ -205,18 +178,19 @@ public class AttachmentServiceImpl implements AttachmentService {
             throw new AccessDeniedException("You can only delete your own attachments");
         }
 
-        // Mark as deleted (soft delete) - cleanup happens asynchronously
-        attachment.setIsDeleted(true);
-        attachmentRepository.save(attachment);
-
-        // Delete from Supabase asynchronously
+        // Delete from Cloudinary first
         try {
-            storageService.deleteFile(attachment.getStoragePath());
+            log.debug("🗑️ Deleting from Cloudinary: {}", attachment.getCloudinaryPublicId());
+            cloudinaryService.deleteFile(attachment.getCloudinaryPublicId());
+            log.debug("✅ File deleted from Cloudinary");
         } catch (Exception e) {
-            log.warn("⚠️ Failed to delete file from storage, will retry later: {}", attachment.getStoragePath());
+            log.error("❌ Failed to delete file from Cloudinary: {}", attachment.getCloudinaryPublicId(), e);
+            throw new RuntimeException("Failed to delete attachment from storage: " + e.getMessage(), e);
         }
 
-        log.info("✅ Attachment marked for deletion: {}", attachmentId);
+        // Delete metadata from database
+        attachmentRepository.delete(attachment);
+        log.info("✅ Attachment deleted from database: id={}", attachmentId);
     }
 
     @Override
@@ -231,38 +205,15 @@ public class AttachmentServiceImpl implements AttachmentService {
         return attachmentRepository.findByTaskId(taskId);
     }
 
-    @Override
-    @Transactional
-    public void cleanupOldDeletedAttachments() {
-        log.info("🧹 Cleaning up old deleted attachments");
-
-        Instant cutoffDate = Instant.now().minus(DELETED_ATTACHMENT_RETENTION_DAYS, ChronoUnit.DAYS);
-        List<Attachment> oldDeletedAttachments = attachmentRepository.findDeletedAttachmentsOlderThan(cutoffDate);
-
-        for (Attachment attachment : oldDeletedAttachments) {
-            try {
-                // Delete from Supabase if still there
-                storageService.deleteFile(attachment.getStoragePath());
-                // Remove metadata from DB
-                attachmentRepository.delete(attachment);
-                log.debug("✅ Cleaned up attachment: {}", attachment.getId());
-            } catch (Exception e) {
-                log.warn("⚠️ Failed to cleanup attachment {}: {}", attachment.getId(), e.getMessage());
-            }
-        }
-
-        log.info("✅ Cleanup complete: {} attachments removed", oldDeletedAttachments.size());
-    }
-
     // ─── Private Helper Methods ────────────────────────────────────────────
 
     /**
-     * PHASE 8: Security - checks if user can access attachment
+     * Checks if user can access attachment
      * 
      * Access rules:
      * - Owner can always access
      * - For chat attachments: user must be participant in chat room
-     * - For task attachments: user must be in workspace (TODO)
+     * - For task attachments: user must be in workspace
      */
     private boolean canUserAccessAttachment(Attachment attachment, Long userId) {
         // Owner can always access

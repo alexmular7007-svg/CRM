@@ -3,11 +3,10 @@ package com.arjun.crm.service;
 import com.arjun.crm.entity.Attachment;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.InputStream;
 import java.util.List;
 
 /**
- * Service for managing file attachments with Supabase Storage backend
+ * Service for managing file attachments with Cloudinary backend
  */
 public interface AttachmentService {
 
@@ -17,7 +16,7 @@ public interface AttachmentService {
      * @param file The file to upload
      * @param chatMessageId The chat message ID
      * @param userId The user uploading the file
-     * @return Attachment metadata
+     * @return Attachment metadata with Cloudinary details
      */
     Attachment uploadChatAttachment(MultipartFile file, Long chatMessageId, Long userId);
 
@@ -27,7 +26,7 @@ public interface AttachmentService {
      * @param file The file to upload
      * @param taskId The task ID
      * @param userId The user uploading the file
-     * @return Attachment metadata
+     * @return Attachment metadata with Cloudinary details
      */
     Attachment uploadTaskAttachment(MultipartFile file, Long taskId, Long userId);
 
@@ -41,25 +40,16 @@ public interface AttachmentService {
     Attachment getAttachmentWithPermissionCheck(Long attachmentId, Long userId);
 
     /**
-     * Generate a signed download URL with permission validation
+     * Get attachment secure URL (direct from Cloudinary, no additional URL generation needed)
      *
      * @param attachmentId The attachment ID
-     * @param userId The user requesting download
-     * @return Signed download URL valid for 7 days
+     * @param userId The user requesting access
+     * @return Secure HTTPS URL for download/preview
      */
-    String generateDownloadUrl(Long attachmentId, Long userId);
+    String getDownloadUrl(Long attachmentId, Long userId);
 
     /**
-     * Download file as stream with permission check
-     *
-     * @param attachmentId The attachment ID
-     * @param userId The user requesting download
-     * @return InputStream of the file
-     */
-    InputStream downloadFileStream(Long attachmentId, Long userId);
-
-    /**
-     * Delete an attachment
+     * Delete an attachment from Cloudinary and database
      *
      * @param attachmentId The attachment ID
      * @param userId The user requesting deletion (must be owner)
@@ -75,10 +65,4 @@ public interface AttachmentService {
      * Get all attachments for a task
      */
     List<Attachment> getAttachmentsForTask(Long taskId);
-
-    /**
-     * Clean up old deleted attachments from storage
-     * Should be called periodically (e.g., daily)
-     */
-    void cleanupOldDeletedAttachments();
 }
