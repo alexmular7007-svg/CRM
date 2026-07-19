@@ -117,6 +117,15 @@ public class Attachment {
     private Boolean isPublic = false;
 
     /**
+     * Whether this attachment is soft-deleted
+     * KEPT for backward compatibility with existing database schema
+     * New uploads will have this as false (hard delete only)
+     */
+    @Column(name = "is_deleted", nullable = false)
+    @Builder.Default
+    private Boolean isDeleted = false;
+
+    /**
      * Download count for analytics
      */
     @Column(name = "download_count")
