@@ -48,7 +48,7 @@ public class AttachmentDownloadController {
      * - User has permission to access attachment
      * - Attachment exists in Cloudinary
      * 
-     * Returns the secure Cloudinary URL for download
+     * Returns the secure Cloudinary URL for download with proper Content-Disposition header
      */
     @GetMapping("/{id}/url")
     public ResponseEntity<ApiResponse<DownloadUrlResponse>> getDownloadUrl(
@@ -57,8 +57,17 @@ public class AttachmentDownloadController {
 
         try {
             User currentUser = getAuthenticatedUser();
-            String downloadUrl = attachmentService.getDownloadUrl(id, currentUser.getId());
+            String baseDownloadUrl = attachmentService.getDownloadUrl(id, currentUser.getId());
             Attachment attachment = attachmentService.getAttachmentWithPermissionCheck(id, currentUser.getId());
+            
+            // ✅ CRITICAL FIX: Add Cloudinary transformation to force attachment download
+            // This adds fl_attachment parameter which tells Cloudinary to set Content-Disposition: attachment
+            // Without this, browsers try to display PDFs inline instead of downloading them
+            String downloadUrl = addCloudinaryAttachmentTransform(baseDownloadUrl, attachment.getOriginalFilename());
+            
+            log.info("📥 Download URL: {}", downloadUrl);
+            log.info("📄 Filename: {}", attachment.getOriginalFilename());
+            log.info("📦 MIME Type: {}", attachment.getMimeType());
             
             DownloadUrlResponse response = DownloadUrlResponse.builder()
                     .downloadUrl(downloadUrl)
@@ -73,6 +82,60 @@ public class AttachmentDownloadController {
             log.error("❌ URL retrieval failed:", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Failed to retrieve download URL: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * Add Cloudinary attachment transformation to force download
+     * 
+     * Transforms URL from:
+     *   https://res.cloudinary.com/.../raw/upload/chat/...
+     * To:
+     *   https://res.cloudinary.com/.../raw/upload/fl_attachment:filename.pdf/chat/...
+     * 
+     * This tells Cloudinary to:
+     * 1. Set Content-Disposition: attachment (forces download, not inline view)
+     * 2. Use the specified filename instead of public_id
+     */
+    private String addCloudinaryAttachmentTransform(String url, String filename) {
+        if (url == null || url.isEmpty() || filename == null || filename.isEmpty()) {
+            return url;
+        }
+        
+        try {
+            // URL structure: https://res.cloudinary.com/cloud/raw/upload/PUBLIC_ID
+            // We need to insert: fl_attachment:FILENAME after /upload/
+            
+            // Find where to insert the transformation
+            String uploadMarker = "/upload/";
+            int uploadIndex = url.indexOf(uploadMarker);
+            
+            if (uploadIndex == -1) {
+                log.warn("⚠️ Could not find /upload/ in Cloudinary URL");
+                return url;
+            }
+            
+            // URL-encode the filename for the transformation parameter
+            // Important: Keep the full filename WITH extension
+            String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8);
+            
+            // Insert transformation after /upload/
+            int insertIndex = uploadIndex + uploadMarker.length();
+            String transformedUrl = url.substring(0, insertIndex) 
+                    + "fl_attachment:" + encodedFilename + "/" 
+                    + url.substring(insertIndex);
+            
+            log.info("✅ Added attachment transform:");
+            log.info("   Original filename: {}", filename);
+            log.info("   Encoded filename: {}", encodedFilename);
+            log.info("   Transformed URL: {}", transformedUrl);
+            return transformedUrl;
+        } catch (Exception e) {
+            log.error("❌ Error adding attachment transform: {}", e.getMessage());
+            return url; // Return original URL if transformation fails
+        }
+    }
+            return url; // Return original URL if transformation fails
         }
     }
 

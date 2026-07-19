@@ -76,7 +76,10 @@ const MessageArea = ({
       // Get signed URL + metadata from backend (validates permissions)
       const urlData = await attachmentService.getDownloadUrl(msg.attachmentId)
       const downloadUrl = urlData.downloadUrl
-      const filename = urlData.filename || msg.attachmentName || 'download'
+      // ✅ CRITICAL FIX: Use the filename from backend, NOT from message
+      // Backend returns the ORIGINAL filename (e.g., "Aryan_Resume.pdf")
+      // NOT the UUID-prefixed public_id
+      const filename = urlData.filename
       
       // For ALL file types, use the Cloudinary secure URL directly
       if (msg.messageType === 'IMAGE') {
@@ -87,7 +90,8 @@ const MessageArea = ({
         // Browser will handle the download based on Content-Type header from Cloudinary
         const link = document.createElement('a')
         link.href = downloadUrl
-        link.download = filename  // ✅ Use original filename with extension
+        // ✅ CRITICAL FIX: Use filename from backend API response, not from message
+        link.download = filename  // Now contains just "Aryan_Resume.pdf"
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)
