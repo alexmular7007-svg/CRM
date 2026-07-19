@@ -78,8 +78,8 @@ const MessageArea = ({
         // Images open in new tab for preview
         window.open(signedUrl, '_blank')
       } else {
-        // Files trigger download
-        const blob = await attachmentService.downloadAttachment(msg.id)
+        // Files trigger download - use correct attachment ID
+        const blob = await attachmentService.downloadAttachment(msg.attachmentId)
         attachmentService.downloadBlob(blob, msg.attachmentName || 'download')
       }
       
