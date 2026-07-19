@@ -8,15 +8,9 @@ import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface AttachmentRepository extends JpaRepository<Attachment, Long> {
-
-    /**
-     * Find attachment by storage path
-     */
-    Optional<Attachment> findByStoragePath(String storagePath);
 
     /**
      * Find all attachments for a chat message
@@ -40,12 +34,6 @@ public interface AttachmentRepository extends JpaRepository<Attachment, Long> {
             "FROM Attachment a " +
             "WHERE a.id = :attachmentId AND a.uploadedBy.id = :userId")
     boolean isAttachmentOwnedByUser(@Param("attachmentId") Long attachmentId, @Param("userId") Long userId);
-
-    /**
-     * Find attachments that need cleanup (marked as deleted, older than retention period)
-     */
-    @Query("SELECT a FROM Attachment a WHERE a.isDeleted = true AND a.updatedAt < :cutoffDate")
-    List<Attachment> findDeletedAttachmentsOlderThan(@Param("cutoffDate") Instant cutoffDate);
 
     /**
      * Get download statistics
