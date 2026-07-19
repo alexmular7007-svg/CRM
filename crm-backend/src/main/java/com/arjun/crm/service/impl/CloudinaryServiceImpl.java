@@ -101,41 +101,86 @@ public class CloudinaryServiceImpl implements CloudinaryService {
         validateFile(file);
 
         try {
-            log.debug("📋 Validating file: {}", file.getOriginalFilename());
-            
             String originalFilename = file.getOriginalFilename();
             String fileExtension = getFileExtension(originalFilename);
             String mimeType = file.getContentType();
+            byte[] fileBytes = file.getBytes();
+            long fileSizeBytes = file.getSize();
+
+            // ═══════════════════════════════════════════════════════════════
+            // DIAGNOSTIC 1: Verify original file integrity
+            // ═══════════════════════════════════════════════════════════════
+            log.info("📋 ━━━━━ UPLOAD DIAGNOSTICS START ━━━━━");
+            log.info("📋 [1] ORIGINAL FILE INFO:");
+            log.info("     Filename: {}", originalFilename);
+            log.info("     Content-Type: {}", mimeType);
+            log.info("     File.getSize(): {} bytes", fileSizeBytes);
+            log.info("     Bytes.length: {} bytes", fileBytes.length);
+            log.info("     Size match: {}", fileSizeBytes == fileBytes.length ? "✅ YES" : "❌ NO");
+
+            // ═══════════════════════════════════════════════════════════════
+            // DIAGNOSTIC 2: Verify PDF signature
+            // ═══════════════════════════════════════════════════════════════
+            if ("pdf".equalsIgnoreCase(fileExtension)) {
+                String pdfSignature = new String(fileBytes, 0, Math.min(8, fileBytes.length));
+                log.info("📋 [2] PDF SIGNATURE:");
+                log.info("     First 8 bytes: {} (hex)", bytesToHex(fileBytes, 0, Math.min(8, fileBytes.length)));
+                log.info("     Starts with %PDF: {}", pdfSignature.startsWith("%PDF") ? "✅ YES" : "❌ NO");
+                if (!pdfSignature.startsWith("%PDF")) {
+                    log.error("❌ CORRUPTED: File does not start with %PDF signature!");
+                }
+            }
 
             // Determine resource type and validate
             String resourceType = determineResourceType(fileExtension, mimeType);
             
-            // Generate unique public ID
+            // Generate unique public ID (includes folder path)
             String publicId = generatePublicId(folder, originalFilename);
 
-            log.debug("📋 File details - extension: {}, mimeType: {}, resourceType: {}, publicId: {}", 
-                    fileExtension, mimeType, resourceType, publicId);
+            log.info("📋 [3] CLOUDINARY CONFIGURATION:");
+            log.info("     Extension: {}", fileExtension);
+            log.info("     MIME Type: {}", mimeType);
+            log.info("     Resource Type: {}", resourceType);
+            log.info("     Folder: {}", folder);
+            log.info("     Public ID: {}", publicId);
 
-            // Upload to Cloudinary
+            // ═══════════════════════════════════════════════════════════════
+            // CRITICAL FIX: Don't pass "folder" parameter separately
+            // Public ID already contains the folder path: "chat/8/uuid-filename"
+            // ═══════════════════════════════════════════════════════════════
             Map<String, Object> uploadParams = ObjectUtils.asMap(
-                    "public_id", publicId,
-                    "resource_type", resourceType,
-                    "folder", folder,
-                    "overwrite", false,  // Prevent accidental overwrites
-                    "invalidate", true,  // Invalidate CDN cache if re-uploading
-                    "timeout", 60000
+                    "public_id", publicId,                    // Already includes folder
+                    "resource_type", resourceType,            // image, video, or raw
+                    "overwrite", false,                       // Prevent accidental overwrites
+                    "invalidate", true,                       // Invalidate CDN cache
+                    "timeout", 60000,                         // 60 second timeout
+                    "use_filename", false,                    // Don't use original filename
+                    "unique_filename", false                  // Use our UUID naming
             );
 
-            log.info("🚀 Uploading to Cloudinary: {}", publicId);
-            Map<String, Object> uploadResult = cloudinary.uploader().upload(file.getBytes(), uploadParams);
+            log.info("📋 [4] UPLOADING TO CLOUDINARY:");
+            log.info("     Upload params: {}", uploadParams);
+            
+            Map<String, Object> uploadResult = cloudinary.uploader().upload(fileBytes, uploadParams);
 
-            // Extract result
+            // ═══════════════════════════════════════════════════════════════
+            // DIAGNOSTIC 3: Verify Cloudinary byte count
+            // ═══════════════════════════════════════════════════════════════
             String resultPublicId = (String) uploadResult.get("public_id");
             String secureUrl = (String) uploadResult.get("secure_url");
             String resultResourceType = (String) uploadResult.get("resource_type");
-            Long fileSize = file.getSize();
+            Long cloudinaryBytes = (Long) uploadResult.get("bytes");
 
-            log.info("✅ Upload successful: publicId={}, url={}", resultPublicId, secureUrl);
+            log.info("📋 [5] CLOUDINARY RESPONSE:");
+            log.info("     Public ID: {}", resultPublicId);
+            log.info("     Resource Type: {}", resultResourceType);
+            log.info("     Secure URL: {}", secureUrl);
+            log.info("     Cloudinary bytes: {}", cloudinaryBytes);
+            log.info("     Original bytes: {}", fileSizeBytes);
+            log.info("     Bytes match: {}", cloudinaryBytes != null && cloudinaryBytes.equals(fileSizeBytes) ? "✅ YES" : "❌ NO");
+
+            log.info("✅ Upload successful: publicId={}", resultPublicId);
+            log.info("📋 ━━━━━ UPLOAD DIAGNOSTICS END ━━━━━");
 
             return new UploadResult(
                     resultPublicId,
@@ -143,7 +188,7 @@ public class CloudinaryServiceImpl implements CloudinaryService {
                     resultResourceType,
                     originalFilename,
                     mimeType,
-                    fileSize
+                    fileSizeBytes
             );
 
         } catch (IOException e) {
@@ -153,6 +198,17 @@ public class CloudinaryServiceImpl implements CloudinaryService {
             log.error("❌ Error during Cloudinary upload: {}", file.getOriginalFilename(), e);
             throw new RuntimeException("Failed to upload file to Cloudinary: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * Convert bytes to hex string for debugging
+     */
+    private String bytesToHex(byte[] bytes, int start, int length) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = start; i < start + length && i < bytes.length; i++) {
+            sb.append(String.format("%02X ", bytes[i]));
+        }
+        return sb.toString();
     }
 
     /**
