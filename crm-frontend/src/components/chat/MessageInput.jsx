@@ -110,12 +110,19 @@ const MessageInput = ({ onSendMessage, onTyping, roomId, disabled = false }) => 
   }
 
   const uploadFileAndSend = async (fileObj) => {
-    const formData = new FormData()
-    formData.append('file', fileObj.file)
-    formData.append('roomId', roomId)
-    await api.post('/chat/messages/upload', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
+    try {
+      const formData = new FormData()
+      formData.append('file', fileObj.file)
+      formData.append('roomId', roomId)
+      const response = await api.post('/chat/messages/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      console.log('✅ File uploaded successfully:', fileObj.file.name, response)
+    } catch (error) {
+      console.error('❌ Upload failed for', fileObj.file.name, error)
+      const errorMsg = error.response?.data?.message || error.message || 'Upload failed'
+      throw new Error(`${fileObj.file.name}: ${errorMsg}`)
+    }
   }
 
   const handleSubmit = async (e) => {
@@ -132,11 +139,23 @@ const MessageInput = ({ onSendMessage, onTyping, roomId, disabled = false }) => 
         return
       }
       setUploading(true)
+      const failedFiles = []
       try {
-        await Promise.all(attachments.map(uploadFileAndSend))
+        await Promise.all(
+          attachments.map((fileObj) =>
+            uploadFileAndSend(fileObj).catch((err) => {
+              failedFiles.push(err.message)
+            })
+          )
+        )
+        if (failedFiles.length > 0) {
+          failedFiles.forEach((msg) => toast.error(msg))
+        } else {
+          toast.success(`${attachments.length} file(s) uploaded successfully`)
+        }
       } catch (err) {
-        toast.error('Failed to upload one or more files')
-        console.error(err)
+        toast.error('Failed to upload files')
+        console.error('Upload error:', err)
       } finally {
         setUploading(false)
       }
