@@ -131,7 +131,7 @@ public class AttachmentDownloadController {
             String mimeType,
             boolean preview) {
         
-        log.info("📋 [1.1] SDK URL GENERATION - START");
+        log.info("📋 [1.1] SDK URL GENERATION");
         log.info("     publicId: {}", publicId);
         log.info("     version: {}", version);
         log.info("     resourceType: {}", resourceType);
@@ -140,50 +140,48 @@ public class AttachmentDownloadController {
         log.info("     preview: {}", preview);
         
         try {
-            // Use Cloudinary.url() method from official SDK
-            // This builder properly constructs URLs without manual string manipulation
+            // CRITICAL: Use Cloudinary.url() builder from official SDK
+            // For raw resources (PDFs, DOCX, etc.): Do NOT apply format("auto")
+            // format("auto") is image-specific and breaks non-image files
+            // Only apply attachment flag for downloads
             
-            String url = cloudinary.url()
-                    .resourceType(resourceType)  // image, video, raw
-                    .type("upload")              // Upload type
-                    .version(version)            // Add version from response
-                    .secure(true)                // HTTPS only
-                    .format("auto")              // Auto format based on browser
-                    .generate(publicId);         // Generate URL for public_id
-            
-            // If it's a preview request for images, use inline display
-            // Otherwise, set as attachment for download
-            if (preview && ("image".equals(resourceType))) {
-                log.info("     Mode: Image preview (inline display)");
-                // Image preview - no modification needed, browser will display inline
+            if ("image".equals(resourceType) && preview) {
+                // Image preview: return URL without attachment flag (browser displays inline)
+                log.info("     Mode: Image preview (inline)");
+                
+                String url = cloudinary.url()
+                        .resourceType(resourceType)
+                        .type("upload")
+                        .version(version)
+                        .secure(true)
+                        .generate(publicId);
+                
+                log.info("     Generated URL: {}", url);
                 return url;
             } else {
-                // For downloads: add attachment disposition via URL transformations
-                // Use Cloudinary Transformation object properly
-                log.info("     Mode: Download with attachment disposition");
+                // All other cases: use attachment flag only
+                // No format("auto"), no image-specific transformations
+                log.info("     Mode: Download (attachment flag)");
                 
                 String downloadUrl = cloudinary.url()
                         .resourceType(resourceType)
                         .type("upload")
                         .version(version)
                         .secure(true)
-                        .format("auto")
                         .transformation(new com.cloudinary.Transformation()
-                                .flags("attachment"))  // Cloudinary flag for attachment disposition
+                                .flags("attachment"))  // Only attachment flag
                         .generate(publicId);
                 
-                log.info("     Generated download URL: {}", downloadUrl);
+                log.info("     Generated URL: {}", downloadUrl);
                 return downloadUrl;
             }
             
         } catch (Exception e) {
             log.error("❌ Error generating URL with SDK: {}", e.getMessage(), e);
             
-            // Fallback to secure_url if SDK fails (should not happen)
-            // But log this as it indicates a problem
+            // Fallback: basic URL without any transformations
             log.warn("⚠️ SDK URL generation failed, using fallback");
             
-            // Build basic URL without transformations
             String fallbackUrl = cloudinary.url()
                     .resourceType(resourceType)
                     .type("upload")
