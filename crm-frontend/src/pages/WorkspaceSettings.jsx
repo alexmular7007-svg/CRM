@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSelector } from 'react-redux'
+import { useTheme } from '@mui/material/styles'
+import { useMediaQuery } from '@mui/material'
 import { motion } from 'framer-motion'
 import { FiArrowLeft, FiUsers, FiMail, FiLock, FiSettings, FiShield } from 'react-icons/fi'
 import toast from 'react-hot-toast'
@@ -12,6 +14,8 @@ import Spinner from '../components/common/Spinner'
 import MembersTab from '../components/workspace/MembersTab'
 
 const WorkspaceSettings = () => {
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const { workspaceId } = useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -135,29 +139,29 @@ const WorkspaceSettings = () => {
         >
           <FiArrowLeft size={20} />
         </button>
-        <div>
-          <h1 className="text-xl sm:text-3xl font-bold" style={{ color: 'var(--theme-textPrimary)' }}>
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-3xl font-bold truncate" style={{ color: 'var(--theme-textPrimary)' }}>
             {workspaceName} Settings
           </h1>
-          <p className="mt-0.5 sm:mt-1 text-xs sm:text-sm" style={{ color: 'var(--theme-textSecondary)' }}>
+          <p className="mt-0.5 sm:mt-1 text-xs sm:text-sm truncate" style={{ color: 'var(--theme-textSecondary)' }}>
             Manage your workspace members, invitations, and permissions
           </p>
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs - Horizontally Scrollable on Mobile */}
       <div className="border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
-        <div className="flex space-x-2 sm:space-x-8 min-w-min sm:min-w-0">
+        <div className="flex space-x-2 sm:space-x-8 min-w-max sm:min-w-0">
           <button
             onClick={() => setActiveTab('members')}
-            className={`px-2 sm:px-1 py-3 sm:py-4 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
+            className={`px-3 sm:px-1 py-3 sm:py-4 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
               activeTab === 'members'
                 ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                 : 'border-transparent text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
             }`}
           >
             <div className="flex items-center gap-1 sm:gap-2">
-              <FiUsers size={16} className="sm:block hidden" />
+              <FiUsers size={16} className="hidden sm:block" />
               <span>Members</span>
             </div>
           </button>
@@ -165,14 +169,14 @@ const WorkspaceSettings = () => {
           <RoleGuard workspaceId={workspaceId} requireRole="ADMIN">
             <button
               onClick={() => setActiveTab('invitations')}
-              className={`px-2 sm:px-1 py-3 sm:py-4 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
+              className={`px-3 sm:px-1 py-3 sm:py-4 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
                 activeTab === 'invitations'
                   ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                   : 'border-transparent text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
               }`}
             >
               <div className="flex items-center gap-1 sm:gap-2">
-                <FiMail size={16} className="sm:block hidden" />
+                <FiMail size={16} className="hidden sm:block" />
                 <span>Invitations</span>
               </div>
             </button>
@@ -181,14 +185,14 @@ const WorkspaceSettings = () => {
           <RoleGuard workspaceId={workspaceId} requireRole="OWNER">
             <button
               onClick={() => setActiveTab('roles')}
-              className={`px-2 sm:px-1 py-3 sm:py-4 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
+              className={`px-3 sm:px-1 py-3 sm:py-4 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
                 activeTab === 'roles'
                   ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                   : 'border-transparent text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
               }`}
             >
               <div className="flex items-center gap-1 sm:gap-2">
-                <FiLock size={16} className="sm:block hidden" />
+                <FiLock size={16} className="hidden sm:block" />
                 <span>Roles & Permissions</span>
               </div>
             </button>
@@ -197,14 +201,14 @@ const WorkspaceSettings = () => {
           <RoleGuard workspaceId={workspaceId} requireRole="OWNER">
             <button
               onClick={() => setActiveTab('general')}
-              className={`px-2 sm:px-1 py-3 sm:py-4 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
+              className={`px-3 sm:px-1 py-3 sm:py-4 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
                 activeTab === 'general'
                   ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                   : 'border-transparent text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
               }`}
             >
               <div className="flex items-center gap-1 sm:gap-2">
-                <FiSettings size={16} className="sm:block hidden" />
+                <FiSettings size={16} className="hidden sm:block" />
                 <span>General</span>
               </div>
             </button>
@@ -236,7 +240,7 @@ const WorkspaceSettings = () => {
                   If not, they'll receive an invitation email.
                 </p>
                 <form onSubmit={handleSendInvitation} className="space-y-3 sm:space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className={`grid gap-3 sm:gap-4 ${isMobile ? 'grid-cols-1' : 'sm:grid-cols-2'}`}>
                     <div>
                       <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
                         Gmail Address
@@ -246,7 +250,7 @@ const WorkspaceSettings = () => {
                         value={inviteEmail}
                         onChange={(e) => setInviteEmail(e.target.value)}
                         placeholder="user@gmail.com"
-                        className="w-full px-3 sm:px-4 py-2 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-600 dark:placeholder-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all"
+                        className="w-full px-3 sm:px-4 py-2 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-lg text-xs sm:text-sm text-gray-900 dark:text-white placeholder-gray-600 dark:placeholder-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all"
                       />
                     </div>
                     <div>
@@ -256,7 +260,7 @@ const WorkspaceSettings = () => {
                       <select
                         value={inviteRole}
                         onChange={(e) => setInviteRole(e.target.value)}
-                        className="w-full px-3 sm:px-4 py-2 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all"
+                        className="w-full px-3 sm:px-4 py-2 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-lg text-xs sm:text-sm text-gray-900 dark:text-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all"
                       >
                         <option value="MEMBER">Member</option>
                         <option value="ADMIN">Admin</option>
@@ -268,7 +272,7 @@ const WorkspaceSettings = () => {
                     disabled={sendInvitationMutation.isPending}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    className="w-full sm:w-auto px-4 sm:px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm font-medium rounded-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
+                    className="w-full sm:w-auto px-4 sm:px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs sm:text-sm font-medium rounded-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
                   >
                     {sendInvitationMutation.isPending ? 'Sending...' : 'Send Invitation'}
                   </motion.button>
@@ -351,8 +355,8 @@ const WorkspaceSettings = () => {
         {/* Roles & Permissions Tab */}
         {activeTab === 'roles' && (
           <RoleGuard workspaceId={workspaceId} requireRole="OWNER">
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-4 sm:space-y-6">
+              <div className={`grid gap-4 sm:gap-6 ${isMobile ? 'grid-cols-1' : 'md:grid-cols-3'}`}>
                 {[
                   {
                     role: 'OWNER',
@@ -393,17 +397,17 @@ const WorkspaceSettings = () => {
                 ].map(({ role, icon: Icon, color, permissions }) => (
                   <div
                     key={role}
-                    className={`bg-white dark:bg-gray-800 rounded-lg shadow p-6 border-2 border-${color}-200 dark:border-${color}-800`}
+                    className={`bg-white dark:bg-gray-800 rounded-lg shadow p-4 sm:p-6 border-2 border-${color}-200 dark:border-${color}-800`}
                   >
-                    <div className="flex items-center space-x-3 mb-4">
-                      <Icon size={24} className={`text-${color}-600 dark:text-${color}-400`} />
-                      <h4 className="text-lg font-semibold text-gray-900 dark:text-white">{role}</h4>
+                    <div className="flex items-center gap-3 mb-4">
+                      <Icon size={24} className={`text-${color}-600 dark:text-${color}-400 flex-shrink-0`} />
+                      <h4 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">{role}</h4>
                     </div>
                     <ul className="space-y-2">
                       {permissions.map((permission, idx) => (
-                        <li key={idx} className="flex items-start space-x-2">
-                          <span className={`text-${color}-600 dark:text-${color}-400 mt-1`}>✓</span>
-                          <span className="text-sm text-gray-700 dark:text-gray-300">{permission}</span>
+                        <li key={idx} className="flex items-start gap-2">
+                          <span className={`text-${color}-600 dark:text-${color}-400 mt-1 flex-shrink-0`}>✓</span>
+                          <span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">{permission}</span>
                         </li>
                       ))}
                     </ul>
@@ -417,37 +421,37 @@ const WorkspaceSettings = () => {
         {/* General Tab */}
         {activeTab === 'general' && (
           <RoleGuard workspaceId={workspaceId} requireRole="OWNER">
-            <div className="space-y-6">
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            <div className="space-y-4 sm:space-y-6">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 sm:p-6">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4">
                   Workspace Details
                 </h3>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
                       Workspace Name
                     </label>
-                    <p className="text-lg font-semibold text-gray-900 dark:text-white">{workspace?.name}</p>
+                    <p className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white truncate">{workspace?.name}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
                       Workspace Owner
                     </label>
-                    <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                    <p className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white truncate">
                       {workspace?.owner?.name || 'Unknown'}
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
                       Total Members
                     </label>
-                    <p className="text-lg font-semibold text-gray-900 dark:text-white">{members.length}</p>
+                    <p className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">{members.length}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
                       Created
                     </label>
-                    <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                    <p className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
                       {workspace?.createdAt ? new Date(workspace.createdAt).toLocaleDateString() : 'N/A'}
                     </p>
                   </div>

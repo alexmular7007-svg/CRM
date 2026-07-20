@@ -38,6 +38,9 @@ public class SecurityConfig {
     @Value("${app.oauth2-frontend-failure-url:http://localhost:3000/login?error=oauth2_failed}")
     private String oauth2FailureUrl;
 
+    @Value("${spring.profiles.active:}")
+    private String activeProfiles;
+
     /**
      * Chain 1 — OAuth2 social login only.
      * Handles /oauth2/** and /login/oauth2/** with a session (required for
@@ -71,15 +74,22 @@ public class SecurityConfig {
     @Bean
     @Order(2)
     public SecurityFilterChain apiFilterChain(HttpSecurity http) throws Exception {
-        http
+        var authBuilder = http
             .cors(cors -> cors.configurationSource(corsConfigurationSource))
             .csrf(AbstractHttpConfigurer::disable)
             // STATELESS — no session cookies, no session creation
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/test/**").permitAll()
+                .requestMatchers("/api/auth/**").permitAll());
+
+        // PRODUCTION HARDENING: Only allow test endpoints in dev/test profiles
+        if (!isProductionProfile()) {
+            authBuilder.authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/test/**").permitAll());
+        }
+
+        authBuilder.authorizeHttpRequests(auth -> auth
                 .requestMatchers("/ws/**").permitAll()
                 .requestMatchers("/ws", "/ws/").permitAll()
                 .requestMatchers("/ws/info").permitAll()
@@ -89,7 +99,14 @@ public class SecurityConfig {
             )
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-        return http.build();
+        return authBuilder.build();
+    }
+
+    /**
+     * Helper method to determine if running in production profile
+     */
+    private boolean isProductionProfile() {
+        return activeProfiles != null && activeProfiles.contains("prod");
     }
 
     @Bean
