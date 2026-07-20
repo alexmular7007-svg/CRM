@@ -318,29 +318,21 @@ public class CloudinaryServiceImpl implements CloudinaryService {
 
     /**
      * Generate unique public ID for file in Cloudinary
-     * Format: folder/uuid-filename.ext (WITH extension)
+     * Format: folder/uuid-filename (without extension)
      * 
-     * ✅ CRITICAL: Keep the file extension so Cloudinary knows the file type
-     * Without extension, Cloudinary can't determine proper MIME type for downloads
+     * Note: File extension is stored in database and used for downloads.
+     * Cloudinary determines MIME type from resource_type (image/video/raw), not extension.
      */
     private String generatePublicId(String folder, String originalFilename) {
         String uuid = UUID.randomUUID().toString();
-        
-        // Extract extension
-        String extension = "";
-        if (originalFilename.contains(".")) {
-            extension = originalFilename.substring(originalFilename.lastIndexOf("."));
-        }
-        
-        // Get name without extension
         String nameWithoutExtension = originalFilename.contains(".")
                 ? originalFilename.substring(0, originalFilename.lastIndexOf("."))
                 : originalFilename;
 
-        // Sanitize filename (remove special characters)
+        // Sanitize filename
         nameWithoutExtension = nameWithoutExtension.replaceAll("[^a-zA-Z0-9._-]", "_");
 
-        // ✅ CRITICAL FIX: Include extension in public ID so Cloudinary knows file type
-        return folder + "/" + uuid + "-" + nameWithoutExtension + extension;
+        // Include folder path in public ID
+        return folder + "/" + uuid + "-" + nameWithoutExtension;
     }
 }
