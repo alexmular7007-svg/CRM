@@ -152,11 +152,13 @@ public class CloudinaryServiceImpl implements CloudinaryService {
 
             // ═══════════════════════════════════════════════════════════════
             // CRITICAL FIX: Don't pass "folder" parameter separately
-            // Public ID already contains the folder path: "chat/8/uuid-filename"
+            // Public ID already contains the folder path: "chat/8/uuid-filename.ext"
+            // Include original_filename as hint for Cloudinary's internal processing
             // ═══════════════════════════════════════════════════════════════
             Map<String, Object> uploadParams = ObjectUtils.asMap(
-                    "public_id", publicId,                    // Already includes folder
+                    "public_id", publicId,                    // Already includes folder + extension
                     "resource_type", resourceType,            // image, video, or raw
+                    "original_filename", originalFilename,    // NEW: Cloudinary metadata hint
                     "overwrite", false,                       // Prevent accidental overwrites
                     "invalidate", true,                       // Invalidate CDN cache
                     "timeout", 60000,                         // 60 second timeout
@@ -318,21 +320,26 @@ public class CloudinaryServiceImpl implements CloudinaryService {
 
     /**
      * Generate unique public ID for file in Cloudinary
-     * Format: folder/uuid-filename (without extension)
+     * Format: folder/uuid-filename.ext
      * 
-     * Note: File extension is stored in database and used for downloads.
-     * Cloudinary determines MIME type from resource_type (image/video/raw), not extension.
+     * CRITICAL FIX: Keep file extension in public ID so Cloudinary can:
+     * 1. Determine file format (pdf, docx, etc.) - fixes Format=N/A issue
+     * 2. Set correct Content-Type headers for downloads
+     * 3. Generate correct download filenames
+     * 
+     * Files are identified by:
+     * - extension: For format detection (Cloudinary dashboard)
+     * - resource_type (image/video/raw): For media type classification
+     * - database metadata: originalFilename, mimeType for reliable downloads
      */
     private String generatePublicId(String folder, String originalFilename) {
         String uuid = UUID.randomUUID().toString();
-        String nameWithoutExtension = originalFilename.contains(".")
-                ? originalFilename.substring(0, originalFilename.lastIndexOf("."))
-                : originalFilename;
-
-        // Sanitize filename
-        nameWithoutExtension = nameWithoutExtension.replaceAll("[^a-zA-Z0-9._-]", "_");
-
-        // Include folder path in public ID
-        return folder + "/" + uuid + "-" + nameWithoutExtension;
+        
+        // ✅ CRITICAL FIX: Preserve full filename WITH extension
+        String sanitizedFilename = originalFilename.replaceAll("[^a-zA-Z0-9._-]", "_");
+        
+        // Include folder path and full filename with extension
+        // Format: "chat/8/uuid-Resume.pdf" (NOW includes .pdf)
+        return folder + "/" + uuid + "-" + sanitizedFilename;
     }
 }
