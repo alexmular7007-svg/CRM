@@ -178,7 +178,14 @@ public class CloudinaryServiceImpl implements CloudinaryService {
             // ═══════════════════════════════════════════════════════════════
             // DIAGNOSTIC 3: Verify Cloudinary byte count
             // ═══════════════════════════════════════════════════════════════
+            // ═══════════════════════════════════════════════════════════════
+            // CRITICAL: Extract version from Cloudinary response
+            // Used for URL generation via SDK
+            // ═══════════════════════════════════════════════════════════════
             String resultPublicId = (String) uploadResult.get("public_id");
+            String resultVersion = uploadResult.get("version") != null 
+                    ? uploadResult.get("version").toString() 
+                    : null;
             String secureUrl = (String) uploadResult.get("secure_url");
             String resultResourceType = (String) uploadResult.get("resource_type");
             String format = (String) uploadResult.get("format");
@@ -189,6 +196,7 @@ public class CloudinaryServiceImpl implements CloudinaryService {
 
             log.info("📋 [5] CLOUDINARY RESPONSE:");
             log.info("     Public ID: {}", resultPublicId);
+            log.info("     Version: {}", resultVersion);
             log.info("     Resource Type: {}", resultResourceType);
             log.info("     Format: {}", format);
             log.info("     Secure URL: {}", secureUrl);
@@ -202,11 +210,12 @@ public class CloudinaryServiceImpl implements CloudinaryService {
             log.info("📋 [6] FULL CLOUDINARY RESPONSE:");
             uploadResult.forEach((key, value) -> log.info("     {}: {}", key, value));
 
-            log.info("✅ Upload successful: publicId={}", resultPublicId);
+            log.info("✅ Upload successful: publicId={}, version={}", resultPublicId, resultVersion);
             log.info("📋 ━━━━━ UPLOAD DIAGNOSTICS END ━━━━━");
 
             return new UploadResult(
                     resultPublicId,
+                    resultVersion,
                     secureUrl,
                     resultResourceType,
                     originalFilename,
