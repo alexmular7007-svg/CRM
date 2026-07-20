@@ -1,15 +1,17 @@
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { authService } from '../services/authService'
 import { loginStart, loginSuccess, loginFailure, logout as logoutAction } from '../store/slices/authSlice'
 import { clearWorkspace } from '../store/slices/workspaceSlice'
+import { clearChat } from '../store/slices/chatSlice'
 import { websocketService } from '../services/websocketService'
 import toast from 'react-hot-toast'
 
 export const useAuth = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [searchParams] = useSearchParams()
   const { user, isAuthenticated, loading, error, token } = useSelector((state) => state.auth)
 
@@ -19,6 +21,10 @@ export const useAuth = () => {
       dispatch(loginStart())
     },
     onSuccess: (data) => {
+      // 🔒 CRITICAL FIX: Clear React Query cache before logging in new user
+      // This prevents stale chat/room data from previous user being visible
+      queryClient.clear()
+      
       dispatch(loginSuccess(data))
       dispatch(clearWorkspace())  // clear any stale workspace from a previous user
       websocketService.connect()
@@ -51,6 +57,10 @@ export const useAuth = () => {
   const registerMutation = useMutation({
     mutationFn: authService.register,
     onSuccess: (data) => {
+      // 🔒 CRITICAL FIX: Clear React Query cache before logging in new user
+      // This prevents stale chat/room data from previous user being visible
+      queryClient.clear()
+      
       dispatch(loginSuccess(data))
       dispatch(clearWorkspace())  // clear any stale workspace from a previous user
       websocketService.connect()
@@ -133,6 +143,8 @@ export const useAuth = () => {
     websocketService.disconnect()
     dispatch(logoutAction())       // clears auth + localStorage (token, user, currentWorkspace, currentProject)
     dispatch(clearWorkspace())     // resets Redux workspace state to null
+    dispatch(clearChat())          // 🔒 CRITICAL FIX: Clear Redux chat state to prevent stale data
+    queryClient.clear()            // 🔒 CRITICAL FIX: Clear React Query cache to prevent stale chat data
     toast.success('Logged out successfully')
     navigate('/')
   }
