@@ -30,4 +30,11 @@ public interface LeadActivityRepository extends JpaRepository<LeadActivity, Long
     @Modifying
     @Query("DELETE FROM LeadActivity la WHERE la.lead.workspace.id = :workspaceId")
     int deleteByWorkspaceId(@Param("workspaceId") Long workspaceId);
+    
+    /**
+     * Delete all activities for a specific lead
+     */
+    @Modifying
+    @Query("DELETE FROM LeadActivity la WHERE la.lead.id = :leadId")
+    int deleteByLeadId(@Param("leadId") Long leadId);
 }
