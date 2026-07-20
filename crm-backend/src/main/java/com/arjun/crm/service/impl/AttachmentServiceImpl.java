@@ -66,8 +66,9 @@ public class AttachmentServiceImpl implements AttachmentService {
 
         // Save attachment metadata to database
         Attachment attachment = Attachment.builder()
-                .storagePath(uploadResult.publicId())  // Use cloudinaryPublicId as storagePath for compatibility
+                .storagePath(uploadResult.publicId())
                 .cloudinaryPublicId(uploadResult.publicId())
+                .cloudinaryVersion(uploadResult.version())  // ✅ NEW: Store version
                 .secureUrl(uploadResult.secureUrl())
                 .resourceType(uploadResult.resourceType())
                 .originalFilename(uploadResult.filename())
@@ -75,8 +76,8 @@ public class AttachmentServiceImpl implements AttachmentService {
                 .fileSize(uploadResult.fileSize())
                 .uploadedBy(uploader)
                 .chatMessage(chatMessage)
-                .isPublic(false)  // Chat attachments are private to workspace
-                .isDeleted(false)  // Explicitly set for database compatibility
+                .isPublic(false)
+                .isDeleted(false)
                 .downloadCount(0)
                 .build();
 
@@ -111,8 +112,9 @@ public class AttachmentServiceImpl implements AttachmentService {
 
         // Save attachment metadata to database
         Attachment attachment = Attachment.builder()
-                .storagePath(uploadResult.publicId())  // Use cloudinaryPublicId as storagePath for compatibility
+                .storagePath(uploadResult.publicId())
                 .cloudinaryPublicId(uploadResult.publicId())
+                .cloudinaryVersion(uploadResult.version())  // ✅ NEW: Store version
                 .secureUrl(uploadResult.secureUrl())
                 .resourceType(uploadResult.resourceType())
                 .originalFilename(uploadResult.filename())
@@ -121,7 +123,7 @@ public class AttachmentServiceImpl implements AttachmentService {
                 .uploadedBy(uploader)
                 .task(task)
                 .isPublic(false)
-                .isDeleted(false)  // Explicitly set for database compatibility
+                .isDeleted(false)
                 .downloadCount(0)
                 .build();
 

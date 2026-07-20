@@ -52,22 +52,32 @@ public class Attachment {
 
     /**
      * Cloudinary Public ID (unique, immutable)
-     * E.g., "chat/550e8400-e29b-41d4-a716-446655440000"
-     * Used for Cloudinary API operations
+     * E.g., "chat/550e8400-e29b-41d4-a716-446655440000-Resume.pdf"
+     * Used for Cloudinary API operations and URL generation via SDK
      */
     @Column(name = "cloudinary_public_id", length = 500, unique = true)
     private String cloudinaryPublicId;
 
     /**
+     * Cloudinary Version ID
+     * E.g., "1721234567"
+     * Returned by Cloudinary API after upload
+     * Used for URL generation via SDK
+     */
+    @Column(name = "cloudinary_version", length = 50)
+    private String cloudinaryVersion;
+
+    /**
      * Cloudinary Secure URL (HTTPS delivery URL)
      * E.g., "https://res.cloudinary.com/lb7tu53k/image/upload/v1234567890/chat/550e8400..."
-     * Served directly to frontend for download/preview
+     * Stored for reference but URLs generated via SDK for downloads
      */
     @Column(name = "secure_url", nullable = false, length = 1000)
     private String secureUrl;
 
     /**
      * Cloudinary Resource Type (image, video, raw)
+     * Determines URL structure and how Cloudinary serves the file
      */
     @Column(name = "resource_type", nullable = false, length = 50)
     private String resourceType;

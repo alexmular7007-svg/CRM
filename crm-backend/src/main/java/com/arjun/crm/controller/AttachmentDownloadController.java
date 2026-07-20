@@ -6,6 +6,8 @@ import com.arjun.crm.entity.User;
 import com.arjun.crm.exception.ResourceNotFoundException;
 import com.arjun.crm.repository.UserRepository;
 import com.arjun.crm.service.AttachmentService;
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -15,20 +17,21 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-
 /**
- * Attachment Download Controller - Cloudinary Edition
+ * Attachment Download Controller - Cloudinary SDK Edition
  * 
- * Handles secure downloads of chat/task attachments.
- * Verifies user permissions before returning download URLs.
+ * Handles secure downloads of chat/task attachments using official Cloudinary SDK.
+ * Verifies user permissions before generating download URLs.
  * 
- * Cloudinary serves files directly via secure URLs, so we just verify
- * permissions and return the secure URL for the frontend to handle.
+ * Uses Cloudinary SDK URL builder (no manual string manipulation):
+ * - Image preview: Uses Cloudinary transformations
+ * - PDF download: Generated via SDK with attachment flag
+ * - Document download: Generated via SDK with attachment flag
+ * - Video streaming: Generated via SDK
+ * - ZIP archives: Generated via SDK with attachment flag
  * 
  * Endpoints:
- * - GET /api/attachments/{id}/url - Get download URL
+ * - GET /api/attachments/{id}/url - Get download/preview URL
  * - DELETE /api/attachments/{id} - Delete attachment
  */
 @RestController
@@ -39,35 +42,54 @@ public class AttachmentDownloadController {
 
     private final AttachmentService attachmentService;
     private final UserRepository userRepository;
+    private final Cloudinary cloudinary;
 
     /**
-     * Get download URL for attachment
+     * Get download/preview URL for attachment
      * 
      * Verifies:
      * - User is authenticated
      * - User has permission to access attachment
-     * - Attachment exists in Cloudinary
+     * - Attachment exists and metadata is valid
      * 
-     * Returns the secure Cloudinary URL for download with proper Content-Disposition header
+     * Generates URL using Cloudinary SDK (no manual string manipulation)
+     * URL type depends on resource type and requested action:
+     * - Images: Preview URL (inline display)
+     * - Documents/PDF: Download URL (attachment disposition)
+     * - Videos: Streaming URL
      */
     @GetMapping("/{id}/url")
     public ResponseEntity<ApiResponse<DownloadUrlResponse>> getDownloadUrl(
-            @PathVariable Long id) {
-        log.info("🔗 Download URL request: attachment_id={}", id);
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "false") boolean preview) {
+        
+        log.info("🔗 Download URL request: attachment_id={}, preview={}", id, preview);
 
         try {
             User currentUser = getAuthenticatedUser();
-            String baseDownloadUrl = attachmentService.getDownloadUrl(id, currentUser.getId());
+            
+            // Get attachment with permission check
             Attachment attachment = attachmentService.getAttachmentWithPermissionCheck(id, currentUser.getId());
             
-            // ✅ CRITICAL FIX: Add Cloudinary transformation to force attachment download
-            // This adds fl_attachment parameter which tells Cloudinary to set Content-Disposition: attachment
-            // Without this, browsers try to display PDFs inline instead of downloading them
-            String downloadUrl = addCloudinaryAttachmentTransform(baseDownloadUrl, attachment.getOriginalFilename());
+            log.info("📋 [1] ATTACHMENT METADATA:");
+            log.info("     Public ID: {}", attachment.getCloudinaryPublicId());
+            log.info("     Version: {}", attachment.getCloudinaryVersion());
+            log.info("     Resource Type: {}", attachment.getResourceType());
+            log.info("     Original Filename: {}", attachment.getOriginalFilename());
+            log.info("     MIME Type: {}", attachment.getMimeType());
             
-            log.info("📥 Download URL: {}", downloadUrl);
-            log.info("📄 Filename: {}", attachment.getOriginalFilename());
-            log.info("📦 MIME Type: {}", attachment.getMimeType());
+            // Generate URL using official Cloudinary SDK
+            String downloadUrl = generateDownloadUrlWithSdk(
+                    attachment.getCloudinaryPublicId(),
+                    attachment.getCloudinaryVersion(),
+                    attachment.getResourceType(),
+                    attachment.getOriginalFilename(),
+                    attachment.getMimeType(),
+                    preview
+            );
+            
+            log.info("📋 [2] GENERATED URL:");
+            log.info("     Download URL: {}", downloadUrl);
             
             DownloadUrlResponse response = DownloadUrlResponse.builder()
                     .downloadUrl(downloadUrl)
@@ -86,53 +108,91 @@ public class AttachmentDownloadController {
     }
     
     /**
-     * Add Cloudinary attachment transformation to force download
+     * Generate download URL using official Cloudinary SDK
      * 
-     * Transforms URL from:
-     *   https://res.cloudinary.com/.../raw/upload/chat/...
-     * To:
-     *   https://res.cloudinary.com/.../raw/upload/fl_attachment:filename.pdf/chat/...
+     * ✅ Uses Cloudinary Java SDK CloudinaryUrl builder (no manual string concatenation)
+     * ✅ Properly handles all file types
+     * ✅ Sets correct headers via SDK
+     * ✅ No manual URL string manipulation
      * 
-     * This tells Cloudinary to:
-     * 1. Set Content-Disposition: attachment (forces download, not inline view)
-     * 2. Use the specified filename instead of public_id
+     * @param publicId Cloudinary public ID
+     * @param version Cloudinary version ID
+     * @param resourceType Resource type (image, video, raw)
+     * @param filename Original filename
+     * @param mimeType MIME type
+     * @param preview Whether this is a preview request (for images)
+     * @return Download URL generated by Cloudinary SDK
      */
-    private String addCloudinaryAttachmentTransform(String url, String filename) {
-        if (url == null || url.isEmpty() || filename == null || filename.isEmpty()) {
-            return url;
-        }
+    private String generateDownloadUrlWithSdk(
+            String publicId,
+            String version,
+            String resourceType,
+            String filename,
+            String mimeType,
+            boolean preview) {
+        
+        log.info("📋 [1.1] SDK URL GENERATION - START");
+        log.info("     publicId: {}", publicId);
+        log.info("     version: {}", version);
+        log.info("     resourceType: {}", resourceType);
+        log.info("     filename: {}", filename);
+        log.info("     mimeType: {}", mimeType);
+        log.info("     preview: {}", preview);
         
         try {
-            // URL structure: https://res.cloudinary.com/cloud/raw/upload/PUBLIC_ID
-            // We need to insert: fl_attachment:FILENAME after /upload/
+            // Use Cloudinary.url() method from official SDK
+            // This builder properly constructs URLs without manual string manipulation
             
-            // Find where to insert the transformation
-            String uploadMarker = "/upload/";
-            int uploadIndex = url.indexOf(uploadMarker);
+            String url = cloudinary.url()
+                    .resourceType(resourceType)  // image, video, raw
+                    .type("upload")              // Upload type
+                    .version(version)            // Add version from response
+                    .secure(true)                // HTTPS only
+                    .format("auto")              // Auto format based on browser
+                    .generate(publicId);         // Generate URL for public_id
             
-            if (uploadIndex == -1) {
-                log.warn("⚠️ Could not find /upload/ in Cloudinary URL");
+            // If it's a preview request for images, use inline display
+            // Otherwise, set as attachment for download
+            if (preview && ("image".equals(resourceType))) {
+                log.info("     Mode: Image preview (inline display)");
+                // Image preview - no modification needed, browser will display inline
                 return url;
+            } else {
+                // For downloads: add attachment disposition via URL transformations
+                // Use Cloudinary Transformation object properly
+                log.info("     Mode: Download with attachment disposition");
+                
+                String downloadUrl = cloudinary.url()
+                        .resourceType(resourceType)
+                        .type("upload")
+                        .version(version)
+                        .secure(true)
+                        .format("auto")
+                        .transformation(new com.cloudinary.Transformation()
+                                .flags("attachment"))  // Cloudinary flag for attachment disposition
+                        .generate(publicId);
+                
+                log.info("     Generated download URL: {}", downloadUrl);
+                return downloadUrl;
             }
             
-            // URL-encode the filename for the transformation parameter
-            // Important: Keep the full filename WITH extension
-            String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8);
-            
-            // Insert transformation after /upload/
-            int insertIndex = uploadIndex + uploadMarker.length();
-            String transformedUrl = url.substring(0, insertIndex) 
-                    + "fl_attachment:" + encodedFilename + "/" 
-                    + url.substring(insertIndex);
-            
-            log.info("✅ Added attachment transform:");
-            log.info("   Original filename: {}", filename);
-            log.info("   Encoded filename: {}", encodedFilename);
-            log.info("   Transformed URL: {}", transformedUrl);
-            return transformedUrl;
         } catch (Exception e) {
-            log.error("❌ Error adding attachment transform: {}", e.getMessage());
-            return url; // Return original URL if transformation fails
+            log.error("❌ Error generating URL with SDK: {}", e.getMessage(), e);
+            
+            // Fallback to secure_url if SDK fails (should not happen)
+            // But log this as it indicates a problem
+            log.warn("⚠️ SDK URL generation failed, using fallback");
+            
+            // Build basic URL without transformations
+            String fallbackUrl = cloudinary.url()
+                    .resourceType(resourceType)
+                    .type("upload")
+                    .version(version)
+                    .secure(true)
+                    .generate(publicId);
+            
+            log.warn("     Fallback URL: {}", fallbackUrl);
+            return fallbackUrl;
         }
     }
 
@@ -179,7 +239,7 @@ public class AttachmentDownloadController {
     @lombok.NoArgsConstructor
     @lombok.AllArgsConstructor
     public static class DownloadUrlResponse {
-        private String downloadUrl;           // Cloudinary secure URL
+        private String downloadUrl;           // Generated by Cloudinary SDK
         private String filename;              // Original filename
         private String mimeType;              // Content type
         private Long fileSize;                // File size in bytes

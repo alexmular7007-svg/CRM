@@ -13,14 +13,18 @@ public interface CloudinaryService {
 
     /**
      * Result of a successful file upload to Cloudinary
+     * 
+     * Contains all metadata needed to generate download URLs via SDK
+     * No manual URL string manipulation required
      */
     record UploadResult(
-            String publicId,      // Cloudinary public ID
-            String secureUrl,     // HTTPS delivery URL
-            String resourceType,  // image, video, raw
-            String filename,      // Original filename
-            String mimeType,      // MIME type
-            Long fileSize         // File size in bytes
+            String publicId,         // Cloudinary public ID (e.g., "chat/8/uuid-Resume.pdf")
+            String version,          // Cloudinary version ID (e.g., "1721234567")
+            String secureUrl,        // HTTPS delivery URL
+            String resourceType,     // image, video, raw
+            String filename,         // Original filename (e.g., "Aryan_Resume.pdf")
+            String mimeType,         // MIME type (e.g., "application/pdf")
+            Long fileSize            // File size in bytes
     ) {}
 
     /**
