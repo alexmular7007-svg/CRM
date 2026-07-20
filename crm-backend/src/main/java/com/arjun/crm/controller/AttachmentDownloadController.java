@@ -135,9 +135,6 @@ public class AttachmentDownloadController {
             return url; // Return original URL if transformation fails
         }
     }
-            return url; // Return original URL if transformation fails
-        }
-    }
 
     /**
      * Delete attachment
