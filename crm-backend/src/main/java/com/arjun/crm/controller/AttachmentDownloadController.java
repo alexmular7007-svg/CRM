@@ -163,13 +163,16 @@ public class AttachmentDownloadController {
                 // No format("auto"), no image-specific transformations
                 log.info("     Mode: Download (attachment flag)");
                 
+                // Build transformation with attachment flag BEFORE generate()
+                com.cloudinary.Transformation transform = new com.cloudinary.Transformation()
+                        .flags("attachment");
+                
                 String downloadUrl = cloudinary.url()
                         .resourceType(resourceType)
                         .type("upload")
+                        .transformation(transform)  // Add transformation BEFORE generate()
                         .version(version)
                         .secure(true)
-                        .transformation(new com.cloudinary.Transformation()
-                                .flags("attachment"))  // Only attachment flag
                         .generate(publicId);
                 
                 log.info("     Generated URL: {}", downloadUrl);
