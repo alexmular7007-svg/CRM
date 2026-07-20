@@ -6,8 +6,6 @@ import com.arjun.crm.entity.User;
 import com.arjun.crm.exception.ResourceNotFoundException;
 import com.arjun.crm.repository.UserRepository;
 import com.arjun.crm.service.AttachmentService;
-import com.cloudinary.Cloudinary;
-import com.cloudinary.utils.ObjectUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -18,20 +16,16 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * Attachment Download Controller - Cloudinary SDK Edition
+ * Attachment Download Controller - Production Simple Edition
  * 
- * Handles secure downloads of chat/task attachments using official Cloudinary SDK.
- * Verifies user permissions before generating download URLs.
- * 
- * Uses Cloudinary SDK URL builder (no manual string manipulation):
- * - Image preview: Uses Cloudinary transformations
- * - PDF download: Generated via SDK with attachment flag
- * - Document download: Generated via SDK with attachment flag
- * - Video streaming: Generated via SDK
- * - ZIP archives: Generated via SDK with attachment flag
+ * Strategy:
+ * - Backend returns secure_url from Cloudinary (stored in database)
+ * - Frontend handles download via Blob API
+ * - No complex URL transformations needed
+ * - Works for all file types: PDF, DOCX, images, videos, ZIP, etc.
  * 
  * Endpoints:
- * - GET /api/attachments/{id}/url - Get download/preview URL
+ * - GET /api/attachments/{id}/url - Get download URL
  * - DELETE /api/attachments/{id} - Delete attachment
  */
 @RestController
@@ -42,28 +36,26 @@ public class AttachmentDownloadController {
 
     private final AttachmentService attachmentService;
     private final UserRepository userRepository;
-    private final Cloudinary cloudinary;
 
     /**
-     * Get download/preview URL for attachment
+     * Get download URL for attachment
      * 
-     * Verifies:
-     * - User is authenticated
-     * - User has permission to access attachment
-     * - Attachment exists and metadata is valid
+     * Returns:
+     * - secure_url: Cloudinary HTTPS URL (stored in database at upload time)
+     * - filename: Original filename for download dialog
+     * - mimeType: Content type
+     * - fileSize: File size in bytes
+     * - resourceType: image, video, or raw
      * 
-     * Generates URL using Cloudinary SDK (no manual string manipulation)
-     * URL type depends on resource type and requested action:
-     * - Images: Preview URL (inline display)
-     * - Documents/PDF: Download URL (attachment disposition)
-     * - Videos: Streaming URL
+     * Frontend then:
+     * 1. Fetches the URL
+     * 2. Uses Blob API to download with original filename
      */
     @GetMapping("/{id}/url")
     public ResponseEntity<ApiResponse<DownloadUrlResponse>> getDownloadUrl(
-            @PathVariable Long id,
-            @RequestParam(defaultValue = "false") boolean preview) {
+            @PathVariable Long id) {
         
-        log.info("🔗 Download URL request: attachment_id={}, preview={}", id, preview);
+        log.info("🔗 Download URL request: attachment_id={}", id);
 
         try {
             User currentUser = getAuthenticatedUser();
@@ -71,28 +63,17 @@ public class AttachmentDownloadController {
             // Get attachment with permission check
             Attachment attachment = attachmentService.getAttachmentWithPermissionCheck(id, currentUser.getId());
             
-            log.info("📋 [1] ATTACHMENT METADATA:");
-            log.info("     Public ID: {}", attachment.getCloudinaryPublicId());
-            log.info("     Version: {}", attachment.getCloudinaryVersion());
-            log.info("     Resource Type: {}", attachment.getResourceType());
-            log.info("     Original Filename: {}", attachment.getOriginalFilename());
-            log.info("     MIME Type: {}", attachment.getMimeType());
+            log.info("✅ Attachment retrieved:");
+            log.info("     ID: {}", attachment.getId());
+            log.info("     Filename: {}", attachment.getOriginalFilename());
+            log.info("     Size: {} bytes", attachment.getFileSize());
+            log.info("     Type: {}", attachment.getResourceType());
+            log.info("     Secure URL: {}", attachment.getSecureUrl());
             
-            // Generate URL using official Cloudinary SDK
-            String downloadUrl = generateDownloadUrlWithSdk(
-                    attachment.getCloudinaryPublicId(),
-                    attachment.getCloudinaryVersion(),
-                    attachment.getResourceType(),
-                    attachment.getOriginalFilename(),
-                    attachment.getMimeType(),
-                    preview
-            );
-            
-            log.info("📋 [2] GENERATED URL:");
-            log.info("     Download URL: {}", downloadUrl);
-            
+            // Return secure URL directly from Cloudinary
+            // No transformations, no SDK URL building, just the stored URL
             DownloadUrlResponse response = DownloadUrlResponse.builder()
-                    .downloadUrl(downloadUrl)
+                    .downloadUrl(attachment.getSecureUrl())
                     .filename(attachment.getOriginalFilename())
                     .mimeType(attachment.getMimeType())
                     .fileSize(attachment.getFileSize())
@@ -100,99 +81,11 @@ public class AttachmentDownloadController {
                     .build();
 
             return ResponseEntity.ok(ApiResponse.success("Download URL retrieved", response));
+            
         } catch (Exception e) {
-            log.error("❌ URL retrieval failed:", e);
+            log.error("❌ URL retrieval failed: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Failed to retrieve download URL: " + e.getMessage()));
-        }
-    }
-    
-    /**
-     * Generate download URL using official Cloudinary SDK
-     * 
-     * ✅ Uses Cloudinary Java SDK CloudinaryUrl builder (no manual string concatenation)
-     * ✅ Properly handles all file types
-     * ✅ Sets correct headers via SDK
-     * ✅ No manual URL string manipulation
-     * 
-     * @param publicId Cloudinary public ID
-     * @param version Cloudinary version ID
-     * @param resourceType Resource type (image, video, raw)
-     * @param filename Original filename
-     * @param mimeType MIME type
-     * @param preview Whether this is a preview request (for images)
-     * @return Download URL generated by Cloudinary SDK
-     */
-    private String generateDownloadUrlWithSdk(
-            String publicId,
-            String version,
-            String resourceType,
-            String filename,
-            String mimeType,
-            boolean preview) {
-        
-        log.info("📋 [1.1] SDK URL GENERATION - START");
-        log.info("     publicId: {}", publicId);
-        log.info("     version: {}", version);
-        log.info("     resourceType: {}", resourceType);
-        log.info("     filename: {}", filename);
-        log.info("     mimeType: {}", mimeType);
-        log.info("     preview: {}", preview);
-        
-        try {
-            // Use Cloudinary.url() method from official SDK
-            // This builder properly constructs URLs without manual string manipulation
-            
-            String url = cloudinary.url()
-                    .resourceType(resourceType)  // image, video, raw
-                    .type("upload")              // Upload type
-                    .version(version)            // Add version from response
-                    .secure(true)                // HTTPS only
-                    .format("auto")              // Auto format based on browser
-                    .generate(publicId);         // Generate URL for public_id
-            
-            // If it's a preview request for images, use inline display
-            // Otherwise, set as attachment for download
-            if (preview && ("image".equals(resourceType))) {
-                log.info("     Mode: Image preview (inline display)");
-                // Image preview - no modification needed, browser will display inline
-                return url;
-            } else {
-                // For downloads: add attachment disposition via URL transformations
-                // Use Cloudinary Transformation object properly
-                log.info("     Mode: Download with attachment disposition");
-                
-                String downloadUrl = cloudinary.url()
-                        .resourceType(resourceType)
-                        .type("upload")
-                        .version(version)
-                        .secure(true)
-                        .format("auto")
-                        .transformation(new com.cloudinary.Transformation()
-                                .flags("attachment"))  // Cloudinary flag for attachment disposition
-                        .generate(publicId);
-                
-                log.info("     Generated download URL: {}", downloadUrl);
-                return downloadUrl;
-            }
-            
-        } catch (Exception e) {
-            log.error("❌ Error generating URL with SDK: {}", e.getMessage(), e);
-            
-            // Fallback to secure_url if SDK fails (should not happen)
-            // But log this as it indicates a problem
-            log.warn("⚠️ SDK URL generation failed, using fallback");
-            
-            // Build basic URL without transformations
-            String fallbackUrl = cloudinary.url()
-                    .resourceType(resourceType)
-                    .type("upload")
-                    .version(version)
-                    .secure(true)
-                    .generate(publicId);
-            
-            log.warn("     Fallback URL: {}", fallbackUrl);
-            return fallbackUrl;
         }
     }
 
@@ -200,11 +93,10 @@ public class AttachmentDownloadController {
      * Delete attachment
      * 
      * Only attachment owner can delete.
-     * Deletes from both Cloudinary and database immediately.
+     * Deletes from both Cloudinary and database.
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteAttachment(
-            @PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> deleteAttachment(@PathVariable Long id) {
         log.info("🗑️ Delete attachment request: id={}", id);
 
         try {
@@ -212,7 +104,7 @@ public class AttachmentDownloadController {
             attachmentService.deleteAttachment(id, currentUser.getId());
             return ResponseEntity.ok(ApiResponse.success("Attachment deleted successfully", null));
         } catch (Exception e) {
-            log.error("❌ Delete failed:", e);
+            log.error("❌ Delete failed: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Failed to delete attachment: " + e.getMessage()));
         }
@@ -239,10 +131,10 @@ public class AttachmentDownloadController {
     @lombok.NoArgsConstructor
     @lombok.AllArgsConstructor
     public static class DownloadUrlResponse {
-        private String downloadUrl;           // Generated by Cloudinary SDK
-        private String filename;              // Original filename
-        private String mimeType;              // Content type
-        private Long fileSize;                // File size in bytes
-        private String resourceType;          // image, video, raw
+        private String downloadUrl;      // Secure URL from Cloudinary
+        private String filename;         // Original filename
+        private String mimeType;         // Content type
+        private Long fileSize;           // File size in bytes
+        private String resourceType;     // image, video, raw
     }
 }

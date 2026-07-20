@@ -9,10 +9,10 @@ import com.arjun.crm.exception.ResourceNotFoundException;
 import com.arjun.crm.repository.TaskAttachmentRepository;
 import com.arjun.crm.repository.TaskRepository;
 import com.arjun.crm.repository.UserRepository;
+import com.arjun.crm.service.CloudinaryService;
 import com.arjun.crm.service.TaskAttachmentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -20,13 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -37,12 +31,7 @@ public class TaskAttachmentServiceImpl implements TaskAttachmentService {
     private final TaskAttachmentRepository taskAttachmentRepository;
     private final TaskRepository taskRepository;
     private final UserRepository userRepository;
-
-    @Value("${file.upload.dir:uploads/task-attachments}")
-    private String uploadDir;
-
-    @Value("${file.upload.max-size:10485760}") // 10MB default
-    private long maxFileSize;
+    private final CloudinaryService cloudinaryService;
 
     @Override
     @Transactional
@@ -55,50 +44,30 @@ public class TaskAttachmentServiceImpl implements TaskAttachmentService {
             throw new IllegalArgumentException("File is empty");
         }
 
-        if (file.getSize() > maxFileSize) {
-            throw new IllegalArgumentException("File size exceeds maximum allowed size of " + maxFileSize + " bytes");
-        }
-
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found with ID: " + taskId));
 
-        try {
-            // Create upload directory if not exists
-            Path uploadPath = Paths.get(uploadDir);
-            if (!Files.exists(uploadPath)) {
-                Files.createDirectories(uploadPath);
-            }
+        // Upload to Cloudinary
+        log.debug("🚀 Starting Cloudinary upload for task attachment");
+        CloudinaryService.UploadResult uploadResult = cloudinaryService.uploadTaskAttachment(file, taskId);
 
-            // Generate unique filename
-            String originalFilename = file.getOriginalFilename();
-            String fileExtension = originalFilename != null && originalFilename.contains(".") 
-                    ? originalFilename.substring(originalFilename.lastIndexOf(".")) 
-                    : "";
-            String uniqueFilename = UUID.randomUUID().toString() + fileExtension;
+        log.debug("✅ Cloudinary upload completed - publicId: {}", uploadResult.publicId());
 
-            // Save file to disk
-            Path filePath = uploadPath.resolve(uniqueFilename);
-            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+        // Create attachment entity using Cloudinary metadata
+        TaskAttachment attachment = TaskAttachment.builder()
+                .task(task)
+                .uploadedBy(currentUser)
+                .fileName(uploadResult.filename())
+                .fileUrl(uploadResult.secureUrl())  // Use Cloudinary secure URL
+                .fileType(uploadResult.mimeType())
+                .fileSize(uploadResult.fileSize())
+                .build();
 
-            // Create attachment entity
-            TaskAttachment attachment = TaskAttachment.builder()
-                    .task(task)
-                    .uploadedBy(currentUser)
-                    .fileName(originalFilename)
-                    .fileUrl("/uploads/task-attachments/" + uniqueFilename)
-                    .fileType(file.getContentType())
-                    .fileSize(file.getSize())
-                    .build();
+        TaskAttachment savedAttachment = taskAttachmentRepository.save(attachment);
+        log.info("✅ Task attachment saved to database: id={}, fileName={}", 
+                savedAttachment.getId(), savedAttachment.getFileName());
 
-            TaskAttachment savedAttachment = taskAttachmentRepository.save(attachment);
-            log.info("Attachment uploaded successfully: {}", savedAttachment.getId());
-
-            return TaskAttachmentResponse.fromEntity(savedAttachment);
-
-        } catch (IOException e) {
-            log.error("Failed to upload file", e);
-            throw new RuntimeException("Failed to upload file: " + e.getMessage());
-        }
+        return TaskAttachmentResponse.fromEntity(savedAttachment);
     }
 
     @Override
@@ -120,20 +89,55 @@ public class TaskAttachmentServiceImpl implements TaskAttachmentService {
             throw new AccessDeniedException("You can only delete your own attachments");
         }
 
-        // Delete file from disk
+        // Delete from Cloudinary
         try {
+            log.debug("🗑️ Deleting from Cloudinary");
+            // Extract public_id from fileUrl
+            // fileUrl format: https://res.cloudinary.com/xxx/raw/upload/v123/tasks/8/uuid-filename.ext
             String fileUrl = attachment.getFileUrl();
-            String filename = fileUrl.substring(fileUrl.lastIndexOf("/") + 1);
-            Path filePath = Paths.get(uploadDir).resolve(filename);
-            Files.deleteIfExists(filePath);
-            log.info("File deleted from disk: {}", filename);
-        } catch (IOException e) {
-            log.error("Failed to delete file from disk", e);
-            // Continue with database deletion even if file deletion fails
+            String publicId = extractPublicIdFromUrl(fileUrl);
+            if (publicId != null && !publicId.isEmpty()) {
+                cloudinaryService.deleteFile(publicId);
+                log.debug("✅ File deleted from Cloudinary");
+            }
+        } catch (Exception e) {
+            log.error("❌ Failed to delete file from Cloudinary", e);
+            // Continue with database deletion even if Cloudinary delete fails
         }
 
         taskAttachmentRepository.delete(attachment);
-        log.info("Attachment deleted successfully: {}", attachmentId);
+        log.info("✅ Attachment deleted from database: {}", attachmentId);
+    }
+
+    /**
+     * Extract public_id from Cloudinary secure URL
+     * URL format: https://res.cloudinary.com/xxx/raw/upload/v123/tasks/8/uuid-filename.ext
+     * Public ID: tasks/8/uuid-filename.ext
+     */
+    private String extractPublicIdFromUrl(String secureUrl) {
+        try {
+            if (secureUrl == null || !secureUrl.contains("/upload/")) {
+                return null;
+            }
+            // Find the part after "/upload/"
+            int uploadIndex = secureUrl.indexOf("/upload/");
+            if (uploadIndex == -1) {
+                return null;
+            }
+            // Skip "/upload/" and any version info like "v123/"
+            String afterUpload = secureUrl.substring(uploadIndex + 8);
+            // If there's a version, skip it
+            if (afterUpload.startsWith("v")) {
+                int slashIndex = afterUpload.indexOf("/");
+                if (slashIndex != -1) {
+                    afterUpload = afterUpload.substring(slashIndex + 1);
+                }
+            }
+            return afterUpload;
+        } catch (Exception e) {
+            log.warn("Failed to extract public_id from URL: {}", secureUrl, e);
+            return null;
+        }
     }
 
     @Override
