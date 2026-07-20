@@ -42,6 +42,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final ChatParticipantRepository chatParticipantRepository;
+    private final AttachmentRepository attachmentRepository;
     private final NotificationRepository notificationRepository;
     private final AIInsightSnapshotRepository aiInsightSnapshotRepository;
     private final WorkspaceInvitationRepository workspaceInvitationRepository;
@@ -140,12 +141,22 @@ public class WorkspaceServiceImpl implements WorkspaceService {
             log.debug("Deleted {} leads", deletedLeads);
 
             // 3. Delete all chat-related data
+            // CRITICAL: Delete in correct order to respect foreign key constraints
+            // Attachments -> ChatMessages -> ChatRooms
+            
+            // First delete chat attachments (they reference chat messages)
+            int deletedChatAttachments = attachmentRepository.deleteByWorkspaceIdAndChatMessage(workspaceId);
+            log.debug("Deleted {} chat attachments", deletedChatAttachments);
+            
+            // Then delete chat messages (which may have referenced attachments)
             int deletedChatMessages = chatMessageRepository.deleteByWorkspaceId(workspaceId);
             log.debug("Deleted {} chat messages", deletedChatMessages);
             
+            // Then delete chat participants
             int deletedChatParticipants = chatParticipantRepository.deleteByWorkspaceId(workspaceId);
             log.debug("Deleted {} chat participants", deletedChatParticipants);
             
+            // Finally delete chat rooms (leaf nodes are gone)
             int deletedChatRooms = chatRoomRepository.deleteByWorkspaceId(workspaceId);
             log.debug("Deleted {} chat rooms", deletedChatRooms);
 

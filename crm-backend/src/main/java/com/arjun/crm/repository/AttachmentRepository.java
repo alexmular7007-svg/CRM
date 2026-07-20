@@ -2,6 +2,7 @@ package com.arjun.crm.repository;
 
 import com.arjun.crm.entity.Attachment;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -40,4 +41,19 @@ public interface AttachmentRepository extends JpaRepository<Attachment, Long> {
      */
     @Query("SELECT COUNT(a) FROM Attachment a WHERE a.lastDownloadedAt >= :since")
     long countDownloadsAfter(@Param("since") Instant since);
+
+    /**
+     * Delete all chat attachments in a workspace
+     * Must be called BEFORE deleting ChatMessages to respect FK constraints
+     */
+    @Modifying
+    @Query("DELETE FROM Attachment a WHERE a.chatMessage IS NOT NULL AND a.chatMessage.chatRoom.workspace.id = :workspaceId")
+    int deleteByWorkspaceIdAndChatMessage(@Param("workspaceId") Long workspaceId);
+
+    /**
+     * Delete all task attachments in a workspace
+     */
+    @Modifying
+    @Query("DELETE FROM Attachment a WHERE a.task IS NOT NULL AND a.task.workspace.id = :workspaceId")
+    int deleteByWorkspaceIdAndTask(@Param("workspaceId") Long workspaceId);
 }
