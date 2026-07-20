@@ -329,26 +329,31 @@ public class CloudinaryServiceImpl implements CloudinaryService {
 
     /**
      * Generate unique public ID for file in Cloudinary
-     * Format: folder/uuid-filename.ext
+     * Format: folder/uuid-filename (WITHOUT extension)
      * 
-     * CRITICAL FIX: Keep file extension in public ID so Cloudinary can:
-     * 1. Determine file format (pdf, docx, etc.) - fixes Format=N/A issue
-     * 2. Set correct Content-Type headers for downloads
-     * 3. Generate correct download filenames
+     * CRITICAL: Do NOT include file extension in public_id
+     * Reason: Cloudinary Java SDK auto-appends ".auto" when public_id ends with extension
+     * This causes invalid URLs like: .../.png.auto instead of just .../.png
      * 
-     * Files are identified by:
-     * - extension: For format detection (Cloudinary dashboard)
-     * - resource_type (image/video/raw): For media type classification
-     * - database metadata: originalFilename, mimeType for reliable downloads
+     * Extension is preserved via:
+     * - resource_type parameter: image, video, or raw
+     * - original_filename metadata: For Cloudinary display
+     * - database: originalFilename stores full name with extension
      */
     private String generatePublicId(String folder, String originalFilename) {
         String uuid = UUID.randomUUID().toString();
         
-        // ✅ CRITICAL FIX: Preserve full filename WITH extension
-        String sanitizedFilename = originalFilename.replaceAll("[^a-zA-Z0-9._-]", "_");
+        // Remove extension from filename for public_id
+        String nameWithoutExt = originalFilename;
+        if (originalFilename.contains(".")) {
+            nameWithoutExt = originalFilename.substring(0, originalFilename.lastIndexOf("."));
+        }
         
-        // Include folder path and full filename with extension
-        // Format: "chat/8/uuid-Resume.pdf" (NOW includes .pdf)
+        // Sanitize filename
+        String sanitizedFilename = nameWithoutExt.replaceAll("[^a-zA-Z0-9._-]", "_");
+        
+        // Format: "chat/8/uuid-Resume" (WITHOUT .pdf extension)
+        // Extension determined by resource_type parameter instead
         return folder + "/" + uuid + "-" + sanitizedFilename;
     }
 }
