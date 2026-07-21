@@ -174,19 +174,13 @@ public class CloudinaryServiceImpl implements CloudinaryService {
             Map<String, Object> uploadParams = ObjectUtils.asMap(
                     "public_id", publicId,
                     "resource_type", resourceType,
-                    "original_filename", originalFilename,
-                    "overwrite", false,
-                    "invalidate", true,
-                    "timeout", 60000,
-                    "use_filename", false,
-                    "unique_filename", false,
-                    "type", "upload"
+                    "overwrite", false
             );
 
             log.info("📋 [UPLOADING TO CLOUDINARY]:");
             log.info("     Sending {} bytes to Cloudinary", fileBytes.length);
             
-            Map<String, Object> uploadResult = cloudinary.uploader().upload(fileBytes, uploadParams);
+            Map<String, Object> uploadResult = cloudinary.uploader().upload(file.getInputStream(), uploadParams);
 
             // ═══════════════════════════════════════════════════════════════
             // CLOUDINARY RESPONSE ANALYSIS
