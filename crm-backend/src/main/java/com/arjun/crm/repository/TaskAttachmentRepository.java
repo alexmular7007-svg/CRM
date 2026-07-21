@@ -18,8 +18,9 @@ public interface TaskAttachmentRepository extends JpaRepository<TaskAttachment, 
 
     /**
      * Delete all task attachments in a workspace
+     * clearAutomatically=true ensures persistence context is cleared after delete
      */
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("DELETE FROM TaskAttachment ta WHERE ta.task.workspace.id = :workspaceId")
     int deleteByWorkspaceId(@Param("workspaceId") Long workspaceId);
 }

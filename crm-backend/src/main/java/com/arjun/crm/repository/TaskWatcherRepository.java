@@ -23,8 +23,9 @@ public interface TaskWatcherRepository extends JpaRepository<TaskWatcher, Long> 
 
     /**
      * Delete all task watchers in a workspace
+     * clearAutomatically=true ensures persistence context is cleared after delete
      */
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("DELETE FROM TaskWatcher tw WHERE tw.task.workspace.id = :workspaceId")
     int deleteByWorkspaceId(@Param("workspaceId") Long workspaceId);
 }

@@ -54,7 +54,7 @@ public interface WorkspaceMemberRepository extends JpaRepository<WorkspaceMember
     /**
      * Delete all workspace members for a workspace
      */
-    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true)
     @Query("DELETE FROM WorkspaceMember wm WHERE wm.workspace.id = :workspaceId")
     int deleteByWorkspaceId(@Param("workspaceId") Long workspaceId);
 

@@ -29,12 +29,16 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     private final UserRepository userRepository;
     private final WorkspaceMemberRepository workspaceMemberRepository;
     
+    // JPA EntityManager for manual flush operations
+    private final jakarta.persistence.EntityManager entityManager;
+    
     // Additional repositories for cascade deletion
     private final TaskRepository taskRepository;
     private final TaskAttachmentRepository taskAttachmentRepository;
     private final TaskCommentRepository taskCommentRepository;
     private final TaskActivityRepository taskActivityRepository;
     private final TaskWatcherRepository taskWatcherRepository;
+    private final MentionRepository mentionRepository;
     private final LeadRepository leadRepository;
     private final LeadActivityRepository leadActivityRepository;
     private final ProjectRepository projectRepository;
@@ -112,83 +116,152 @@ public class WorkspaceServiceImpl implements WorkspaceService {
             throw new AccessDeniedException("Only workspace owner can delete workspace");
         }
 
-        // Comprehensive cascade deletion in correct order
-        // This prevents foreign key constraint violations
+        // Comprehensive cascade deletion in CORRECT dependency order
+        // This prevents foreign key constraint violations by deleting children before parents
+        // 
+        // CRITICAL FK CONSTRAINT ANALYSIS:
+        // - attachments.chat_message_id (FK) -> chat_messages.id
+        // - attachments.task_id (FK) -> tasks.id
+        // - mentions.comment_id (FK) -> task_comments.id
+        // - task_comments.task_id (FK) -> tasks.id
+        // 
+        // REQUIRED DELETION ORDER (children before parents):
+        // 1. Attachments (references chat_messages and tasks)
+        // 2. Mentions (references task_comments)
+        // 3. Task-related data (comments, activities, watchers)
+        // 4. Tasks (parent of task attachments and comments)
+        // 5. Lead-related data
+        // 6. Chat-related data (messages reference attachments - must delete attachments first)
+        // 7. Projects and project members
+        // 8. Workspace members and invitations
+        // 9. Workspace itself
+        
         log.info("Starting cascade delete for workspace ID: {}", workspaceId);
         
         try {
-            // 1. Delete all task-related data (leaf nodes first)
-            int deletedAttachments = taskAttachmentRepository.deleteByWorkspaceId(workspaceId);
-            log.debug("Deleted {} task attachments", deletedAttachments);
+            // ═══════════════════════════════════════════════════════════════════════════
+            // PHASE 1: DELETE ALL ATTACHMENTS FIRST (Leaf nodes with FKs to multiple parents)
+            // ═══════════════════════════════════════════════════════════════════════════
+            // REASON: Attachments table has FKs to both chat_messages and tasks
+            // If we delete chat_messages or tasks first, orphaned attachment records will violate FK constraints
             
-            int deletedWatchers = taskWatcherRepository.deleteByWorkspaceId(workspaceId);
-            log.debug("Deleted {} task watchers", deletedWatchers);
+            int deletedAttachments = attachmentRepository.deleteAllByWorkspaceId(workspaceId);
+            log.info("Deleted {} attachments (chat + task)", deletedAttachments);
+            
+            // Also delete task attachments (separate entity in task_attachments table)
+            int deletedTaskAttachments = taskAttachmentRepository.deleteByWorkspaceId(workspaceId);
+            log.info("Deleted {} task attachment metadata records", deletedTaskAttachments);
+            
+            // Flush to ensure database consistency before next phase
+            entityManager.flush();
+
+            // ═══════════════════════════════════════════════════════════════════════════
+            // PHASE 2: DELETE TASK-RELATED DATA (Leaf → Parent)
+            // ═══════════════════════════════════════════════════════════════════════════
+            // REASON: Task comments reference task, mentions reference task comments
+            // Must delete in order: Mentions → TaskComments → TaskActivities → TaskWatchers → Tasks
+            
+            int deletedMentions = mentionRepository.deleteByWorkspaceId(workspaceId);
+            log.info("Deleted {} mentions", deletedMentions);
             
             int deletedComments = taskCommentRepository.deleteByWorkspaceId(workspaceId);
-            log.debug("Deleted {} task comments", deletedComments);
+            log.info("Deleted {} task comments", deletedComments);
             
             int deletedActivities = taskActivityRepository.deleteByWorkspaceId(workspaceId);
-            log.debug("Deleted {} task activities", deletedActivities);
+            log.info("Deleted {} task activities", deletedActivities);
+            
+            int deletedWatchers = taskWatcherRepository.deleteByWorkspaceId(workspaceId);
+            log.info("Deleted {} task watchers", deletedWatchers);
             
             int deletedTasks = taskRepository.deleteByWorkspaceId(workspaceId);
-            log.debug("Deleted {} tasks", deletedTasks);
+            log.info("Deleted {} tasks", deletedTasks);
+            
+            // Flush to ensure database consistency before next phase
+            entityManager.flush();
 
-            // 2. Delete all lead-related data
+            // ═══════════════════════════════════════════════════════════════════════════
+            // PHASE 3: DELETE LEAD-RELATED DATA (Leaf → Parent)
+            // ═══════════════════════════════════════════════════════════════════════════
+            
             int deletedLeadActivities = leadActivityRepository.deleteByWorkspaceId(workspaceId);
-            log.debug("Deleted {} lead activities", deletedLeadActivities);
+            log.info("Deleted {} lead activities", deletedLeadActivities);
             
             int deletedLeads = leadRepository.deleteByWorkspaceId(workspaceId);
-            log.debug("Deleted {} leads", deletedLeads);
+            log.info("Deleted {} leads", deletedLeads);
+            
+            // Flush to ensure database consistency before next phase
+            entityManager.flush();
 
-            // 3. Delete all chat-related data
-            // CRITICAL: Delete in correct order to respect foreign key constraints
-            // Attachments -> ChatMessages -> ChatRooms
+            // ═══════════════════════════════════════════════════════════════════════════
+            // PHASE 4: DELETE CHAT-RELATED DATA (Leaf → Parent)
+            // ═══════════════════════════════════════════════════════════════════════════
+            // REASON: ChatParticipants and ChatMessages reference ChatRoom
+            // All attachments already deleted in Phase 1, so chat message deletion won't violate FK
             
-            // First delete chat attachments (they reference chat messages)
-            int deletedChatAttachments = attachmentRepository.deleteByWorkspaceIdAndChatMessage(workspaceId);
-            log.debug("Deleted {} chat attachments", deletedChatAttachments);
-            
-            // Then delete chat messages (which may have referenced attachments)
-            int deletedChatMessages = chatMessageRepository.deleteByWorkspaceId(workspaceId);
-            log.debug("Deleted {} chat messages", deletedChatMessages);
-            
-            // Then delete chat participants
             int deletedChatParticipants = chatParticipantRepository.deleteByWorkspaceId(workspaceId);
-            log.debug("Deleted {} chat participants", deletedChatParticipants);
+            log.info("Deleted {} chat participants", deletedChatParticipants);
             
-            // Finally delete chat rooms (leaf nodes are gone)
+            int deletedChatMessages = chatMessageRepository.deleteByWorkspaceId(workspaceId);
+            log.info("Deleted {} chat messages", deletedChatMessages);
+            
             int deletedChatRooms = chatRoomRepository.deleteByWorkspaceId(workspaceId);
-            log.debug("Deleted {} chat rooms", deletedChatRooms);
+            log.info("Deleted {} chat rooms", deletedChatRooms);
+            
+            // Flush to ensure database consistency before next phase
+            entityManager.flush();
 
-            // 4. Delete all project-related data
+            // ═══════════════════════════════════════════════════════════════════════════
+            // PHASE 5: DELETE PROJECT-RELATED DATA (Leaf → Parent)
+            // ═══════════════════════════════════════════════════════════════════════════
+            
             int deletedProjectMembers = projectMemberRepository.deleteByWorkspaceId(workspaceId);
-            log.debug("Deleted {} project members", deletedProjectMembers);
+            log.info("Deleted {} project members", deletedProjectMembers);
             
             int deletedProjects = projectRepository.deleteByWorkspaceId(workspaceId);
-            log.debug("Deleted {} projects", deletedProjects);
+            log.info("Deleted {} projects", deletedProjects);
+            
+            // Flush to ensure database consistency before next phase
+            entityManager.flush();
 
-            // 5. Delete analytics and AI insights
+            // ═══════════════════════════════════════════════════════════════════════════
+            // PHASE 6: DELETE WORKSPACE METADATA & ANALYTICS
+            // ═══════════════════════════════════════════════════════════════════════════
+            
             int deletedAIInsights = aiInsightSnapshotRepository.deleteByWorkspaceId(workspaceId);
-            log.debug("Deleted {} AI insights", deletedAIInsights);
+            log.info("Deleted {} AI insight snapshots", deletedAIInsights);
             
             int deletedNotifications = notificationRepository.deleteByWorkspaceId(workspaceId);
-            log.debug("Deleted {} notifications", deletedNotifications);
-
-            // 6. Delete all invitations (NEW - was missing)
+            log.info("Deleted {} notifications", deletedNotifications);
+            
             int deletedInvitations = workspaceInvitationRepository.deleteByWorkspaceId(workspaceId);
-            log.debug("Deleted {} workspace invitations", deletedInvitations);
+            log.info("Deleted {} workspace invitations", deletedInvitations);
 
-            // 7. Delete workspace members
             int deletedMembers = workspaceMemberRepository.deleteByWorkspaceId(workspaceId);
-            log.debug("Deleted {} workspace members", deletedMembers);
+            log.info("Deleted {} workspace members", deletedMembers);
+            
+            // Flush to ensure database consistency before final deletion
+            entityManager.flush();
 
-            // 8. Finally, delete the workspace itself
+            // ═══════════════════════════════════════════════════════════════════════════
+            // PHASE 7: DELETE ROOT ENTITY (Workspace)
+            // ═══════════════════════════════════════════════════════════════════════════
+            // At this point, all child entities have been deleted
+            // Workspace has no remaining FK references
+            
             workspaceRepository.delete(workspace);
-            log.info("Workspace deleted successfully: {} (attachments: {}, comments: {}, tasks: {}, leads: {}, projects: {}, invitations: {}, members: {})", 
-                    workspaceId, deletedAttachments, deletedComments, deletedTasks, deletedLeads, deletedProjects, deletedInvitations, deletedMembers);
+            log.info("✅ Workspace deleted successfully: workspaceId={}, " +
+                    "attachments={}, taskAttachments={}, mentions={}, taskComments={}, " +
+                    "taskActivities={}, taskWatchers={}, tasks={}, leads={}, leadActivities={}, " +
+                    "chatParticipants={}, chatMessages={}, chatRooms={}, projects={}, projectMembers={}, " +
+                    "aiInsights={}, notifications={}, invitations={}, members={}",
+                    workspaceId, deletedAttachments, deletedTaskAttachments, deletedMentions,
+                    deletedComments, deletedActivities, deletedWatchers, deletedTasks,
+                    deletedLeads, deletedLeadActivities, deletedChatParticipants, deletedChatMessages,
+                    deletedChatRooms, deletedProjects, deletedProjectMembers, deletedAIInsights,
+                    deletedNotifications, deletedInvitations, deletedMembers);
             
         } catch (Exception e) {
-            log.error("Error during workspace deletion for workspace ID: {}", workspaceId, e);
+            log.error("❌ Error during workspace deletion for workspace ID: {}", workspaceId, e);
             throw new RuntimeException("Failed to delete workspace: " + e.getMessage(), e);
         }
     }

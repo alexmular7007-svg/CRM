@@ -56,8 +56,9 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
 
     /**
      * Delete all chat messages in a workspace via chat rooms
+     * clearAutomatically=true ensures persistence context is cleared after delete
      */
-    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true)
     @Query("DELETE FROM ChatMessage m WHERE m.chatRoom.workspace.id = :workspaceId")
     int deleteByWorkspaceId(@Param("workspaceId") Long workspaceId);
 }

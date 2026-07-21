@@ -128,6 +128,15 @@ public class Attachment {
     private Task task;
 
     /**
+     * Workspace this attachment belongs to
+     * CRITICAL: Added to enable fast workspace-based deletion without traversing relationships
+     * Prevents JPQL DELETE query issues with complex OR conditions
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "workspace_id", nullable = false)
+    private Workspace workspace;
+
+    /**
      * Whether this attachment is public (visible to all) or private
      */
     @Column(name = "is_public", nullable = false)

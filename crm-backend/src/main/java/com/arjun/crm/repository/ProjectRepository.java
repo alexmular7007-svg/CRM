@@ -61,7 +61,7 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
     /**
      * Delete all projects in a workspace
      */
-    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true)
     @Query("DELETE FROM Project p WHERE p.workspace.id = :workspaceId")
     int deleteByWorkspaceId(@Param("workspaceId") Long workspaceId);
 

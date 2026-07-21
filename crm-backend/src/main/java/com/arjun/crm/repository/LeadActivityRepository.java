@@ -26,8 +26,9 @@ public interface LeadActivityRepository extends JpaRepository<LeadActivity, Long
 
     /**
      * Delete all lead activities in a workspace
+     * clearAutomatically=true ensures persistence context is cleared after delete
      */
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("DELETE FROM LeadActivity la WHERE la.lead.workspace.id = :workspaceId")
     int deleteByWorkspaceId(@Param("workspaceId") Long workspaceId);
     
