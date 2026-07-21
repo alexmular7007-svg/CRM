@@ -102,6 +102,16 @@ public class CloudinaryServiceImpl implements CloudinaryService {
 
         try {
             String originalFilename = file.getOriginalFilename();
+            
+            // ✅ DEFENSIVE CHECK: Ensure filename has extension
+            if (originalFilename == null || originalFilename.isEmpty()) {
+                throw new IllegalArgumentException("Filename is empty");
+            }
+            if (!originalFilename.contains(".")) {
+                log.warn("⚠️ WARNING: Filename has no extension - adding default: {}", originalFilename);
+                originalFilename = originalFilename + ".bin";
+            }
+            
             String fileExtension = getFileExtension(originalFilename);
             String mimeType = file.getContentType();
             byte[] fileBytes = file.getBytes();
@@ -112,7 +122,7 @@ public class CloudinaryServiceImpl implements CloudinaryService {
             // ═══════════════════════════════════════════════════════════════
             log.info("📋 ━━━━━ UPLOAD DIAGNOSTICS START ━━━━━");
             log.info("📋 [1] ORIGINAL FILE INFO:");
-            log.info("     Filename: {}", originalFilename);
+            log.info("     Filename: {} ✅ WITH EXTENSION", originalFilename);
             log.info("     Content-Type: {}", mimeType);
             log.info("     File.getSize(): {} bytes", fileSizeBytes);
             log.info("     Bytes.length: {} bytes", fileBytes.length);
