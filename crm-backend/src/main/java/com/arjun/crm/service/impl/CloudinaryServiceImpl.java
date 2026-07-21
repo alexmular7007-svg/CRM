@@ -184,7 +184,7 @@ public class CloudinaryServiceImpl implements CloudinaryService {
             log.info("📋 [UPLOADING TO CLOUDINARY]:");
             log.info("     Sending {} bytes to Cloudinary", fileBytes.length);
             
-            Map<String, Object> uploadResult = cloudinary.uploader().upload(file.getInputStream(), uploadParams);
+            Map<String, Object> uploadResult = cloudinary.uploader().upload(fileBytes, uploadParams);
 
             // ═══════════════════════════════════════════════════════════════
             // CLOUDINARY RESPONSE ANALYSIS
