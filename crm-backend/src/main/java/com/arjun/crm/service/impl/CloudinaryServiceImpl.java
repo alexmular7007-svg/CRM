@@ -10,6 +10,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.util.Map;
 import java.util.UUID;
@@ -218,6 +222,68 @@ public class CloudinaryServiceImpl implements CloudinaryService {
             // ═══════════════════════════════════════════════════════════════
             log.info("🔗 [SECURE URL FOR MANUAL TESTING]:");
             log.info("     {}", secureUrl);
+            
+            // ═══════════════════════════════════════════════════════════════
+            // DEFINITIVE TEST: Download from Cloudinary and verify SHA-256
+            // ═══════════════════════════════════════════════════════════════
+            log.info("═════════════════════════════════════════════════════════════");
+            log.info("🔐 DEFINITIVE SHA-256 VERIFICATION TEST - DOWNLOADING FROM CLOUDINARY");
+            log.info("═════════════════════════════════════════════════════════════");
+            
+            try {
+                log.info("📥 Downloading file from Cloudinary: {}", secureUrl);
+                
+                // Download bytes from Cloudinary using try-with-resources for proper stream closure
+                try (InputStream in = new URL(secureUrl).openStream()) {
+                    byte[] downloadedBytes = in.readAllBytes();
+                    
+                    log.info("📋 [DOWNLOADED FROM CLOUDINARY]:");
+                    log.info("     Downloaded bytes: {} bytes", downloadedBytes.length);
+                    log.info("     First 20 bytes (hex) = {}", bytesToHex(downloadedBytes, 0, Math.min(20, downloadedBytes.length)));
+                    log.info("     Last 20 bytes (hex)  = {}", bytesToHex(downloadedBytes, Math.max(0, downloadedBytes.length - 20), Math.min(20, downloadedBytes.length)));
+                    
+                    // Compute SHA-256 of downloaded bytes
+                    String sha256Downloaded = computeSHA256(downloadedBytes);
+                    log.info("📋 [HASH AFTER DOWNLOAD] SHA-256 = {}", sha256Downloaded);
+                    
+                    // ═══════════════════════════════════════════════════════════════
+                    // CRITICAL: Compare hashes
+                    // ═══════════════════════════════════════════════════════════════
+                    log.info("📊 [HASH COMPARISON]:");
+                    log.info("     Original SHA-256   : {}", sha256Before);
+                    log.info("     Downloaded SHA-256 : {}", sha256Downloaded);
+                    log.info("     Hashes match       : {}", sha256Before.equals(sha256Downloaded) ? "✅ YES - IDENTICAL" : "❌ NO - MISMATCH");
+                    
+                    if (sha256Before.equals(sha256Downloaded)) {
+                        log.info("✅ Hash verification PASSED - Cloudinary stored exact same file");
+                        
+                        // ═══════════════════════════════════════════════════════════════
+                        // SAVE TO DISK FOR MANUAL TESTING
+                        // ═══════════════════════════════════════════════════════════════
+                        try {
+                            String filename = "cloudinary-test." + fileExtension;
+                            Files.write(Paths.get(filename), downloadedBytes);
+                            log.info("💾 [FILE SAVED TO DISK]:");
+                            log.info("     Filename: {}", filename);
+                            log.info("     Path: {}", Paths.get(filename).toAbsolutePath());
+                            log.info("     Size: {} bytes", downloadedBytes.length);
+                            log.info("     ➡️  Open this file manually to verify it displays correctly");
+                        } catch (IOException e) {
+                            log.error("❌ Failed to save file to disk: {}", e.getMessage(), e);
+                        }
+                    } else {
+                        log.error("❌ Hash verification FAILED - Cloudinary returned different bytes!");
+                        log.error("     This indicates corruption during upload or delivery");
+                    }
+                }
+                
+            } catch (Exception e) {
+                log.error("❌ Failed to download file from Cloudinary for verification: {}", e.getMessage(), e);
+            }
+            
+            log.info("═════════════════════════════════════════════════════════════");
+            log.info("🔐 DEFINITIVE TEST COMPLETE");
+            log.info("═════════════════════════════════════════════════════════════");
             
             // ═══════════════════════════════════════════════════════════════
             // PDF SIGNATURE CHECK - First 8 bytes should be %PDF
