@@ -29,9 +29,6 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     private final UserRepository userRepository;
     private final WorkspaceMemberRepository workspaceMemberRepository;
     
-    // JPA EntityManager for manual flush operations
-    private final jakarta.persistence.EntityManager entityManager;
-    
     // Additional repositories for cascade deletion
     private final TaskRepository taskRepository;
     private final TaskAttachmentRepository taskAttachmentRepository;
@@ -151,9 +148,6 @@ public class WorkspaceServiceImpl implements WorkspaceService {
             // Also delete task attachments (separate entity in task_attachments table)
             int deletedTaskAttachments = taskAttachmentRepository.deleteByWorkspaceId(workspaceId);
             log.info("Deleted {} task attachment metadata records", deletedTaskAttachments);
-            
-            // Flush to ensure database consistency before next phase
-            entityManager.flush();
 
             // ═══════════════════════════════════════════════════════════════════════════
             // PHASE 2: DELETE TASK-RELATED DATA (Leaf → Parent)
@@ -175,9 +169,6 @@ public class WorkspaceServiceImpl implements WorkspaceService {
             
             int deletedTasks = taskRepository.deleteByWorkspaceId(workspaceId);
             log.info("Deleted {} tasks", deletedTasks);
-            
-            // Flush to ensure database consistency before next phase
-            entityManager.flush();
 
             // ═══════════════════════════════════════════════════════════════════════════
             // PHASE 3: DELETE LEAD-RELATED DATA (Leaf → Parent)
@@ -188,9 +179,6 @@ public class WorkspaceServiceImpl implements WorkspaceService {
             
             int deletedLeads = leadRepository.deleteByWorkspaceId(workspaceId);
             log.info("Deleted {} leads", deletedLeads);
-            
-            // Flush to ensure database consistency before next phase
-            entityManager.flush();
 
             // ═══════════════════════════════════════════════════════════════════════════
             // PHASE 4: DELETE CHAT-RELATED DATA (Leaf → Parent)
@@ -206,9 +194,6 @@ public class WorkspaceServiceImpl implements WorkspaceService {
             
             int deletedChatRooms = chatRoomRepository.deleteByWorkspaceId(workspaceId);
             log.info("Deleted {} chat rooms", deletedChatRooms);
-            
-            // Flush to ensure database consistency before next phase
-            entityManager.flush();
 
             // ═══════════════════════════════════════════════════════════════════════════
             // PHASE 5: DELETE PROJECT-RELATED DATA (Leaf → Parent)
@@ -219,9 +204,6 @@ public class WorkspaceServiceImpl implements WorkspaceService {
             
             int deletedProjects = projectRepository.deleteByWorkspaceId(workspaceId);
             log.info("Deleted {} projects", deletedProjects);
-            
-            // Flush to ensure database consistency before next phase
-            entityManager.flush();
 
             // ═══════════════════════════════════════════════════════════════════════════
             // PHASE 6: DELETE WORKSPACE METADATA & ANALYTICS
@@ -238,9 +220,6 @@ public class WorkspaceServiceImpl implements WorkspaceService {
 
             int deletedMembers = workspaceMemberRepository.deleteByWorkspaceId(workspaceId);
             log.info("Deleted {} workspace members", deletedMembers);
-            
-            // Flush to ensure database consistency before final deletion
-            entityManager.flush();
 
             // ═══════════════════════════════════════════════════════════════════════════
             // PHASE 7: DELETE ROOT ENTITY (Workspace)
