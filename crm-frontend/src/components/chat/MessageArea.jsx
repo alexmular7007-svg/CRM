@@ -93,8 +93,20 @@ const MessageArea = ({
           throw new Error(`Download failed: ${response.status} ${response.statusText}`)
         }
         
+        // Log HTTP response details
+        console.log('🔍 HTTP Response Details:')
+        console.log('   Status:', response.status)
+        console.log('   Content-Type:', response.headers.get('content-type'))
+        console.log('   Content-Length:', response.headers.get('content-length'))
+        
         // Convert response to Blob (preserves exact binary data)
         const blob = await response.blob()
+        
+        // Log Blob details
+        console.log('🔍 Blob Details:')
+        console.log('   Blob Type:', blob.type)
+        console.log('   Blob Size:', blob.size, 'bytes')
+        console.log('   Filename:', filename)
         
         // Create object URL from Blob
         const blobUrl = window.URL.createObjectURL(blob)

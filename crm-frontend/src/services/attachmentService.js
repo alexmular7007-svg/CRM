@@ -20,9 +20,14 @@ const attachmentService = {
   async getDownloadUrl(attachmentId) {
     try {
       const response = await api.get(`/attachments/${attachmentId}/url`)
-      // response is already unwrapped by api.js interceptor to ApiResponse<DownloadUrlResponse>
-      // response.data contains the DownloadUrlResponse object with all metadata
-      return response.data
+      // API interceptor returns response.data which is the full ApiResponse
+      // Structure: { success: true, message: "...", data: { downloadUrl, filename, ... } }
+      // We need to extract the inner 'data' object
+      if (response && response.data) {
+        // response.data contains the DownloadUrlResponse object
+        return response.data
+      }
+      return response
     } catch (error) {
       console.error('Failed to get download URL:', error)
       throw error
