@@ -108,6 +108,21 @@ const MessageArea = ({
         console.log('   Blob Size:', blob.size, 'bytes')
         console.log('   Filename:', filename)
         
+        // Check first 8 bytes of downloaded Blob - should be %PDF (25 50 44 46)
+        const buffer = await blob.arrayBuffer()
+        const bytes = new Uint8Array(buffer)
+        const firstBytes = Array.from(bytes.slice(0, 8))
+        console.log('📋 First 8 bytes (decimal):', firstBytes)
+        console.log('📋 First 8 bytes (hex):', firstBytes.map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' '))
+        console.log('   Should be: 25 50 44 46 (which is %PDF)')
+        console.log('   Match: ', firstBytes[0] === 0x25 && firstBytes[1] === 0x50 && firstBytes[2] === 0x44 && firstBytes[3] === 0x46 ? '✅ YES' : '❌ NO')
+        
+        // Size comparison
+        console.log('📊 [SIZE COMPARISON]')
+        console.log('   Content-Length from header:', response.headers.get('content-length'))
+        console.log('   Blob Size:', blob.size)
+        console.log('   Match: ', response.headers.get('content-length') == blob.size ? '✅ YES' : '❌ NO')
+        
         // Create object URL from Blob
         const blobUrl = window.URL.createObjectURL(blob)
         

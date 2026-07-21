@@ -219,6 +219,23 @@ public class CloudinaryServiceImpl implements CloudinaryService {
             log.info("     Public ID: {}", resultPublicId);
             log.info("     Version: {}", resultVersion);
 
+            // ═══════════════════════════════════════════════════════════════
+            // CRITICAL: Log exact secure URL for manual testing
+            // ═══════════════════════════════════════════════════════════════
+            log.info("🔗 [SECURE URL FOR MANUAL TESTING]:");
+            log.info("     {}", secureUrl);
+            
+            // ═══════════════════════════════════════════════════════════════
+            // PDF SIGNATURE CHECK - First 8 bytes should be %PDF
+            // ═══════════════════════════════════════════════════════════════
+            if ("pdf".equalsIgnoreCase(fileExtension)) {
+                String firstBytes = bytesToHex(fileBytes, 0, Math.min(8, fileBytes.length));
+                log.info("📋 [FIRST 8 BYTES AFTER UPLOAD]:");
+                log.info("     Hex: {}", firstBytes);
+                log.info("     Should be: 25 50 44 46 (which is %PDF)");
+                log.info("     Match: {}", firstBytes.contains("25 50 44 46") ? "✅ YES" : "❌ NO");
+            }
+
             log.info("═════════════════════════════════════════════════════════════");
             log.info("🔐 BINARY INTEGRITY VERIFICATION - UPLOADED");
             log.info("═════════════════════════════════════════════════════════════");
