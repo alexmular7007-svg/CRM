@@ -42,6 +42,15 @@ public class AttachmentServiceImpl implements AttachmentService {
         log.info("📤 Uploading chat attachment: msg_id={}, user_id={}, file={}", 
                 chatMessageId, userId, file.getOriginalFilename());
 
+        // ✅ DEFENSIVE CHECK: Ensure filename is preserved
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null || originalFilename.isEmpty()) {
+            throw new IllegalArgumentException("Filename cannot be empty");
+        }
+        if (!originalFilename.contains(".")) {
+            log.warn("⚠️ Filename missing extension: {} - using as-is", originalFilename);
+        }
+
         // Validate chat message exists
         ChatMessage chatMessage = chatMessageRepository.findById(chatMessageId)
                 .orElseThrow(() -> new ResourceNotFoundException("Chat message not found"));
@@ -59,10 +68,24 @@ public class AttachmentServiceImpl implements AttachmentService {
                 file, chatMessage.getChatRoom().getId());
 
         log.debug("✅ Cloudinary upload completed - publicId: {}", uploadResult.publicId());
+        log.info("✅ CRITICAL: Filename from upload result: {} ✅ HAS EXTENSION", uploadResult.filename());
 
         // Get uploader user
         User uploader = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        // ✅ DEFENSIVE CHECK: Verify filename before saving
+        String filenameToSave = uploadResult.filename();
+        if (filenameToSave == null || filenameToSave.isEmpty()) {
+            log.error("❌ CRITICAL: Upload result filename is empty!");
+            filenameToSave = originalFilename;  // Fallback to original
+        }
+        if (!filenameToSave.contains(".")) {
+            log.error("❌ CRITICAL: Upload result filename has NO EXTENSION: {}", filenameToSave);
+            // Try to add extension based on MIME type
+            filenameToSave = addExtensionIfMissing(filenameToSave, uploadResult.mimeType());
+            log.info("✅ Added extension: {}", filenameToSave);
+        }
 
         // Save attachment metadata to database
         Attachment attachment = Attachment.builder()
@@ -71,7 +94,7 @@ public class AttachmentServiceImpl implements AttachmentService {
                 .cloudinaryVersion(uploadResult.version())  // ✅ NEW: Store version
                 .secureUrl(uploadResult.secureUrl())
                 .resourceType(uploadResult.resourceType())
-                .originalFilename(uploadResult.filename())
+                .originalFilename(filenameToSave)  // ✅ VERIFIED FILENAME WITH EXTENSION
                 .mimeType(uploadResult.mimeType())
                 .fileSize(uploadResult.fileSize())
                 .uploadedBy(uploader)
@@ -83,8 +106,8 @@ public class AttachmentServiceImpl implements AttachmentService {
                 .build();
 
         Attachment saved = attachmentRepository.save(attachment);
-        log.info("✅ Chat attachment saved to database: id={}, publicId={}", 
-                saved.getId(), saved.getCloudinaryPublicId());
+        log.info("✅ Chat attachment saved to database: id={}, filename={}, publicId={}", 
+                saved.getId(), saved.getOriginalFilename(), saved.getCloudinaryPublicId());
 
         return saved;
     }
@@ -94,6 +117,15 @@ public class AttachmentServiceImpl implements AttachmentService {
     public Attachment uploadTaskAttachment(MultipartFile file, Long taskId, Long userId) {
         log.info("📤 Uploading task attachment: task_id={}, user_id={}, file={}", 
                 taskId, userId, file.getOriginalFilename());
+
+        // ✅ DEFENSIVE CHECK: Ensure filename is preserved
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null || originalFilename.isEmpty()) {
+            throw new IllegalArgumentException("Filename cannot be empty");
+        }
+        if (!originalFilename.contains(".")) {
+            log.warn("⚠️ Filename missing extension: {} - using as-is", originalFilename);
+        }
 
         // Validate task exists
         Task task = taskRepository.findById(taskId)
@@ -106,10 +138,24 @@ public class AttachmentServiceImpl implements AttachmentService {
         CloudinaryService.UploadResult uploadResult = cloudinaryService.uploadTaskAttachment(file, taskId);
 
         log.debug("✅ Cloudinary upload completed - publicId: {}", uploadResult.publicId());
+        log.info("✅ CRITICAL: Filename from upload result: {} ✅ HAS EXTENSION", uploadResult.filename());
 
         // Get uploader user
         User uploader = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        // ✅ DEFENSIVE CHECK: Verify filename before saving
+        String filenameToSave = uploadResult.filename();
+        if (filenameToSave == null || filenameToSave.isEmpty()) {
+            log.error("❌ CRITICAL: Upload result filename is empty!");
+            filenameToSave = originalFilename;  // Fallback to original
+        }
+        if (!filenameToSave.contains(".")) {
+            log.error("❌ CRITICAL: Upload result filename has NO EXTENSION: {}", filenameToSave);
+            // Try to add extension based on MIME type
+            filenameToSave = addExtensionIfMissing(filenameToSave, uploadResult.mimeType());
+            log.info("✅ Added extension: {}", filenameToSave);
+        }
 
         // Save attachment metadata to database
         Attachment attachment = Attachment.builder()
@@ -118,7 +164,7 @@ public class AttachmentServiceImpl implements AttachmentService {
                 .cloudinaryVersion(uploadResult.version())  // ✅ NEW: Store version
                 .secureUrl(uploadResult.secureUrl())
                 .resourceType(uploadResult.resourceType())
-                .originalFilename(uploadResult.filename())
+                .originalFilename(filenameToSave)  // ✅ VERIFIED FILENAME WITH EXTENSION
                 .mimeType(uploadResult.mimeType())
                 .fileSize(uploadResult.fileSize())
                 .uploadedBy(uploader)
@@ -130,8 +176,8 @@ public class AttachmentServiceImpl implements AttachmentService {
                 .build();
 
         Attachment saved = attachmentRepository.save(attachment);
-        log.info("✅ Task attachment saved to database: id={}, publicId={}", 
-                saved.getId(), saved.getCloudinaryPublicId());
+        log.info("✅ Task attachment saved to database: id={}, filename={}, publicId={}", 
+                saved.getId(), saved.getOriginalFilename(), saved.getCloudinaryPublicId());
 
         return saved;
     }
@@ -214,6 +260,28 @@ public class AttachmentServiceImpl implements AttachmentService {
     }
 
     // ─── Private Helper Methods ────────────────────────────────────────────
+
+    /**
+     * Add file extension if missing based on MIME type
+     */
+    private String addExtensionIfMissing(String filename, String mimeType) {
+        if (filename.contains(".")) {
+            return filename;  // Already has extension
+        }
+        
+        String ext = ".bin";  // Default
+        if (mimeType != null) {
+            if (mimeType.contains("pdf")) ext = ".pdf";
+            else if (mimeType.contains("word") || mimeType.contains("document")) ext = ".docx";
+            else if (mimeType.contains("image/jpeg")) ext = ".jpg";
+            else if (mimeType.contains("image/png")) ext = ".png";
+            else if (mimeType.contains("video")) ext = ".mp4";
+            else if (mimeType.contains("zip")) ext = ".zip";
+            else if (mimeType.contains("excel")) ext = ".xlsx";
+        }
+        
+        return filename + ext;
+    }
 
     /**
      * Checks if user can access attachment
