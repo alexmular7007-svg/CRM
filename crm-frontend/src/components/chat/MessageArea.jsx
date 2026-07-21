@@ -67,7 +67,7 @@ const MessageArea = ({
    * 
    * For Cloudinary: all files are served via secure URLs
    * - Images open in new tab for preview
-   * - PDFs/Videos downloaded with proper filename and extension
+   * - PDFs/Videos/Documents downloaded via Blob API for binary integrity
    */
   const handleDownloadAttachment = async (msg) => {
     try {
@@ -76,31 +76,45 @@ const MessageArea = ({
       // Get signed URL + metadata from backend (validates permissions)
       const urlData = await attachmentService.getDownloadUrl(msg.attachmentId)
       const downloadUrl = urlData.downloadUrl
-      // ✅ CRITICAL FIX: Use the filename from backend, NOT from message
-      // Backend returns the ORIGINAL filename (e.g., "Aryan_Resume.pdf")
-      // NOT the UUID-prefixed public_id
+      // ✅ Use the filename from backend, NOT from message
+      // Backend returns the ORIGINAL filename (e.g., "Resume.pdf")
       const filename = urlData.filename
       
-      // For ALL file types, use the Cloudinary secure URL directly
+      // For images: open in new tab for preview
       if (msg.messageType === 'IMAGE') {
-        // Images open in new tab for preview
         window.open(downloadUrl, '_blank')
+        toast.success('Image opened')
       } else {
-        // PDFs and other files: download via secure URL with original filename
-        // Browser will handle the download based on Content-Type header from Cloudinary
+        // For PDFs/DOCX/Videos: fetch as Blob to preserve binary integrity
+        // This ensures downloaded file is byte-for-byte identical to original
+        const response = await fetch(downloadUrl)
+        
+        if (!response.ok) {
+          throw new Error(`Download failed: ${response.status} ${response.statusText}`)
+        }
+        
+        // Convert response to Blob (preserves exact binary data)
+        const blob = await response.blob()
+        
+        // Create object URL from Blob
+        const blobUrl = window.URL.createObjectURL(blob)
+        
+        // Create temporary link and trigger download
         const link = document.createElement('a')
-        link.href = downloadUrl
-        // ✅ CRITICAL FIX: Use filename from backend API response, not from message
-        link.download = filename  // Now contains just "Aryan_Resume.pdf"
+        link.href = blobUrl
+        link.download = filename  // Original filename with extension
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)
+        
+        // Clean up object URL
+        window.URL.revokeObjectURL(blobUrl)
+        
+        toast.success('Download started')
       }
-      
-      toast.success('Download started')
     } catch (error) {
-      console.error('Download failed:', error)
-      toast.error('Failed to download file')
+      console.error('❌ Download failed:', error)
+      toast.error(`Failed to download file: ${error.message}`)
     } finally {
       setDownloadingId(null)
     }

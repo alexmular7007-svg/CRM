@@ -139,6 +139,17 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex) {
         log.error("Unexpected error: {}", ex.getMessage(), ex);
+        
+        // Provide more specific error messages for workspace deletion errors
+        String errorMessage = ex.getMessage();
+        if (errorMessage != null && errorMessage.contains("Failed to delete workspace")) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error(errorMessage));
+        } else if (errorMessage != null && errorMessage.contains("Cannot delete workspace")) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(errorMessage));
+        }
+        
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error("An unexpected error occurred. Please try again."));
     }

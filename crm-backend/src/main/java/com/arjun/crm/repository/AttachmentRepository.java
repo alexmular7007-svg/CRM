@@ -45,11 +45,8 @@ public interface AttachmentRepository extends JpaRepository<Attachment, Long> {
     /**
      * Delete all attachments in a workspace (both chat and task)
      * 
-     * FIXED: Changed from complex OR condition to simple direct workspace ID comparison
-     * This prevents JPQL DELETE translation issues with nested relationships.
-     * 
-     * Simple approach: Attachment has workspace_id FK directly
-     * No complex JOINs or OR conditions needed
+     * FIXED: Using workspace relationship with simple ID comparison
+     * Hibernate will translate this to appropriate SQL joins
      * 
      * clearAutomatically=true ensures persistence context is cleared after delete,
      * preventing stale entity references from interfering with subsequent deletes.

@@ -239,8 +239,23 @@ public class WorkspaceServiceImpl implements WorkspaceService {
                     deletedChatRooms, deletedProjects, deletedProjectMembers, deletedAIInsights,
                     deletedNotifications, deletedInvitations, deletedMembers);
             
+        } catch (org.hibernate.exception.ConstraintViolationException e) {
+            log.error("❌ Database constraint violation during workspace deletion for workspace ID: {}", workspaceId, e);
+            log.error("Constraint Name: {}, SQL State: {}", e.getConstraintName(), e.getSQLState());
+            throw new RuntimeException("Cannot delete workspace: Constraint violation - " + e.getConstraintName(), e);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            log.error("❌ Data integrity violation during workspace deletion for workspace ID: {}", workspaceId, e);
+            log.error("Root Cause: {}", e.getRootCause().getMessage(), e);
+            throw new RuntimeException("Cannot delete workspace: Data integrity violation", e);
+        } catch (org.hibernate.LazyInitializationException e) {
+            log.error("❌ Lazy initialization error during workspace deletion for workspace ID: {}", workspaceId, e);
+            log.error("This indicates an entity relationship was accessed outside transaction scope");
+            throw new RuntimeException("Cannot delete workspace: Entity relationship error", e);
         } catch (Exception e) {
-            log.error("❌ Error during workspace deletion for workspace ID: {}", workspaceId, e);
+            log.error("❌ Unexpected error during workspace deletion for workspace ID: {}", workspaceId);
+            log.error("Exception Type: {}", e.getClass().getName());
+            log.error("Exception Message: {}", e.getMessage());
+            log.error("Full Stack Trace:", e);
             throw new RuntimeException("Failed to delete workspace: " + e.getMessage(), e);
         }
     }
