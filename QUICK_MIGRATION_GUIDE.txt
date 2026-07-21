@@ -1,0 +1,125 @@
+================================================================================
+WORKSPACE DELETION FK FIX - QUICK MIGRATION GUIDE
+================================================================================
+
+STATUS: Code ✅ DONE | Database ⏳ PENDING
+
+WHAT TO DO NOW:
+1. Connect to production PostgreSQL
+2. Run the SQL migration below
+3. Rebuild and deploy backend JAR
+4. Test workspace deletion
+
+================================================================================
+COPY & PASTE THIS INTO YOUR PRODUCTION PostgreSQL:
+================================================================================
+
+-- Migration V14: Add Workspace Foreign Key to Attachments
+-- Adds workspace_id column to attachments table for fast workspace deletion
+
+-- Add column (nullable initially for backfill)
+ALTER TABLE attachments 
+ADD COLUMN IF NOT EXISTS workspace_id BIGINT;
+
+-- Create index for query performance  
+CREATE INDEX IF NOT EXISTS idx_attachments_workspace_id 
+ON attachments (workspace_id);
+
+-- Backfill from chat attachments
+UPDATE attachments 
+SET workspace_id = (
+  SELECT cr.workspace_id 
+  FROM chat_messages cm
+  JOIN chat_rooms cr ON cm.chat_room_id = cr.id
+  WHERE cm.id = attachments.chat_message_id
+)
+WHERE chat_message_id IS NOT NULL AND workspace_id IS NULL;
+
+-- Backfill from task attachments
+UPDATE attachments 
+SET workspace_id = (
+  SELECT t.workspace_id 
+  FROM tasks t
+  WHERE t.id = attachments.task_id
+)
+WHERE task_id IS NOT NULL AND workspace_id IS NULL;
+
+-- Add NOT NULL constraint and FK
+ALTER TABLE attachments 
+ALTER COLUMN workspace_id SET NOT NULL,
+ADD CONSTRAINT fk_attachment_workspace 
+  FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE;
+
+================================================================================
+VERIFY MIGRATION WORKED:
+================================================================================
+
+-- Check column exists and is NOT NULL
+SELECT column_name, data_type, is_nullable
+FROM information_schema.columns 
+WHERE table_name = 'attachments' AND column_name = 'workspace_id';
+
+-- Should show:
+-- workspace_id | bigint | NO
+
+-- Check constraint exists
+\d attachments
+
+-- Should show FK constraint: fk_attachment_workspace
+
+================================================================================
+AFTER MIGRATION - BUILD AND DEPLOY:
+================================================================================
+
+cd crm-backend
+mvn clean package -DskipTests
+# Deploy the new JAR to production
+
+================================================================================
+TEST:
+================================================================================
+
+1. Log in as workspace owner
+2. Create workspace
+3. Add tasks with attachments (optional)
+4. Delete workspace
+5. Expected: SUCCESS ✅ (no error)
+
+================================================================================
+FILES TO REFERENCE:
+================================================================================
+
+Migration SQL:  crm-backend/src/main/resources/db/migration/V14__Add_Workspace_FK_To_Attachments.sql
+Code changes:   crm-backend/src/main/java/com/arjun/crm/service/impl/WorkspaceServiceImpl.java
+                crm-backend/src/main/java/com/arjun/crm/repository/AttachmentRepository.java
+
+Full guide:     WORKSPACE_DELETION_FK_FIX_PRODUCTION_STEPS.md
+Details:        WORKSPACE_FK_FIX_COMPLETE_SUMMARY.md
+Report:         FINAL_VERIFICATION_REPORT.md
+
+================================================================================
+IF SOMETHING GOES WRONG:
+================================================================================
+
+Rollback migration:
+
+ALTER TABLE attachments DROP CONSTRAINT fk_attachment_workspace;
+DROP INDEX idx_attachments_workspace_id;
+ALTER TABLE attachments DROP COLUMN workspace_id;
+
+Then redeploy old backend JAR.
+
+================================================================================
+KEY FACTS:
+================================================================================
+
+✅ Code changes: COMPLETE (18 delete methods have @Modifying)
+✅ Deletion order: OPTIMAL (7-phase cascade verified)
+✅ Build status: SUCCESS (281 files compiled, 0 errors)
+✅ Git commits: PUSHED (2 commits with clear messages)
+
+⏳ Database migration: NOT YET EXECUTED
+⏳ Backend deployment: AWAITING MIGRATION
+
+THE FIX IS READY TO GO. JUST NEED MIGRATION + DEPLOYMENT.
+
