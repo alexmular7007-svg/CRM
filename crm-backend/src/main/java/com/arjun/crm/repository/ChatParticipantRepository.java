@@ -51,8 +51,9 @@ public interface ChatParticipantRepository extends JpaRepository<ChatParticipant
 
     /**
      * Delete all participants in a workspace via chat rooms
+     * clearAutomatically=true ensures persistence context is cleared after delete
      */
-    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true)
     @Query("DELETE FROM ChatParticipant p WHERE p.chatRoom.workspace.id = :workspaceId")
     int deleteByWorkspaceId(@Param("workspaceId") Long workspaceId);
 }

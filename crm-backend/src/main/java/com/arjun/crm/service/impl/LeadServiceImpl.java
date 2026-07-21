@@ -269,6 +269,7 @@ public class LeadServiceImpl implements LeadService {
     }
     
     @Override
+    @Transactional
     public void deleteLead(Long leadId, Long userId) {
         log.info("Deleting lead: {} by user: {}", leadId, userId);
         
@@ -277,8 +278,13 @@ public class LeadServiceImpl implements LeadService {
         
         validateWorkspaceAccess(userId, lead.getWorkspace().getId());
         
+        // 🔒 FIX: Delete related lead activities FIRST before deleting lead
+        // This prevents foreign key constraint violations
+        int deletedActivities = leadActivityRepository.deleteByLeadId(leadId);
+        log.debug("Deleted {} lead activities for lead: {}", deletedActivities, leadId);
+        
         leadRepository.delete(lead);
-        log.info("Lead deleted successfully: {}", leadId);
+        log.info("Lead deleted successfully: {} (activities deleted: {})", leadId, deletedActivities);
     }
     
     @Override

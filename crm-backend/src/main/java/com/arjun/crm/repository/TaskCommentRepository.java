@@ -33,8 +33,9 @@ public interface TaskCommentRepository extends JpaRepository<TaskComment, Long> 
 
     /**
      * Delete all task comments in a workspace
+     * clearAutomatically=true ensures persistence context is cleared after delete
      */
-    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true)
     @Query("DELETE FROM TaskComment tc WHERE tc.task.workspace.id = :workspaceId")
     int deleteByWorkspaceId(@Param("workspaceId") Long workspaceId);
 }

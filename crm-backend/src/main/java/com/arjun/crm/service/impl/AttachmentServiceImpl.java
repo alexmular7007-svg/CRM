@@ -76,6 +76,7 @@ public class AttachmentServiceImpl implements AttachmentService {
                 .fileSize(uploadResult.fileSize())
                 .uploadedBy(uploader)
                 .chatMessage(chatMessage)
+                .workspace(chatMessage.getChatRoom().getWorkspace())  // ✅ Set workspace directly
                 .isPublic(false)
                 .isDeleted(false)
                 .downloadCount(0)
@@ -122,6 +123,7 @@ public class AttachmentServiceImpl implements AttachmentService {
                 .fileSize(uploadResult.fileSize())
                 .uploadedBy(uploader)
                 .task(task)
+                .workspace(task.getWorkspace())  // ✅ Set workspace directly
                 .isPublic(false)
                 .isDeleted(false)
                 .downloadCount(0)

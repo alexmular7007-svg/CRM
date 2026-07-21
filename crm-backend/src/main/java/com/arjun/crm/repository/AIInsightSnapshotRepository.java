@@ -20,7 +20,7 @@ public interface AIInsightSnapshotRepository extends JpaRepository<AIInsightSnap
     /**
      * Delete all AI insight snapshots for a workspace
      */
-    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true)
     @org.springframework.data.jpa.repository.Query("DELETE FROM AIInsightSnapshot ai WHERE ai.workspace.id = :workspaceId")
     int deleteByWorkspaceId(@Param("workspaceId") Long workspaceId);
 }

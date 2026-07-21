@@ -140,8 +140,9 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     
     /**
      * Delete all tasks for a workspace
+     * clearAutomatically=true ensures persistence context is cleared after delete
      */
-    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true)
     @Query("DELETE FROM Task t WHERE t.workspace.id = :workspaceId")
     int deleteByWorkspaceId(@Param("workspaceId") Long workspaceId);
 

@@ -61,7 +61,7 @@ public interface LeadRepository extends JpaRepository<Lead, Long> {
     /**
      * Delete all leads for a workspace
      */
-    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true)
     @Query("DELETE FROM Lead l WHERE l.workspace.id = :workspaceId")
     int deleteByWorkspaceId(@Param("workspaceId") Long workspaceId);
 

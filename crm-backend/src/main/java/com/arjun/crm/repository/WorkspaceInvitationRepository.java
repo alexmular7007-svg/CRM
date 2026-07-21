@@ -86,7 +86,7 @@ public interface WorkspaceInvitationRepository extends JpaRepository<WorkspaceIn
      * Delete all invitations for a workspace
      * Used during workspace deletion cascade
      */
-    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true)
     @Query("DELETE FROM WorkspaceInvitation wi WHERE wi.workspace.id = :workspaceId")
     int deleteByWorkspaceId(@Param("workspaceId") Long workspaceId);
 }

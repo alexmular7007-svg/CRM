@@ -68,8 +68,9 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     
     /**
      * Delete all notifications for a workspace
+     * clearAutomatically=true ensures persistence context is cleared after delete
      */
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("DELETE FROM Notification n WHERE n.workspace.id = :workspaceId")
     int deleteByWorkspaceId(@Param("workspaceId") Long workspaceId);
 }

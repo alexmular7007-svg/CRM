@@ -37,7 +37,7 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Lo
     /**
      * Delete all project members in a workspace
      */
-    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true)
     @Query("DELETE FROM ProjectMember pm WHERE pm.project.workspace.id = :workspaceId")
     int deleteByWorkspaceId(@Param("workspaceId") Long workspaceId);
 }
