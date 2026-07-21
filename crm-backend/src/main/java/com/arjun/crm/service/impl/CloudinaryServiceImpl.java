@@ -10,6 +10,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.util.Map;
 import java.util.UUID;
@@ -220,6 +224,68 @@ public class CloudinaryServiceImpl implements CloudinaryService {
             log.info("     {}", secureUrl);
             
             // ═══════════════════════════════════════════════════════════════
+            // DEFINITIVE TEST: Download from Cloudinary and verify SHA-256
+            // ═══════════════════════════════════════════════════════════════
+            log.info("═════════════════════════════════════════════════════════════");
+            log.info("🔐 DEFINITIVE SHA-256 VERIFICATION TEST - DOWNLOADING FROM CLOUDINARY");
+            log.info("═════════════════════════════════════════════════════════════");
+            
+            try {
+                log.info("📥 Downloading file from Cloudinary: {}", secureUrl);
+                
+                // Download bytes from Cloudinary using try-with-resources for proper stream closure
+                try (InputStream in = new URL(secureUrl).openStream()) {
+                    byte[] downloadedBytes = in.readAllBytes();
+                    
+                    log.info("📋 [DOWNLOADED FROM CLOUDINARY]:");
+                    log.info("     Downloaded bytes: {} bytes", downloadedBytes.length);
+                    log.info("     First 20 bytes (hex) = {}", bytesToHex(downloadedBytes, 0, Math.min(20, downloadedBytes.length)));
+                    log.info("     Last 20 bytes (hex)  = {}", bytesToHex(downloadedBytes, Math.max(0, downloadedBytes.length - 20), Math.min(20, downloadedBytes.length)));
+                    
+                    // Compute SHA-256 of downloaded bytes
+                    String sha256Downloaded = computeSHA256(downloadedBytes);
+                    log.info("📋 [HASH AFTER DOWNLOAD] SHA-256 = {}", sha256Downloaded);
+                    
+                    // ═══════════════════════════════════════════════════════════════
+                    // CRITICAL: Compare hashes
+                    // ═══════════════════════════════════════════════════════════════
+                    log.info("📊 [HASH COMPARISON]:");
+                    log.info("     Original SHA-256   : {}", sha256Before);
+                    log.info("     Downloaded SHA-256 : {}", sha256Downloaded);
+                    log.info("     Hashes match       : {}", sha256Before.equals(sha256Downloaded) ? "✅ YES - IDENTICAL" : "❌ NO - MISMATCH");
+                    
+                    if (sha256Before.equals(sha256Downloaded)) {
+                        log.info("✅ Hash verification PASSED - Cloudinary stored exact same file");
+                        
+                        // ═══════════════════════════════════════════════════════════════
+                        // SAVE TO DISK FOR MANUAL TESTING
+                        // ═══════════════════════════════════════════════════════════════
+                        try {
+                            String filename = "cloudinary-test." + fileExtension;
+                            Files.write(Paths.get(filename), downloadedBytes);
+                            log.info("💾 [FILE SAVED TO DISK]:");
+                            log.info("     Filename: {}", filename);
+                            log.info("     Path: {}", Paths.get(filename).toAbsolutePath());
+                            log.info("     Size: {} bytes", downloadedBytes.length);
+                            log.info("     ➡️  Open this file manually to verify it displays correctly");
+                        } catch (IOException e) {
+                            log.error("❌ Failed to save file to disk: {}", e.getMessage(), e);
+                        }
+                    } else {
+                        log.error("❌ Hash verification FAILED - Cloudinary returned different bytes!");
+                        log.error("     This indicates corruption during upload or delivery");
+                    }
+                }
+                
+            } catch (Exception e) {
+                log.error("❌ Failed to download file from Cloudinary for verification: {}", e.getMessage(), e);
+            }
+            
+            log.info("═════════════════════════════════════════════════════════════");
+            log.info("🔐 DEFINITIVE TEST COMPLETE");
+            log.info("═════════════════════════════════════════════════════════════");
+            
+            // ═══════════════════════════════════════════════════════════════
             // PDF SIGNATURE CHECK - First 8 bytes should be %PDF
             // ═══════════════════════════════════════════════════════════════
             if ("pdf".equalsIgnoreCase(fileExtension)) {
@@ -370,31 +436,19 @@ public class CloudinaryServiceImpl implements CloudinaryService {
 
     /**
      * Generate unique public ID for file in Cloudinary
-     * Format: folder/uuid-filename (WITHOUT extension)
+     * Format: folder/uuid-filename WITH extension
      * 
-     * CRITICAL: Do NOT include file extension in public_id
-     * Reason: Cloudinary Java SDK auto-appends ".auto" when public_id ends with extension
-     * This causes invalid URLs like: .../.png.auto instead of just .../.png
-     * 
-     * Extension is preserved via:
-     * - resource_type parameter: image, video, or raw
-     * - original_filename metadata: For Cloudinary display
-     * - database: originalFilename stores full name with extension
+     * CRITICAL: File extension MUST be included in public_id
+     * Reason: Cloudinary needs the extension to determine file format on download
+     * Without extension, downloads lose file type and become unreadable
      */
     private String generatePublicId(String folder, String originalFilename) {
         String uuid = UUID.randomUUID().toString();
         
-        // Remove extension from filename for public_id
-        String nameWithoutExt = originalFilename;
-        if (originalFilename.contains(".")) {
-            nameWithoutExt = originalFilename.substring(0, originalFilename.lastIndexOf("."));
-        }
+        // Sanitize entire filename (including extension)
+        String sanitizedFilename = originalFilename.replaceAll("[^a-zA-Z0-9._-]", "_");
         
-        // Sanitize filename
-        String sanitizedFilename = nameWithoutExt.replaceAll("[^a-zA-Z0-9._-]", "_");
-        
-        // Format: "chat/8/uuid-Resume" (WITHOUT .pdf extension)
-        // Extension determined by resource_type parameter instead
+        // Format: "chat/8/uuid-Resume.pdf" (WITH extension preserved)
         return folder + "/" + uuid + "-" + sanitizedFilename;
     }
 }
