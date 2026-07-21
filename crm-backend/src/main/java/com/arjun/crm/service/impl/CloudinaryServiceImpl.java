@@ -370,31 +370,19 @@ public class CloudinaryServiceImpl implements CloudinaryService {
 
     /**
      * Generate unique public ID for file in Cloudinary
-     * Format: folder/uuid-filename (WITHOUT extension)
+     * Format: folder/uuid-filename WITH extension
      * 
-     * CRITICAL: Do NOT include file extension in public_id
-     * Reason: Cloudinary Java SDK auto-appends ".auto" when public_id ends with extension
-     * This causes invalid URLs like: .../.png.auto instead of just .../.png
-     * 
-     * Extension is preserved via:
-     * - resource_type parameter: image, video, or raw
-     * - original_filename metadata: For Cloudinary display
-     * - database: originalFilename stores full name with extension
+     * CRITICAL: File extension MUST be included in public_id
+     * Reason: Cloudinary needs the extension to determine file format on download
+     * Without extension, downloads lose file type and become unreadable
      */
     private String generatePublicId(String folder, String originalFilename) {
         String uuid = UUID.randomUUID().toString();
         
-        // Remove extension from filename for public_id
-        String nameWithoutExt = originalFilename;
-        if (originalFilename.contains(".")) {
-            nameWithoutExt = originalFilename.substring(0, originalFilename.lastIndexOf("."));
-        }
+        // Sanitize entire filename (including extension)
+        String sanitizedFilename = originalFilename.replaceAll("[^a-zA-Z0-9._-]", "_");
         
-        // Sanitize filename
-        String sanitizedFilename = nameWithoutExt.replaceAll("[^a-zA-Z0-9._-]", "_");
-        
-        // Format: "chat/8/uuid-Resume" (WITHOUT .pdf extension)
-        // Extension determined by resource_type parameter instead
+        // Format: "chat/8/uuid-Resume.pdf" (WITH extension preserved)
         return folder + "/" + uuid + "-" + sanitizedFilename;
     }
 }
