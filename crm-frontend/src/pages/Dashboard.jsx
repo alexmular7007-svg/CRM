@@ -1,10 +1,61 @@
 import { useQuery } from '@tanstack/react-query'
+import { memo, useMemo } from 'react'
 import { analyticsService } from '../services/analyticsService'
 import { useSelector } from 'react-redux'
 import Spinner from '../components/common/Spinner'
 import { FiCheckCircle, FiClock, FiAlertCircle, FiTrendingUp } from 'react-icons/fi'
 import { format } from 'date-fns'
 import { useThemeContext } from '../contexts/ThemeContext'
+
+// Skeleton Loader Component
+const StatsSkeleton = () => (
+  <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 animate-pulse">
+    {[...Array(4)].map((_, i) => (
+      <div key={i} className="card p-3 sm:p-5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="min-w-0">
+            <div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
+            <div className="h-8 w-20 bg-gray-300 dark:bg-gray-600 rounded"></div>
+          </div>
+          <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+        </div>
+      </div>
+    ))}
+  </div>
+)
+
+// Memoized Stats Card
+const StatCard = memo(({ stat, index, c }) => (
+  <div key={index} className="card p-3 sm:p-5">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+      <div className="min-w-0">
+        <p style={{ color: c.textSecondary }} className="text-xs sm:text-sm mb-0.5 sm:mb-1">
+          {stat.label}
+        </p>
+        <p style={{ color: c.textPrimary }} className="text-2xl sm:text-3xl font-bold">{stat.value}</p>
+      </div>
+      <div style={{ backgroundColor: stat.bgColor }} className="p-2 sm:p-3 rounded-lg w-fit">
+        <stat.icon style={{ color: stat.color }} className="text-lg sm:text-2xl" />
+      </div>
+    </div>
+  </div>
+))
+
+// Memoized Recent Activity
+const RecentActivitySkeleton = () => (
+  <div className="space-y-3 sm:space-y-4 animate-pulse">
+    {[...Array(3)].map((_, i) => (
+      <div key={i} className="flex items-start gap-2 sm:gap-3 pb-2 sm:pb-3 border-b border-gray-200 dark:border-gray-700">
+        <div className="h-6 w-12 bg-gray-200 dark:bg-gray-700 rounded flex-shrink-0 mt-0.5"></div>
+        <div className="flex-1 min-w-0 space-y-2">
+          <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded"></div>
+          <div className="h-3 w-full bg-gray-100 dark:bg-gray-800 rounded"></div>
+          <div className="h-3 w-20 bg-gray-100 dark:bg-gray-800 rounded"></div>
+        </div>
+      </div>
+    ))}
+  </div>
+)
 
 const Dashboard = () => {
   const { currentTheme } = useThemeContext()
@@ -49,14 +100,6 @@ const Dashboard = () => {
     )
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Spinner size="lg" />
-      </div>
-    )
-  }
-
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -69,7 +112,8 @@ const Dashboard = () => {
     )
   }
 
-  const stats = [
+  // Memoize stats array to prevent unnecessary recalculations
+  const stats = useMemo(() => [
     {
       label: 'Total Tasks',
       value: dashboardData?.taskStatistics?.totalTasks ?? 0,
@@ -98,9 +142,9 @@ const Dashboard = () => {
       color: c.danger,
       bgColor: c.badgeDanger,
     },
-  ]
+  ], [dashboardData, c])
 
-  const activityScore = dashboardData?.userProductivity?.activityScore ?? 0
+  const activityScore = useMemo(() => dashboardData?.userProductivity?.activityScore ?? 0, [dashboardData])
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -112,23 +156,15 @@ const Dashboard = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-        {stats.map((stat, index) => (
-          <div key={index} className="card p-3 sm:p-5">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <div className="min-w-0">
-                <p style={{ color: c.textSecondary }} className="text-xs sm:text-sm mb-0.5 sm:mb-1">
-                  {stat.label}
-                </p>
-                <p style={{ color: c.textPrimary }} className="text-2xl sm:text-3xl font-bold">{stat.value}</p>
-              </div>
-              <div style={{ backgroundColor: stat.bgColor }} className="p-2 sm:p-3 rounded-lg w-fit">
-                <stat.icon style={{ color: stat.color }} className="text-lg sm:text-2xl" />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+      {isLoading ? (
+        <StatsSkeleton />
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+          {stats.map((stat, index) => (
+            <StatCard key={index} stat={stat} index={index} c={c} />
+          ))}
+        </div>
+      )}
 
       {/* Recent Activity & Productivity Score */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
@@ -136,12 +172,10 @@ const Dashboard = () => {
           <h2 style={{ color: c.heading }} className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Recent Activity</h2>
           <div className="space-y-3 sm:space-y-4">
             {isLoadingActivities ? (
-              <div className="flex items-center justify-center py-8">
-                <Spinner size="sm" />
-              </div>
+              <RecentActivitySkeleton />
             ) : recentActivities && recentActivities.length > 0 ? (
               recentActivities.map((activity, index) => (
-                <div key={index} className="flex items-start gap-2 sm:gap-3 pb-2 sm:pb-3" style={{ borderBottomColor: c.border, borderBottomWidth: index < recentActivities.length - 1 ? 1 : 0 }}>
+                <div key={activity.id || index} className="flex items-start gap-2 sm:gap-3 pb-2 sm:pb-3" style={{ borderBottomColor: c.border, borderBottomWidth: index < recentActivities.length - 1 ? 1 : 0 }}>
                   <div style={{ 
                     backgroundColor: activity.type === 'TASK' ? c.badgeInfo : c.badgeWarning,
                     color: activity.type === 'TASK' ? c.badgeInfoText : c.badgeWarningText
