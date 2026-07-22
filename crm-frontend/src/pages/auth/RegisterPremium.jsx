@@ -227,7 +227,7 @@ const RegisterPremium = () => {
                   name="fullName"
                   value={formData.fullName}
                   onChange={handleChange}
-                  placeholder="John Doe"
+                  placeholder="Enter your name"
                   className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all shadow-sm bg-white text-gray-900 placeholder-gray-500"
                   required
                 />
@@ -245,7 +245,7 @@ const RegisterPremium = () => {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  placeholder="you@company.com"
+                  placeholder="Enter your email address"
                   className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all shadow-sm bg-white text-gray-900 placeholder-gray-500"
                   required
                 />

@@ -158,7 +158,7 @@ const PremiumHero = () => {
               <div className="mt-auto pt-6 border-t border-slate-700/50">
                 <div className="flex items-center gap-2 text-slate-300 text-xs cursor-pointer hover:text-white transition">
                   <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500" />
-                  <span className="font-medium">John Doe</span>
+                  <span className="font-medium">User</span>
                 </div>
               </div>
             </div>

@@ -85,7 +85,7 @@ const AuthShowcase = () => {
               <div className={`mt-auto pt-4 border-t ${isDark ? 'border-slate-700/50' : 'border-gray-300'}`}>
                 <div className={`flex items-center gap-2 ${isDark ? 'text-slate-300' : 'text-gray-600'} text-xs cursor-pointer ${isDark ? 'hover:text-white' : 'hover:text-gray-900'} transition`}>
                   <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex-shrink-0" />
-                  <span className="font-medium truncate">John Doe</span>
+                  <span className="font-medium truncate">User</span>
                 </div>
               </div>
             </div>

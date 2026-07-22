@@ -123,7 +123,7 @@ const LeadModal = ({ isOpen, onClose, onSubmit, lead, workspaceId, workspaceMemb
                 <input
                   {...register('name')}
                   className="input"
-                  placeholder="John Doe"
+                  placeholder="Enter your name"
                 />
                 {errors.name && (
                   <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>

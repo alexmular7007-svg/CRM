@@ -4,6 +4,8 @@ import { motion } from 'framer-motion'
 import { Mail, Lock, ArrowRight } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 
+// v2.0.0 - Updated placeholders
+
 const LoginForm = ({ onSwitchToRegister }) => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()

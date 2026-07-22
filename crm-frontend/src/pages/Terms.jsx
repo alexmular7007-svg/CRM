@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Shield, Zap, Users, Lock, AlertCircle, Trash2, RefreshCw } from 'lucide-react'
 
+// v2.0.0 - Professional Terms of Service Page
+
 const Terms = () => {
   const navigate = useNavigate()
 

@@ -114,6 +114,7 @@ const Register = () => {
           <Link
             to="/terms"
             target="_blank"
+            rel="noopener noreferrer"
             className="text-primary-600 hover:text-primary-700 font-medium underline"
           >
             Terms of Service
@@ -122,6 +123,7 @@ const Register = () => {
           <Link
             to="/privacy"
             target="_blank"
+            rel="noopener noreferrer"
             className="text-primary-600 hover:text-primary-700 font-medium underline"
           >
             Privacy Policy
