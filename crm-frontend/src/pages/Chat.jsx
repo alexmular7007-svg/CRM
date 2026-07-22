@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useSelector } from 'react-redux'
+import { useSelector, shallowEqual } from 'react-redux'
 import { motion } from 'framer-motion'
 import { FiMessageSquare, FiArrowLeft, FiPlus, FiUsers, FiInfo } from 'react-icons/fi'
 import { Sparkles, X } from 'lucide-react'
@@ -23,8 +23,11 @@ const Chat = () => {
   const { roomId } = useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const currentWorkspace = useSelector((state) => state.workspace.currentWorkspace)
-  const currentUser = useSelector((state) => state.auth.user)
+  
+  // Memoized selectors to prevent unnecessary re-renders
+  const currentWorkspace = useSelector((state) => state.workspace.currentWorkspace, shallowEqual)
+  const currentUser = useSelector((state) => state.auth.user, shallowEqual)
+  
   const workspaceId = currentWorkspace?.id
   const [showInfo, setShowInfo] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -35,14 +38,15 @@ const Chat = () => {
   // PHASE 7: Auto-refresh when member is removed from workspace
   useAutoRefreshOnMemberRemoval(workspaceId, queryClient)
 
-  // Track screen size for responsive behavior
+  // Track screen size for responsive behavior with memoized callback
+  const handleResize = useCallback(() => {
+    setIsMobile(window.innerWidth < 1024)
+  }, [])
+
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 1024)
-    }
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
-  }, [])
+  }, [handleResize])
 
   const {
     rooms,
@@ -70,16 +74,17 @@ const Chat = () => {
     }
   }, [roomId, rooms, currentRoom, selectRoom])
 
-  const handleSelectRoom = (room) => {
+  // Memoize handlers to prevent unnecessary re-renders of child components
+  const handleSelectRoom = useCallback((room) => {
     selectRoom(room)
     navigate(`/chat/${room.id}`)
-  }
+  }, [selectRoom, navigate])
 
-  const handleCreateRoom = () => {
+  const handleCreateRoom = useCallback(() => {
     setShowCreateModal(true)
-  }
+  }, [])
 
-  const handleSelectMessage = (message) => {
+  const handleSelectMessage = useCallback((message) => {
     setShowSearch(false)
     requestAnimationFrame(() => {
       document.getElementById(`message-${message.id}`)?.scrollIntoView({
@@ -87,16 +92,16 @@ const Chat = () => {
         behavior: 'smooth',
       })
     })
-  }
+  }, [])
 
   // Handle room creation and auto-navigate on mobile
-  const handleRoomCreated = (newRoom) => {
+  const handleRoomCreated = useCallback((newRoom) => {
     setShowCreateModal(false)
     selectRoom(newRoom)
     if (isMobile) {
       navigate(`/chat/${newRoom.id}`)
     }
-  }
+  }, [selectRoom, isMobile, navigate])
 
   if (roomsLoading) {
     return (

@@ -1,14 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
-import { memo, useMemo } from 'react'
+import { memo, useMemo, useCallback } from 'react'
 import { analyticsService } from '../services/analyticsService'
-import { useSelector } from 'react-redux'
+import { useSelector, shallowEqual } from 'react-redux'
 import Spinner from '../components/common/Spinner'
 import { FiCheckCircle, FiClock, FiAlertCircle, FiTrendingUp } from 'react-icons/fi'
 import { format } from 'date-fns'
 import { useThemeContext } from '../contexts/ThemeContext'
 
 // Skeleton Loader Component
-const StatsSkeleton = () => (
+const StatsSkeleton = memo(() => (
   <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 animate-pulse">
     {[...Array(4)].map((_, i) => (
       <div key={i} className="card p-3 sm:p-5">
@@ -22,9 +22,9 @@ const StatsSkeleton = () => (
       </div>
     ))}
   </div>
-)
+))
 
-// Memoized Stats Card
+// Memoized Stats Card with deep comparison
 const StatCard = memo(({ stat, index, c }) => (
   <div key={index} className="card p-3 sm:p-5">
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -39,10 +39,12 @@ const StatCard = memo(({ stat, index, c }) => (
       </div>
     </div>
   </div>
-))
+), (prev, next) => {
+  return prev.stat.value === next.stat.value && prev.stat.label === next.stat.label && prev.index === next.index
+})
 
 // Memoized Recent Activity
-const RecentActivitySkeleton = () => (
+const RecentActivitySkeleton = memo(() => (
   <div className="space-y-3 sm:space-y-4 animate-pulse">
     {[...Array(3)].map((_, i) => (
       <div key={i} className="flex items-start gap-2 sm:gap-3 pb-2 sm:pb-3 border-b border-gray-200 dark:border-gray-700">
@@ -55,36 +57,67 @@ const RecentActivitySkeleton = () => (
       </div>
     ))}
   </div>
-)
+))
+
+// Memoized Activity Item
+const ActivityItem = memo(({ activity, index, lastIndex, c }) => (
+  <div key={activity.id || index} className="flex items-start gap-2 sm:gap-3 pb-2 sm:pb-3" style={{ borderBottomColor: c.border, borderBottomWidth: index < lastIndex ? 1 : 0 }}>
+    <div style={{ 
+      backgroundColor: activity.type === 'TASK' ? c.badgeInfo : c.badgeWarning,
+      color: activity.type === 'TASK' ? c.badgeInfoText : c.badgeWarningText
+    }} className="px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded text-xs font-medium whitespace-nowrap flex-shrink-0 mt-0.5">
+      {activity.type}
+    </div>
+    <div className="flex-1 min-w-0">
+      <p style={{ color: c.textPrimary }} className="text-xs sm:text-sm font-medium truncate">
+        {activity.title}
+      </p>
+      <p style={{ color: c.textMuted }} className="text-xs mt-0.5 line-clamp-2">
+        {activity.description}
+      </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mt-1.5 sm:mt-2 text-xs">
+        <span style={{ color: c.textMuted }} className="truncate">
+          {activity.createdBy}
+        </span>
+        <span style={{ color: c.textMuted }} className="flex-shrink-0">
+          {format(new Date(activity.timestamp), 'MMM dd, HH:mm')}
+        </span>
+      </div>
+    </div>
+  </div>
+), (prev, next) => {
+  return prev.activity.id === next.activity.id && prev.index === next.index
+})
 
 const Dashboard = () => {
   const { currentTheme } = useThemeContext()
   const c = currentTheme.colors
-  const currentWorkspace = useSelector((state) => state.workspace.currentWorkspace)
-
-  console.log('🔍 Dashboard: currentWorkspace:', currentWorkspace)
+  
+  // Memoize selector to prevent unnecessary re-renders
+  const currentWorkspace = useSelector(
+    (state) => state.workspace.currentWorkspace,
+    shallowEqual
+  )
 
   const { data: dashboardData, isLoading, error } = useQuery({
     queryKey: ['dashboard', currentWorkspace?.id],
     queryFn: () => {
-      console.log('📡 Fetching dashboard for workspace:', currentWorkspace?.id)
       return currentWorkspace?.id 
         ? analyticsService.getDashboard(currentWorkspace.id)
         : Promise.resolve(null)
     },
     enabled: !!currentWorkspace?.id,
     retry: 1,
+    staleTime: 30000, // Cache for 30 seconds
+    gcTime: 5 * 60 * 1000, // Keep unused data for 5 minutes
   })
-
-  console.log('📊 Dashboard data:', dashboardData)
-  console.log('⏳ Dashboard loading:', isLoading)
-  console.log('❌ Dashboard error:', error)
 
   const { data: recentActivities = [], isLoading: isLoadingActivities } = useQuery({
     queryKey: ['recentActivities', currentWorkspace?.id],
     queryFn: () => currentWorkspace?.id ? analyticsService.getRecentActivities(currentWorkspace.id, 10) : Promise.resolve([]),
     enabled: !!currentWorkspace?.id,
-    staleTime: 30000,
+    staleTime: 45000, // Cache for 45 seconds
+    gcTime: 10 * 60 * 1000,
     retry: false,
   })
 
@@ -161,7 +194,7 @@ const Dashboard = () => {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
           {stats.map((stat, index) => (
-            <StatCard key={index} stat={stat} index={index} c={c} />
+            <StatCard key={`stat-${index}`} stat={stat} index={index} c={c} />
           ))}
         </div>
       )}
@@ -175,30 +208,13 @@ const Dashboard = () => {
               <RecentActivitySkeleton />
             ) : recentActivities && recentActivities.length > 0 ? (
               recentActivities.map((activity, index) => (
-                <div key={activity.id || index} className="flex items-start gap-2 sm:gap-3 pb-2 sm:pb-3" style={{ borderBottomColor: c.border, borderBottomWidth: index < recentActivities.length - 1 ? 1 : 0 }}>
-                  <div style={{ 
-                    backgroundColor: activity.type === 'TASK' ? c.badgeInfo : c.badgeWarning,
-                    color: activity.type === 'TASK' ? c.badgeInfoText : c.badgeWarningText
-                  }} className="px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded text-xs font-medium whitespace-nowrap flex-shrink-0 mt-0.5">
-                    {activity.type}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p style={{ color: c.textPrimary }} className="text-xs sm:text-sm font-medium truncate">
-                      {activity.title}
-                    </p>
-                    <p style={{ color: c.textMuted }} className="text-xs mt-0.5 line-clamp-2">
-                      {activity.description}
-                    </p>
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mt-1.5 sm:mt-2 text-xs">
-                      <span style={{ color: c.textMuted }} className="truncate">
-                        {activity.createdBy}
-                      </span>
-                      <span style={{ color: c.textMuted }} className="flex-shrink-0">
-                        {format(new Date(activity.timestamp), 'MMM dd, HH:mm')}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                <ActivityItem 
+                  key={activity.id || index} 
+                  activity={activity} 
+                  index={index}
+                  lastIndex={recentActivities.length - 1}
+                  c={c}
+                />
               ))
             ) : (
               <p style={{ color: c.textMuted }} className="text-center py-6 sm:py-8 text-xs sm:text-sm">

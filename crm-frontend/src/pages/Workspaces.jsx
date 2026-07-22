@@ -35,10 +35,13 @@ const Workspaces = () => {
   const [workspaceToEdit, setWorkspaceToEdit] = useState(null)
   const queryClient = useQueryClient()
 
-  // Fetch workspaces
+  // Fetch workspaces with improved caching
   const { data: workspaces, isLoading } = useQuery({
     queryKey: ['workspaces'],
     queryFn: workspaceService.getAll,
+    staleTime: 1 * 60 * 1000, // Cache for 1 minute
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    retry: 2,
   })
 
   // Delete workspace mutation
