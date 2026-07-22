@@ -90,11 +90,9 @@ const ActivityItem = memo(({ activity, index, lastIndex, c }) => (
 })
 
 const Dashboard = () => {
-  try {
-    const { currentTheme } = useThemeContext()
-    const c = currentTheme?.colors || {}
-  
-  // Memoize selector to prevent unnecessary re-renders
+  const { currentTheme } = useThemeContext()
+  const c = currentTheme?.colors || {}
+
   const currentWorkspace = useSelector(
     (state) => state.workspace.currentWorkspace,
     shallowEqual
@@ -103,21 +101,41 @@ const Dashboard = () => {
   const { data: dashboardData, isLoading, error } = useQuery({
     queryKey: ['dashboard', currentWorkspace?.id],
     queryFn: () => {
-      return currentWorkspace?.id 
-        ? analyticsService.getDashboard(currentWorkspace.id)
-        : Promise.resolve(null)
+      console.log('📊 Fetching dashboard for workspace:', currentWorkspace?.id)
+      if (!currentWorkspace?.id) return Promise.resolve(null)
+      return analyticsService.getDashboard(currentWorkspace.id)
+        .then(data => {
+          console.log('✅ Dashboard data received:', data)
+          return data
+        })
+        .catch(err => {
+          console.error('❌ Dashboard API error:', err)
+          throw err
+        })
     },
     enabled: !!currentWorkspace?.id,
     retry: 1,
-    staleTime: 30000, // Cache for 30 seconds
-    gcTime: 5 * 60 * 1000, // Keep unused data for 5 minutes
+    staleTime: 30000,
+    gcTime: 5 * 60 * 1000,
   })
 
   const { data: recentActivities = [], isLoading: isLoadingActivities } = useQuery({
     queryKey: ['recentActivities', currentWorkspace?.id],
-    queryFn: () => currentWorkspace?.id ? analyticsService.getRecentActivities(currentWorkspace.id, 10) : Promise.resolve([]),
+    queryFn: () => {
+      console.log('📌 Fetching recent activities for workspace:', currentWorkspace?.id)
+      if (!currentWorkspace?.id) return Promise.resolve([])
+      return analyticsService.getRecentActivities(currentWorkspace.id, 10)
+        .then(data => {
+          console.log('✅ Activities data received:', data)
+          return data
+        })
+        .catch(err => {
+          console.error('❌ Activities API error:', err)
+          return []
+        })
+    },
     enabled: !!currentWorkspace?.id,
-    staleTime: 45000, // Cache for 45 seconds
+    staleTime: 45000,
     gcTime: 10 * 60 * 1000,
     retry: false,
   })
@@ -239,10 +257,6 @@ const Dashboard = () => {
       </div>
     </div>
   )
-  } catch (err) {
-    console.error('Dashboard error:', err)
-    return <div>Dashboard error - check console</div>
-  }
 }
 
 export default Dashboard
