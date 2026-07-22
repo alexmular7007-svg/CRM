@@ -13,6 +13,8 @@ import NotificationPanel from './components/notifications/NotificationPanel'
 
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const Landing = lazy(() => import('./pages/Landing'))
+const Terms = lazy(() => import('./pages/Terms'))
+const Privacy = lazy(() => import('./pages/Privacy'))
 const AuthPage = lazy(() => import('./pages/auth/AuthPage'))
 const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'))
 const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'))
@@ -70,6 +72,8 @@ function AppContent() {
         {/* Public Layout - Landing, Marketing, etc - NO THEME */}
         <Route element={<PublicLayout />}>
           <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" /> : <Suspense fallback={<PageLoader />}><Landing /></Suspense>} />
+          <Route path="/terms" element={<Suspense fallback={<PageLoader />}><Terms /></Suspense>} />
+          <Route path="/privacy" element={<Suspense fallback={<PageLoader />}><Privacy /></Suspense>} />
         </Route>
 
         {/* Auth Routes - Unified Auth Page (no wrapper, no theme) */}
