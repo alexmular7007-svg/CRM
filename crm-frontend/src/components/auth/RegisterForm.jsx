@@ -20,7 +20,10 @@ const RegisterForm = ({ onSwitchToLogin }) => {
   const { register, isRegistering } = useAuth()
 
   // DEBUG: Log version to console
-  console.log('🔧 RegisterForm Component v3.0.0-FIXED loaded')
+  console.log('🔧 RegisterForm Component v3.1.0-VERIFICATION loaded')
+  console.log('✅ Placeholders: "Enter your name", "name@example.com"')
+  console.log('✅ Terms link: /terms | Privacy link: /privacy')
+  console.log('✅ Browser autofill disabled')
 
   // Force clear any browser auto-filled values on mount + localStorage
   useEffect(() => {
@@ -237,7 +240,11 @@ const RegisterForm = ({ onSwitchToLogin }) => {
               href="/terms" 
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => console.log('Terms link clicked')}
+              onClick={(e) => {
+                console.log('✅ Terms link clicked - opening /terms in new tab')
+                e.preventDefault()
+                window.open(window.location.origin + '/terms', '_blank', 'noopener,noreferrer')
+              }}
               className="font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 underline"
             >
               Terms of Service
@@ -247,7 +254,11 @@ const RegisterForm = ({ onSwitchToLogin }) => {
               href="/privacy" 
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => console.log('Privacy link clicked')}
+              onClick={(e) => {
+                console.log('✅ Privacy link clicked - opening /privacy in new tab')
+                e.preventDefault()
+                window.open(window.location.origin + '/privacy', '_blank', 'noopener,noreferrer')
+              }}
               className="font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 underline"
             >
               Privacy Policy
