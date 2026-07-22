@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { memo, useMemo, useCallback } from 'react'
+import { memo } from 'react'
 import { analyticsService } from '../services/analyticsService'
 import { useSelector, shallowEqual } from 'react-redux'
 import Spinner from '../components/common/Spinner'
@@ -146,8 +146,8 @@ const Dashboard = () => {
     )
   }
 
-  // Memoize stats array to prevent unnecessary recalculations
-  const stats = useMemo(() => [
+  // Build stats array - only if we have theme colors
+  const stats = (c.info && c.success && c.warning && c.danger) ? [
     {
       label: 'Total Tasks',
       value: dashboardData?.taskStatistics?.totalTasks ?? 0,
@@ -176,9 +176,9 @@ const Dashboard = () => {
       color: c.danger,
       bgColor: c.badgeDanger,
     },
-  ], [dashboardData, c])
+  ] : []
 
-  const activityScore = useMemo(() => dashboardData?.userProductivity?.activityScore ?? 0, [dashboardData])
+  const activityScore = dashboardData?.userProductivity?.activityScore ?? 0
 
   return (
     <div className="space-y-4 sm:space-y-6">
