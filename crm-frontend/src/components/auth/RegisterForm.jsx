@@ -19,8 +19,12 @@ const RegisterForm = ({ onSwitchToLogin }) => {
   const [passwordMatch, setPasswordMatch] = useState(true)
   const { register, isRegistering } = useAuth()
 
+  // DEBUG: Log version to console
+  console.log('🔧 RegisterForm Component v3.0.0-FIXED loaded')
+
   // Force clear any browser auto-filled values on mount
   useEffect(() => {
+    console.log('🧹 useEffect: Clearing autofilled values')
     const inputs = document.querySelectorAll('input[type="text"], input[type="email"], input[type="password"]')
     inputs.forEach(input => {
       input.value = ''
