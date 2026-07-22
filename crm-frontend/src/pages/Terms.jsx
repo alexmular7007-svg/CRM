@@ -1,211 +1,374 @@
-import { useEffect } from 'react'
-import { ArrowLeft } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { ArrowLeft, Shield, Zap, Users, Lock, AlertCircle, Trash2, RefreshCw } from 'lucide-react'
 
-export default function Terms() {
+const Terms = () => {
   const navigate = useNavigate()
 
-  useEffect(() => {
-    window.scrollTo(0, 0)
-  }, [])
-
   return (
-    <div className="min-h-screen bg-white dark:bg-[#161B22] text-gray-900 dark:text-white">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-white dark:bg-[#0D1117] border-b border-gray-200 dark:border-[#30363D]">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Terms of Service</h1>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white dark:from-[#0A0A0D] dark:to-[#09090B]">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-40 bg-white/80 dark:bg-[#1A1A1D]/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-3">
           <button
-            onClick={() => navigate(-1)}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+            onClick={() => navigate('/')}
+            className="flex items-center gap-2 px-4 py-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
           >
             <ArrowLeft size={18} />
-            Back
+            <span className="font-semibold">Back</span>
           </button>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Terms of Service</h1>
         </div>
-      </header>
+      </div>
 
-      {/* Content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Last Updated */}
-        <div className="mb-12 p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-          <p className="text-sm text-gray-600 dark:text-gray-300">
-            <strong>Last Updated:</strong> July 22, 2026
-          </p>
-        </div>
-
-        {/* Content Sections */}
+      {/* Main Content */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="space-y-8">
-          {/* Project Name & Purpose */}
-          <section>
-            <h2 className="text-2xl font-bold mb-4">Task Manager and Chat Application</h2>
-            <p className="text-gray-600 dark:text-gray-300 mb-4">
-              This application is a comprehensive platform that combines task management, project collaboration, and integrated chat functionality to help teams work efficiently together.
-            </p>
+          {/* Introduction */}
+          <section className="bg-white dark:bg-[#1A1A1D] rounded-2xl p-6 sm:p-8 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-start gap-4">
+              <Shield className="text-indigo-600 dark:text-indigo-400 flex-shrink-0 mt-1" size={28} />
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Introduction</h2>
+                <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                  Welcome to TaskFlow CRM - your unified platform for managing projects, teams, clients, and communications. These Terms of Service ("Terms") govern your use of our application and services. By accessing or using TaskFlow CRM, you agree to comply with these Terms. If you disagree with any part, you must not use our services.
+                </p>
+                <p className="text-gray-600 dark:text-gray-300 leading-relaxed mt-4">
+                  Last Updated: July 22, 2026
+                </p>
+              </div>
+            </div>
           </section>
 
           {/* Acceptance of Terms */}
-          <section>
-            <h3 className="text-xl font-semibold mb-3">1. Acceptance of Terms</h3>
-            <p className="text-gray-600 dark:text-gray-300">
-              By accessing and using this application, you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
-            </p>
+          <section className="bg-white dark:bg-[#1A1A1D] rounded-2xl p-6 sm:p-8 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-start gap-4">
+              <Zap className="text-amber-500 flex-shrink-0 mt-1" size={28} />
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Acceptance of Terms</h2>
+                <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                  By creating an account, accessing TaskFlow CRM, or using any of our services, you agree to be bound by these Terms. We may modify these Terms at any time, and continued use constitutes acceptance of the updated Terms. We will notify you of significant changes via email.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* User Accounts */}
+          <section className="bg-white dark:bg-[#1A1A1D] rounded-2xl p-6 sm:p-8 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-start gap-4">
+              <Users className="text-blue-500 flex-shrink-0 mt-1" size={28} />
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">User Accounts & Registration</h2>
+                <ul className="space-y-3 text-gray-600 dark:text-gray-300">
+                  <li className="flex items-start gap-3">
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">•</span>
+                    <span>You must provide accurate, complete, and current information when creating an account</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">•</span>
+                    <span>You are responsible for maintaining the confidentiality of your password and login credentials</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">•</span>
+                    <span>You must be at least 18 years old to use TaskFlow CRM</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">•</span>
+                    <span>You are fully responsible for all activity that occurs under your account</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
           </section>
 
           {/* User Responsibilities */}
-          <section>
-            <h3 className="text-xl font-semibold mb-3">2. User Responsibilities</h3>
-            <ul className="list-disc list-inside space-y-2 text-gray-600 dark:text-gray-300">
-              <li>You are responsible for maintaining the confidentiality of your account credentials</li>
-              <li>You agree to accept responsibility for all activities under your account</li>
-              <li>You must notify us immediately of any unauthorized use of your account</li>
-              <li>You are responsible for all content you upload, create, or share</li>
-              <li>You must be at least 18 years old to use this service</li>
-            </ul>
+          <section className="bg-white dark:bg-[#1A1A1D] rounded-2xl p-6 sm:p-8 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-start gap-4">
+              <Lock className="text-green-500 flex-shrink-0 mt-1" size={28} />
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">User Responsibilities</h2>
+                <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-4">
+                  You agree to use TaskFlow CRM only for lawful purposes and in a way that does not infringe upon our or others' rights. Specifically, you agree that:
+                </p>
+                <ul className="space-y-3 text-gray-600 dark:text-gray-300">
+                  <li className="flex items-start gap-3">
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">✓</span>
+                    <span>You will maintain confidentiality of sensitive workspace and project information</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">✓</span>
+                    <span>You will not share account credentials with unauthorized persons</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">✓</span>
+                    <span>You will not attempt to gain unauthorized access to TaskFlow CRM systems</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">✓</span>
+                    <span>You will not interfere with or disrupt the integrity or performance of the service</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
           </section>
 
           {/* Acceptable Use */}
-          <section>
-            <h3 className="text-xl font-semibold mb-3">3. Acceptable Use Policy</h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-3">
-              You agree not to use the application in any way that:
-            </p>
-            <ul className="list-disc list-inside space-y-2 text-gray-600 dark:text-gray-300">
-              <li>Violates any applicable law, regulation, or third-party rights</li>
-              <li>Transmits malware, viruses, or any code of destructive nature</li>
-              <li>Attempts to gain unauthorized access to our systems</li>
-              <li>Harasses, threatens, or abuses other users</li>
-              <li>Spams, sends unsolicited messages, or engages in phishing</li>
-              <li>Impersonates any person or entity</li>
-              <li>Uploads illegal content or intellectual property violations</li>
-            </ul>
+          <section className="bg-white dark:bg-[#1A1A1D] rounded-2xl p-6 sm:p-8 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-start gap-4">
+              <AlertCircle className="text-red-500 flex-shrink-0 mt-1" size={28} />
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Acceptable Use Policy</h2>
+                <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-4">
+                  You strictly agree NOT to:
+                </p>
+                <div className="grid gap-4">
+                  <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-lg p-4">
+                    <h3 className="font-semibold text-red-900 dark:text-red-300 mb-2">Prohibited Activities</h3>
+                    <ul className="space-y-2 text-sm text-red-800 dark:text-red-200">
+                      <li>• Post or transmit illegal content, spam, or malware</li>
+                      <li>• Attempt to reverse-engineer, decompile, or access source code</li>
+                      <li>• Conduct phishing, fraud, or impersonation</li>
+                      <li>• Use bots, scrapers, or automated tools without permission</li>
+                      <li>• Harass, threaten, or abuse other users</li>
+                      <li>• Violate any laws or regulations in your jurisdiction</li>
+                      <li>• Share login credentials or allow unauthorized account access</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
           </section>
 
-          {/* Account Security */}
-          <section>
-            <h3 className="text-xl font-semibold mb-3">4. Account Security</h3>
-            <p className="text-gray-600 dark:text-gray-300">
-              We implement industry-standard security measures to protect your account. However, you are responsible for keeping your password confidential and for all activity on your account. We are not liable for unauthorized access resulting from your failure to protect your credentials.
-            </p>
+          {/* Workspace & Project Rules */}
+          <section className="bg-white dark:bg-[#1A1A1D] rounded-2xl p-6 sm:p-8 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-start gap-4">
+              <Users className="text-purple-500 flex-shrink-0 mt-1" size={28} />
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Workspace & Project Rules</h2>
+                <ul className="space-y-3 text-gray-600 dark:text-gray-300">
+                  <li className="flex items-start gap-3">
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">•</span>
+                    <span>Workspace owners are responsible for managing member access and permissions</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">•</span>
+                    <span>Members must respect project settings and access controls established by workspace owners</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">•</span>
+                    <span>All data within a workspace is subject to the same security and privacy policies</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">•</span>
+                    <span>Workspace owners may be held liable for member activity within their workspace</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
           </section>
 
-          {/* Data Collection */}
-          <section>
-            <h3 className="text-xl font-semibold mb-3">5. Data Collection</h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-3">
-              We collect certain information to provide and improve our services:
-            </p>
-            <ul className="list-disc list-inside space-y-2 text-gray-600 dark:text-gray-300">
-              <li>Account information (name, email, profile details)</li>
-              <li>Usage data (features used, activity logs, analytics)</li>
-              <li>Device information (IP address, browser type, device model)</li>
-              <li>Communication data (messages, tasks, project content)</li>
-              <li>Payment information (if applicable)</li>
-            </ul>
+          {/* Chat & Communication Guidelines */}
+          <section className="bg-white dark:bg-[#1A1A1D] rounded-2xl p-6 sm:p-8 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-start gap-4">
+              <Zap className="text-cyan-500 flex-shrink-0 mt-1" size={28} />
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Chat & Communication Guidelines</h2>
+                <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-4">
+                  When using TaskFlow CRM's chat and messaging features:
+                </p>
+                <ul className="space-y-3 text-gray-600 dark:text-gray-300">
+                  <li className="flex items-start gap-3">
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">•</span>
+                    <span>All communications are recorded and monitored for compliance purposes</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">•</span>
+                    <span>Do not share passwords, financial information, or sensitive credentials in chat</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">•</span>
+                    <span>Respect others' privacy and do not share personal information without consent</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">•</span>
+                    <span>Messages may be moderated or removed for policy violations</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
           </section>
 
-          {/* Data Usage */}
-          <section>
-            <h3 className="text-xl font-semibold mb-3">6. Data Usage</h3>
-            <p className="text-gray-600 dark:text-gray-300">
-              Your data is used to:
-            </p>
-            <ul className="list-disc list-inside space-y-2 text-gray-600 dark:text-gray-300">
-              <li>Provide and maintain the application</li>
-              <li>Improve user experience and service quality</li>
-              <li>Send important notifications and updates</li>
-              <li>Respond to your inquiries and support requests</li>
-              <li>Comply with legal obligations</li>
-              <li>Prevent fraud and abuse</li>
-            </ul>
+          {/* AI Features Disclaimer */}
+          <section className="bg-white dark:bg-[#1A1A1D] rounded-2xl p-6 sm:p-8 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-start gap-4">
+              <Zap className="text-yellow-500 flex-shrink-0 mt-1" size={28} />
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">AI Features Disclaimer</h2>
+                <div className="bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-900/30 rounded-lg p-4 mb-4">
+                  <p className="text-yellow-900 dark:text-yellow-200 text-sm">
+                    <span className="font-semibold">Important:</span> AI-powered features and suggestions are provided on an "as-is" basis. We do not guarantee accuracy or suitability for specific purposes.
+                  </p>
+                </div>
+                <ul className="space-y-3 text-gray-600 dark:text-gray-300">
+                  <li className="flex items-start gap-3">
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">•</span>
+                    <span>Always review AI-generated suggestions before relying on them</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">•</span>
+                    <span>TaskFlow CRM is not liable for decisions made based on AI suggestions</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
           </section>
 
-          {/* Cookies & Tracking */}
-          <section>
-            <h3 className="text-xl font-semibold mb-3">7. Cookies and Tracking Technologies</h3>
-            <p className="text-gray-600 dark:text-gray-300">
-              We use cookies, local storage, and similar tracking technologies to enhance your experience, remember your preferences, and analyze usage patterns. You can disable cookies through your browser settings, but this may affect certain features.
-            </p>
-          </section>
-
-          {/* Third-Party Services */}
-          <section>
-            <h3 className="text-xl font-semibold mb-3">8. Third-Party Services</h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-3">
-              This application integrates with third-party services:
-            </p>
-            <ul className="list-disc list-inside space-y-2 text-gray-600 dark:text-gray-300">
-              <li>
-                <strong>Cloudinary:</strong> For secure file storage and image optimization
-              </li>
-              <li>
-                <strong>Google OAuth:</strong> For account authentication and sign-in
-              </li>
-              <li>
-                <strong>GitHub OAuth:</strong> For developer authentication and integration
-              </li>
-            </ul>
-            <p className="text-gray-600 dark:text-gray-300 mt-3">
-              These services have their own terms and privacy policies. We are not responsible for their practices.
-            </p>
+          {/* File Upload Guidelines */}
+          <section className="bg-white dark:bg-[#1A1A1D] rounded-2xl p-6 sm:p-8 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-start gap-4">
+              <Lock className="text-indigo-500 flex-shrink-0 mt-1" size={28} />
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">File Upload Guidelines</h2>
+                <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-4">
+                  You are responsible for all files you upload to TaskFlow CRM:
+                </p>
+                <ul className="space-y-3 text-gray-600 dark:text-gray-300">
+                  <li className="flex items-start gap-3">
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">•</span>
+                    <span>Do not upload malware, viruses, or malicious files</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">•</span>
+                    <span>Do not upload files containing private personal information without consent</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">•</span>
+                    <span>We reserve the right to scan and remove suspicious files</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">•</span>
+                    <span>Maximum file size limits apply per workspace plan</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
           </section>
 
           {/* Intellectual Property */}
-          <section>
-            <h3 className="text-xl font-semibold mb-3">9. Intellectual Property Rights</h3>
-            <p className="text-gray-600 dark:text-gray-300">
-              The application and its content, including text, graphics, logos, and software, are the property of the application owners or their content suppliers. You may not reproduce, distribute, or transmit the content without permission.
-            </p>
+          <section className="bg-white dark:bg-[#1A1A1D] rounded-2xl p-6 sm:p-8 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-start gap-4">
+              <Shield className="text-indigo-600 dark:text-indigo-400 flex-shrink-0 mt-1" size={28} />
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Intellectual Property Rights</h2>
+                <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-4">
+                  TaskFlow CRM and its content, features, and functionality are the exclusive property of TaskFlow and are protected by international intellectual property laws. You retain all rights to content you create and upload.
+                </p>
+                <ul className="space-y-3 text-gray-600 dark:text-gray-300">
+                  <li className="flex items-start gap-3">
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">•</span>
+                    <span>You grant TaskFlow a license to use your content to provide the service</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">•</span>
+                    <span>Do not copy, modify, or distribute TaskFlow's proprietary materials</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
           </section>
 
-          {/* Limitation of Liability */}
-          <section>
-            <h3 className="text-xl font-semibold mb-3">10. Limitation of Liability</h3>
-            <p className="text-gray-600 dark:text-gray-300">
-              To the maximum extent permitted by law, we shall not be liable for any indirect, incidental, special, or consequential damages arising from your use of the application, including but not limited to data loss, business interruption, or other losses.
-            </p>
-          </section>
-
-          {/* Disclaimer */}
-          <section>
-            <h3 className="text-xl font-semibold mb-3">11. Disclaimer of Warranties</h3>
-            <p className="text-gray-600 dark:text-gray-300">
-              The application is provided "as is" without any warranties of any kind. We do not guarantee that the application will be uninterrupted, error-free, or secure.
-            </p>
-          </section>
-
-          {/* Termination */}
-          <section>
-            <h3 className="text-xl font-semibold mb-3">12. Termination</h3>
-            <p className="text-gray-600 dark:text-gray-300">
-              We reserve the right to terminate or suspend your account at any time if you violate these terms or engage in prohibited conduct. Upon termination, your right to use the application will immediately cease.
-            </p>
-          </section>
-
-          {/* Contact Information */}
-          <section>
-            <h3 className="text-xl font-semibold mb-3">13. Contact Information</h3>
-            <p className="text-gray-600 dark:text-gray-300">
-              For questions about these Terms of Service, please contact us through the application's support channels or submit an inquiry through our contact form.
-            </p>
+          {/* Account Suspension & Termination */}
+          <section className="bg-white dark:bg-[#1A1A1D] rounded-2xl p-6 sm:p-8 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-start gap-4">
+              <Trash2 className="text-red-500 flex-shrink-0 mt-1" size={28} />
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Account Suspension & Termination</h2>
+                <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-4">
+                  We reserve the right to suspend or terminate accounts that violate these Terms, including:
+                </p>
+                <ul className="space-y-3 text-gray-600 dark:text-gray-300">
+                  <li className="flex items-start gap-3">
+                    <span className="text-red-600 dark:text-red-400 font-bold">•</span>
+                    <span>Repeated violations of our Acceptable Use Policy</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-red-600 dark:text-red-400 font-bold">•</span>
+                    <span>Unauthorized access or security breaches</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-red-600 dark:text-red-400 font-bold">•</span>
+                    <span>Harassment or abuse of other users</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-red-600 dark:text-red-400 font-bold">•</span>
+                    <span>Non-payment of outstanding balances</span>
+                  </li>
+                </ul>
+                <p className="text-gray-600 dark:text-gray-300 leading-relaxed mt-4">
+                  Termination will result in loss of access to your account and data. You may request data export before deletion.
+                </p>
+              </div>
+            </div>
           </section>
 
           {/* Changes to Terms */}
-          <section>
-            <h3 className="text-xl font-semibold mb-3">14. Changes to Terms</h3>
-            <p className="text-gray-600 dark:text-gray-300">
-              We may update these terms at any time. Continued use of the application following notification of changes constitutes your acceptance of the updated terms.
-            </p>
+          <section className="bg-white dark:bg-[#1A1A1D] rounded-2xl p-6 sm:p-8 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-start gap-4">
+              <RefreshCw className="text-teal-500 flex-shrink-0 mt-1" size={28} />
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Changes to These Terms</h2>
+                <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                  TaskFlow CRM reserves the right to modify these Terms at any time. We will notify you of material changes via email at the address associated with your account. Your continued use of the service after changes constitutes acceptance of the new Terms.
+                </p>
+              </div>
+            </div>
           </section>
-        </div>
 
-        {/* Footer */}
-        <div className="mt-16 pt-8 border-t border-gray-200 dark:border-[#30363D]">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            © 2026 Task Manager and Chat Application. All rights reserved.
-          </p>
+          {/* Limitation of Liability */}
+          <section className="bg-white dark:bg-[#1A1A1D] rounded-2xl p-6 sm:p-8 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-start gap-4">
+              <AlertCircle className="text-orange-500 flex-shrink-0 mt-1" size={28} />
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Limitation of Liability</h2>
+                <div className="bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-900/30 rounded-lg p-4">
+                  <p className="text-orange-900 dark:text-orange-200 text-sm leading-relaxed">
+                    <span className="font-semibold">DISCLAIMER:</span> TaskFlow CRM is provided "AS IS" without warranties of any kind. To the maximum extent permitted by law, TaskFlow CRM is not liable for any indirect, incidental, special, or consequential damages arising from your use of the service, even if advised of the possibility of such damages.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Contact Information */}
+          <section className="bg-white dark:bg-[#1A1A1D] rounded-2xl p-6 sm:p-8 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-start gap-4">
+              <Lock className="text-green-500 flex-shrink-0 mt-1" size={28} />
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Contact Information</h2>
+                <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-4">
+                  If you have questions about these Terms or our service, please contact us:
+                </p>
+                <div className="space-y-2 text-gray-600 dark:text-gray-300">
+                  <p><span className="font-semibold">Email:</span> legal@taskflow.com</p>
+                  <p><span className="font-semibold">Support:</span> support@taskflow.com</p>
+                  <p><span className="font-semibold">Address:</span> TaskFlow Inc., Global</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Footer */}
+          <div className="text-center py-8 border-t border-gray-200 dark:border-gray-700">
+            <p className="text-gray-600 dark:text-gray-400 text-sm">
+              Last Updated: July 22, 2026
+            </p>
+            <p className="text-gray-500 dark:text-gray-500 text-xs mt-2">
+              © 2026 TaskFlow CRM. All rights reserved.
+            </p>
+          </div>
         </div>
-      </main>
+      </div>
     </div>
   )
 }
+
+export default Terms
