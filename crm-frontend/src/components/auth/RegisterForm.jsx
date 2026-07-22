@@ -22,13 +22,30 @@ const RegisterForm = ({ onSwitchToLogin }) => {
   // DEBUG: Log version to console
   console.log('🔧 RegisterForm Component v3.0.0-FIXED loaded')
 
-  // Force clear any browser auto-filled values on mount
+  // Force clear any browser auto-filled values on mount + localStorage
   useEffect(() => {
-    console.log('🧹 useEffect: Clearing autofilled values')
+    console.log('🧹 useEffect: Clearing autofilled values and localStorage')
+    
+    // Clear localStorage
+    try {
+      localStorage.clear()
+      sessionStorage.clear()
+    } catch (e) {
+      console.error('Could not clear storage:', e)
+    }
+    
+    // Clear form values
     const inputs = document.querySelectorAll('input[type="text"], input[type="email"], input[type="password"]')
     inputs.forEach(input => {
       input.value = ''
+      input.setAttribute('autocomplete', 'off')
       input.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    
+    // Disable browser autofill on form
+    const forms = document.querySelectorAll('form')
+    forms.forEach(form => {
+      form.setAttribute('autocomplete', 'off')
     })
   }, [])
 
@@ -120,7 +137,7 @@ const RegisterForm = ({ onSwitchToLogin }) => {
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="space-y-2.5 sm:space-y-3.5 mb-6 sm:mb-8">
+      <form onSubmit={handleSubmit} autoComplete="off" className="space-y-2.5 sm:space-y-3.5 mb-6 sm:mb-8">
         <div>
           <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">Full Name</label>
           <div className="relative">
