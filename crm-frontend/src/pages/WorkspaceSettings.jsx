@@ -2,8 +2,6 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSelector } from 'react-redux'
-import { useTheme } from '@mui/material/styles'
-import { useMediaQuery } from '@mui/material'
 import { motion } from 'framer-motion'
 import { FiArrowLeft, FiUsers, FiMail, FiLock, FiSettings, FiShield } from 'react-icons/fi'
 import toast from 'react-hot-toast'
@@ -14,8 +12,8 @@ import Spinner from '../components/common/Spinner'
 import MembersTab from '../components/workspace/MembersTab'
 
 const WorkspaceSettings = () => {
-  const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  // Removed MUI imports - using Tailwind for responsive design
+  const isMobile = window.innerWidth < 640 // Tailwind sm breakpoint
   const { workspaceId } = useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
