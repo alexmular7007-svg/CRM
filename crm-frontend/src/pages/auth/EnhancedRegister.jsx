@@ -98,9 +98,9 @@ const EnhancedRegister = () => {
             />
             <span className="text-[13px] text-gray-600 dark:text-[#8B949E] leading-relaxed">
               I agree to the{' '}
-              <a href="#" className="text-violet-600 dark:text-violet-400 hover:underline">Terms of Service</a>
+              <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-violet-600 dark:text-violet-400 hover:underline">Terms of Service</a>
               {' '}and{' '}
-              <a href="#" className="text-violet-600 dark:text-violet-400 hover:underline">Privacy Policy</a>
+              <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-violet-600 dark:text-violet-400 hover:underline">Privacy Policy</a>
             </span>
           </label>
           {errors.acceptTerms && (

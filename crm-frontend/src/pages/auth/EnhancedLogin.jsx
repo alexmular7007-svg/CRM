@@ -114,9 +114,9 @@ const EnhancedLogin = () => {
 
       <p className="text-center text-[11px] text-gray-400 dark:text-[#484F58]">
         By signing in you agree to our{' '}
-        <a href="#" className="underline hover:text-gray-600 dark:hover:text-[#6E7681]">Terms</a>
+        <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-600 dark:hover:text-[#6E7681]">Terms</a>
         {' '}and{' '}
-        <a href="#" className="underline hover:text-gray-600 dark:hover:text-[#6E7681]">Privacy Policy</a>.
+        <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-600 dark:hover:text-[#6E7681]">Privacy Policy</a>.
       </p>
     </div>
   )

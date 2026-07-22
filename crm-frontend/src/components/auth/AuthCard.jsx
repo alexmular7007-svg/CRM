@@ -17,7 +17,7 @@ const AuthCard = ({ isLogin, onToggle }) => {
             transformStyle: 'preserve-3d',
             backfaceVisibility: 'hidden',
           }}
-          className="w-full bg-white dark:bg-[#1A1A1D] rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-8 backdrop-blur-xl"
+          className="w-full bg-white dark:bg-[#1A1A1D] rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 sm:p-8 backdrop-blur-xl"
         >
           <AnimatePresence mode="wait">
             {isLogin && (
@@ -43,7 +43,7 @@ const AuthCard = ({ isLogin, onToggle }) => {
             transformStyle: 'preserve-3d',
             backfaceVisibility: 'hidden',
           }}
-          className="w-full bg-white dark:bg-[#1A1A1D] rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-8 backdrop-blur-xl"
+          className="w-full bg-white dark:bg-[#1A1A1D] rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 sm:p-8 backdrop-blur-xl"
         >
           <AnimatePresence mode="wait">
             {!isLogin && (

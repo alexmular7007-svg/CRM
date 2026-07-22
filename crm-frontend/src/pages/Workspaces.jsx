@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo, memo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { FiPlus, FiSearch } from 'react-icons/fi'
@@ -7,6 +7,27 @@ import { workspaceService } from '../services/workspaceService'
 import WorkspaceCard from '../components/workspace/WorkspaceCard'
 import CreateWorkspaceModal from '../components/workspace/CreateWorkspaceModal'
 import Spinner from '../components/common/Spinner'
+
+// Skeleton loader for workspace cards
+const WorkspaceCardSkeleton = memo(({ index }) => (
+  <motion.div
+    key={`skeleton-${index}`}
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.3, delay: index * 0.1 }}
+    className="h-64 bg-white dark:bg-gray-800 rounded-lg shadow-md animate-pulse border-2 border-gray-100 dark:border-gray-700"
+  >
+    <div className="p-6 space-y-4 h-full flex flex-col">
+      <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
+      <div className="mt-auto flex gap-2">
+        <div className="flex-1 h-10 bg-gray-200 dark:bg-gray-700 rounded"></div>
+        <div className="flex-1 h-10 bg-gray-200 dark:bg-gray-700 rounded"></div>
+      </div>
+    </div>
+  </motion.div>
+))
 
 const Workspaces = () => {
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -47,15 +68,32 @@ const Workspaces = () => {
     ? workspaces
     : workspaces?.content ?? []
 
-  // Filter workspaces by search query
-  const filteredWorkspaces = workspaceItems.filter((workspace) =>
-    workspace.name.toLowerCase().includes(searchQuery.toLowerCase())
+  // Memoize filtered results to prevent unnecessary re-renders
+  const filteredWorkspaces = useMemo(() => 
+    workspaceItems.filter((workspace) =>
+      workspace.name.toLowerCase().includes(searchQuery.toLowerCase())
+    ),
+    [workspaceItems, searchQuery]
   )
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <Spinner size="lg" />
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="h-10 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+          <div className="h-10 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+        </div>
+
+        {/* Search Bar */}
+        <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+
+        {/* Skeleton Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(6)].map((_, i) => (
+            <WorkspaceCardSkeleton key={i} index={i} />
+          ))}
+        </div>
       </div>
     )
   }
