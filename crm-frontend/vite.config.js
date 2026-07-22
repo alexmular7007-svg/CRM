@@ -16,6 +16,7 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
+      // Externalize MUI to prevent Vercel build failures
       external: ['@mui/material', '@mui/material/styles'],
       output: {
         globals: {
