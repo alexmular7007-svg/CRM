@@ -45,7 +45,7 @@ const Register = () => {
             value={formData.fullName}
             onChange={handleChange}
             className="input"
-            placeholder="Enter your full name"
+            placeholder="Enter your name"
             required
           />
         </div>
@@ -107,7 +107,29 @@ const Register = () => {
         </button>
       </form>
 
-      <div className="mt-6 text-center text-sm">
+      {/* Terms and Privacy Agreement */}
+      <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+        <p className="text-xs text-gray-600 dark:text-gray-400 text-center leading-relaxed">
+          By continuing, you agree to our{' '}
+          <Link
+            to="/terms"
+            target="_blank"
+            className="text-primary-600 hover:text-primary-700 font-medium underline"
+          >
+            Terms of Service
+          </Link>
+          {' '}and{' '}
+          <Link
+            to="/privacy"
+            target="_blank"
+            className="text-primary-600 hover:text-primary-700 font-medium underline"
+          >
+            Privacy Policy
+          </Link>
+        </p>
+      </div>
+
+      <div className="mt-4 text-center text-sm">
         <span className="text-gray-600 dark:text-gray-400">Already have an account? </span>
         <Link to="/login" className="text-primary-600 hover:text-primary-700 font-medium">
           Login
