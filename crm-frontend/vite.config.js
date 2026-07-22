@@ -14,6 +14,17 @@ export default defineConfig({
   define: {
     global: 'globalThis',
   },
+  build: {
+    rollupOptions: {
+      external: ['@mui/material', '@mui/material/styles'],
+      output: {
+        globals: {
+          '@mui/material': 'mui',
+          '@mui/material/styles': 'muiStyles',
+        },
+      },
+    },
+  },
   server: {
     port: 3000,
     proxy: {
