@@ -90,8 +90,9 @@ const ActivityItem = memo(({ activity, index, lastIndex, c }) => (
 })
 
 const Dashboard = () => {
-  const { currentTheme } = useThemeContext()
-  const c = currentTheme.colors
+  try {
+    const { currentTheme } = useThemeContext()
+    const c = currentTheme?.colors || {}
   
   // Memoize selector to prevent unnecessary re-renders
   const currentWorkspace = useSelector(
@@ -238,6 +239,10 @@ const Dashboard = () => {
       </div>
     </div>
   )
+  } catch (err) {
+    console.error('Dashboard error:', err)
+    return <div>Dashboard error - check console</div>
+  }
 }
 
 export default Dashboard
