@@ -199,11 +199,23 @@ const RegisterForm = ({ onSwitchToLogin }) => {
           />
           <label htmlFor="terms" className="ml-2 sm:ml-3 block text-xs sm:text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
             By continuing you agree to our{' '}
-            <a href="/terms" target="_blank" rel="noopener noreferrer" className="font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300">
+            <a 
+              href="/terms" 
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => console.log('Terms link clicked')}
+              className="font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 underline"
+            >
               Terms of Service
             </a>
             {' '}and{' '}
-            <a href="/privacy" target="_blank" rel="noopener noreferrer" className="font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300">
+            <a 
+              href="/privacy" 
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => console.log('Privacy link clicked')}
+              className="font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 underline"
+            >
               Privacy Policy
             </a>
           </label>
