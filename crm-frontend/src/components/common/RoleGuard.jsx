@@ -1,4 +1,5 @@
 import { useWorkspaceRole } from '../../hooks/useWorkspaceRole'
+import Spinner from './Spinner'
 
 /**
  * RoleGuard Component
@@ -24,9 +25,13 @@ export const RoleGuard = ({
 }) => {
   const { role, isLoading } = useWorkspaceRole(workspaceId)
 
-  // Show nothing while loading (use fallback if explicitly provided)
+  // Show loading spinner while fetching role
   if (isLoading) {
-    return fallback
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Spinner size="md" />
+      </div>
+    )
   }
 
   // Determine if user has access based on role hierarchy
