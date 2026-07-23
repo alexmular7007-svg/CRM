@@ -2,8 +2,6 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FiSearch, FiUserPlus, FiTrash2, FiMoreVertical } from 'react-icons/fi'
-import { useTheme } from '@mui/material/styles'
-import { useMediaQuery } from '@mui/material'
 import toast from 'react-hot-toast'
 import { userService } from '../../services/userService'
 import { workspaceService } from '../../services/workspaceService'
@@ -59,9 +57,6 @@ const MemberActionMenu = ({ member, onRemove, isLoading }) => {
 }
 
 const MembersTab = ({ workspaceId }) => {
-  const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
-  const isTablet = useMediaQuery(theme.breakpoints.down('md'))
   const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedRole, setSelectedRole] = useState('MEMBER')
@@ -136,7 +131,7 @@ const MembersTab = ({ workspaceId }) => {
           Search for registered users and add them directly to this workspace. No email will be sent.
         </p>
 
-        <div className={`flex flex-col sm:flex-row gap-3 sm:gap-4 ${isMobile ? 'flex-col' : 'sm:items-center'}`}>
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 sm:items-center">
           <div className="flex-1 relative">
             <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
             <input
@@ -228,7 +223,7 @@ const MembersTab = ({ workspaceId }) => {
         ) : (
           <>
             {/* Desktop & Tablet Table View */}
-            {!isMobile && (
+            <div className="hidden sm:block">
               <div className="overflow-x-auto">
                 <table className="w-full min-w-full">
                   <thead className="bg-gray-50 dark:bg-gray-700/50">
@@ -236,19 +231,15 @@ const MembersTab = ({ workspaceId }) => {
                       <th className="px-4 sm:px-6 py-3 text-left text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
                         Member
                       </th>
-                      {!isTablet && (
-                        <th className="px-4 sm:px-6 py-3 text-left text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
-                          Email
-                        </th>
-                      )}
+                      <th className="hidden md:table-cell px-4 sm:px-6 py-3 text-left text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
+                        Email
+                      </th>
                       <th className="px-4 sm:px-6 py-3 text-left text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
                         Role
                       </th>
-                      {!isTablet && (
-                        <th className="px-4 sm:px-6 py-3 text-left text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
-                          Joined
-                        </th>
-                      )}
+                      <th className="hidden md:table-cell px-4 sm:px-6 py-3 text-left text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
+                        Joined
+                      </th>
                       <th className="px-4 sm:px-6 py-3 text-right text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
                         Actions
                       </th>
@@ -257,7 +248,7 @@ const MembersTab = ({ workspaceId }) => {
                   <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                     {members.length === 0 ? (
                       <tr>
-                        <td colSpan={isTablet ? 4 : 5} className="px-4 sm:px-6 py-8 text-center text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
+                        <td colSpan={5} className="px-4 sm:px-6 py-8 text-center text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
                           No members in this workspace
                         </td>
                       </tr>
@@ -282,11 +273,9 @@ const MembersTab = ({ workspaceId }) => {
                               </span>
                             </div>
                           </td>
-                          {!isTablet && (
-                            <td className="px-4 sm:px-6 py-4 text-gray-600 dark:text-gray-400 text-xs sm:text-sm truncate">
-                              {member.userEmail || 'N/A'}
-                            </td>
-                          )}
+                          <td className="hidden md:table-cell px-4 sm:px-6 py-4 text-gray-600 dark:text-gray-400 text-xs sm:text-sm truncate">
+                            {member.userEmail || 'N/A'}
+                          </td>
                           <td className="px-4 sm:px-6 py-4">
                             <span
                               className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap ${
@@ -300,9 +289,8 @@ const MembersTab = ({ workspaceId }) => {
                               {member.role}
                             </span>
                           </td>
-                          {!isTablet && (
-                            <td className="px-4 sm:px-6 py-4 text-gray-600 dark:text-gray-400 text-xs sm:text-sm">
-                              {member.joinedAt ? new Date(member.joinedAt).toLocaleDateString() : 'N/A'}
+                          <td className="hidden md:table-cell px-4 sm:px-6 py-4 text-gray-600 dark:text-gray-400 text-xs sm:text-sm">
+                            {member.joinedAt ? new Date(member.joinedAt).toLocaleDateString() : 'N/A'}
                             </td>
                           )}
                           <td className="px-4 sm:px-6 py-4 text-right">
@@ -323,11 +311,10 @@ const MembersTab = ({ workspaceId }) => {
                   </tbody>
                 </table>
               </div>
-            )}
+            </div>
 
             {/* Mobile Card View */}
-            {isMobile && (
-              <div className="divide-y divide-gray-200 dark:divide-gray-700">
+            <div className="sm:hidden divide-y divide-gray-200 dark:divide-gray-700">
                 {members.length === 0 ? (
                   <div className="px-4 py-8 text-center text-gray-500 dark:text-gray-400 text-sm">
                     No members in this workspace
@@ -402,7 +389,7 @@ const MembersTab = ({ workspaceId }) => {
                   ))
                 )}
               </div>
-            )}
+            </div>
           </>
         )}
       </div>
