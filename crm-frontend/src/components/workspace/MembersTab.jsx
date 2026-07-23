@@ -291,8 +291,7 @@ const MembersTab = ({ workspaceId }) => {
                           </td>
                           <td className="hidden md:table-cell px-4 sm:px-6 py-4 text-gray-600 dark:text-gray-400 text-xs sm:text-sm">
                             {member.joinedAt ? new Date(member.joinedAt).toLocaleDateString() : 'N/A'}
-                            </td>
-                          )}
+                          </td>
                           <td className="px-4 sm:px-6 py-4 text-right">
                             {member.role !== 'OWNER' && (
                               <button
