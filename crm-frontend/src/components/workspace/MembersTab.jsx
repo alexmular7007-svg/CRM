@@ -387,7 +387,6 @@ const MembersTab = ({ workspaceId }) => {
                     </motion.div>
                   ))
                 )}
-              </div>
             </div>
           </>
         )}
