@@ -1,0 +1,12 @@
+VERCEL BUILD CACHE CLEAR TRIGGER
+=================================
+Timestamp: 2026-07-23T23:59:00Z
+Commit: 440177c - RoleGuard blank page fix
+
+Force Vercel to clear cache and rebuild with latest source code.
+This file exists to trigger a clean deployment.
+
+The @mui/material/styles error is due to cached old build.
+New build contains no @mui references.
+
+Delete Vercel cache in dashboard and redeploy.
