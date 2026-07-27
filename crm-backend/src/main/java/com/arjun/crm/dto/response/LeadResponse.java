@@ -37,6 +37,12 @@ public class LeadResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     
+    // Feature #1: Lead → Client → Project Conversion
+    private Boolean converted;
+    private LocalDateTime convertedAt;
+    private Long convertedProjectId;
+    private Long convertedClientId;
+    
     @Data
     @NoArgsConstructor
     @AllArgsConstructor

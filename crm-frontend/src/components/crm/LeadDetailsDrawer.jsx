@@ -1,12 +1,14 @@
 import { motion, AnimatePresence } from 'framer-motion'
+import { useState } from 'react'
 import { 
   FiX, FiUser, FiMail, FiPhone, FiBriefcase, FiDollarSign, 
-  FiCalendar, FiTag, FiEdit2, FiTrash2, FiClock, FiActivity 
+  FiCalendar, FiTag, FiEdit2, FiTrash2, FiClock, FiActivity, FiArrowRight
 } from 'react-icons/fi'
 import { format } from 'date-fns'
 import { useQuery } from '@tanstack/react-query'
 import { getLeadActivities } from '../../services/crmService'
 import LeadAIAssistant from '../ai/LeadAIAssistant'
+import LeadConversionDrawer from './LeadConversionDrawer'
 
 const priorityColors = {
   LOW: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
@@ -24,7 +26,8 @@ const statusColors = {
   LOST: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
 }
 
-const LeadDetailsDrawer = ({ isOpen, onClose, lead, onEdit, onDelete }) => {
+const LeadDetailsDrawer = ({ isOpen, onClose, lead, onEdit, onDelete, workspaceId, onLeadConverted }) => {
+  const [showConversionDrawer, setShowConversionDrawer] = useState(false)
   const { data: activitiesData } = useQuery({
     queryKey: ['leadActivities', lead?.id],
     queryFn: () => getLeadActivities(lead.id),
@@ -112,6 +115,39 @@ const LeadDetailsDrawer = ({ isOpen, onClose, lead, onEdit, onDelete }) => {
                   <FiTrash2 size={16} />
                   Delete
                 </button>
+                
+                {/* Convert to Project Button (only for WON leads) */}
+                {lead.status === 'WON' && !lead.converted && (
+                  <button
+                    onClick={() => setShowConversionDrawer(true)}
+                    className="btn-secondary bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 flex items-center gap-2 ml-auto"
+                  >
+                    <FiBriefcase size={16} />
+                    Convert
+                    <FiArrowRight size={14} />
+                  </button>
+                )}
+                
+                {/* Already Converted Badge */}
+                {lead.converted && (
+                  <div className="ml-auto flex items-center gap-2">
+                    <div className="px-3 py-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-lg flex items-center gap-2 text-sm">
+                      <div className="w-2 h-2 bg-green-600 rounded-full" />
+                      Converted to Project
+                    </div>
+                    {lead.convertedProjectId && (
+                      <button
+                        onClick={() => {
+                          window.location.href = `/projects/${lead.convertedProjectId}/kanban`
+                        }}
+                        className="px-3 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg flex items-center gap-2 text-sm transition-colors"
+                      >
+                        Open Project
+                        <FiArrowRight size={14} />
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -312,6 +348,20 @@ const LeadDetailsDrawer = ({ isOpen, onClose, lead, onEdit, onDelete }) => {
           </motion.div>
         </>
       )}
+
+      {/* Lead Conversion Drawer */}
+      <LeadConversionDrawer
+        isOpen={showConversionDrawer}
+        onClose={() => setShowConversionDrawer(false)}
+        lead={lead}
+        workspaceId={workspaceId}
+        onConversionSuccess={(response) => {
+          onClose()
+          if (onLeadConverted) {
+            onLeadConverted(response)
+          }
+        }}
+      />
     </AnimatePresence>
   )
 }

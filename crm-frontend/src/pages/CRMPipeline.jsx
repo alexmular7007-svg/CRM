@@ -475,6 +475,24 @@ const CRMPipeline = () => {
         lead={selectedLead}
         onEdit={handleEditLead}
         onDelete={handleDeleteLead}
+        workspaceId={currentWorkspace?.id}
+        onLeadConverted={(response) => {
+          // Update local lead state to mark as converted
+          if (selectedLead) {
+            const updatedLead = {
+              ...selectedLead,
+              converted: true,
+              convertedAt: new Date().toISOString(),
+              convertedProjectId: response.projectId,
+              convertedClientId: response.clientId,
+            }
+            dispatch(setSelectedLead(updatedLead))
+          }
+          // Refresh leads list and navigate to new project
+          queryClient.invalidateQueries({ queryKey: ['leads'] })
+          // Optional: navigate to new project
+          // navigate(`/project/${response.projectId}`)
+        }}
       />
     </div>
   )

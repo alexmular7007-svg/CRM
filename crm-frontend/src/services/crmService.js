@@ -53,3 +53,9 @@ export const getLeadAnalytics = async (workspaceId) => {
   const response = await api.get(`/leads/workspace/${workspaceId}/analytics`)
   return unwrap(response)
 }
+
+// Feature #1: Lead → Client → Project Conversion
+export const convertLeadToProject = async (leadId, conversionRequest) => {
+  const response = await api.post(`/leads/${leadId}/convert-to-project`, conversionRequest)
+  return unwrap(response)
+}

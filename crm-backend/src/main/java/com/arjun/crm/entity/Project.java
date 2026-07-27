@@ -57,6 +57,22 @@ public class Project {
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<Task> tasks = new ArrayList<>();
+    
+    /**
+     * FEATURE #1: Source Lead for project created from lead conversion
+     * Null for projects created normally
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "source_lead_id")
+    private Lead sourceLead;
+    
+    /**
+     * Client associated with this project (from lead conversion)
+     * Null for projects created normally
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "client_id")
+    private Client client;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)

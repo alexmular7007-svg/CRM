@@ -10,6 +10,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
+
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
@@ -65,21 +68,12 @@ public interface LeadRepository extends JpaRepository<Lead, Long> {
     @Query("DELETE FROM Lead l WHERE l.workspace.id = :workspaceId")
     int deleteByWorkspaceId(@Param("workspaceId") Long workspaceId);
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // PHASE 6: CRM Lead Service Workspace Scoping Methods
-    // ═══════════════════════════════════════════════════════════════════════════
-
     /**
-     * Find assignable leads for user in workspace (active members only)
+     * FEATURE #1: Load lead with pessimistic write lock for conversion
+     * Prevents concurrent conversion attempts on the same lead
+     * Lock is held until transaction commits
      */
-    @Query("SELECT l FROM Lead l WHERE l.workspace.id = :workspaceId AND l.assignedTo.id = :assigneeId ORDER BY l.createdAt DESC")
-    Page<Lead> findByWorkspaceIdAndAssigneeId(@Param("workspaceId") Long workspaceId, 
-                                               @Param("assigneeId") Long assigneeId, 
-                                               Pageable pageable);
-
-    /**
-     * Get assignable CRM members (active workspace members only)
-     */
-    @Query("SELECT DISTINCT wm.user FROM WorkspaceMember wm WHERE wm.workspace.id = :workspaceId AND wm.deletedAt IS NULL AND wm.status = 'ACTIVE' ORDER BY wm.user.fullName")
-    List<User> findAssignableCRMMembersInWorkspace(@Param("workspaceId") Long workspaceId);
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT l FROM Lead l WHERE l.id = :id")
+    Optional<Lead> findByIdForConversion(@Param("id") Long id);
 }

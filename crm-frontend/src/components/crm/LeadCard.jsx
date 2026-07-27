@@ -3,7 +3,7 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { 
   FiUser, FiMail, FiPhone, FiBriefcase, FiDollarSign, 
-  FiClock, FiEdit2, FiTrash2, FiMoreVertical, FiTag 
+  FiClock, FiEdit2, FiTrash2, FiMoreVertical, FiTag, FiCheckCircle 
 } from 'react-icons/fi'
 import { format } from 'date-fns'
 import { useState, useRef, useEffect } from 'react'
@@ -87,6 +87,14 @@ const LeadCard = ({ lead, onEdit, onDelete, onView, isDragging }) => {
             </div>
           )}
         </div>
+        
+        {/* Converted Badge */}
+        {lead.converted && (
+          <div className="ml-2 flex-shrink-0 flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 rounded">
+            <FiCheckCircle className="text-green-600 dark:text-green-400" size={14} />
+            <span className="text-xs font-medium text-green-700 dark:text-green-400">Converted</span>
+          </div>
+        )}
         
         <div className="relative ml-2" ref={menuRef}>
           <button

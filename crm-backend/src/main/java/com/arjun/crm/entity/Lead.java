@@ -82,4 +82,34 @@ public class Lead {
     @UpdateTimestamp
     @Column(nullable = false)
     private LocalDateTime updatedAt;
+    
+    /**
+     * FEATURE #1: Lead Conversion Tracking
+     * Indicates whether this lead has been converted to a project
+     */
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean converted = false;
+    
+    /**
+     * Timestamp when lead was converted to project
+     */
+    @Column(name = "converted_at")
+    private LocalDateTime convertedAt;
+    
+    /**
+     * Project created from this lead conversion
+     * Nullable for leads that have not been converted
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "converted_project_id")
+    private Project convertedProject;
+    
+    /**
+     * Client linked to this conversion
+     * Nullable for leads that have not been converted
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "converted_client_id")
+    private Client convertedClient;
 }

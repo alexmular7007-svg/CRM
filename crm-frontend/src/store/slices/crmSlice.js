@@ -55,6 +55,17 @@ const crmSlice = createSlice({
         lead.status = newStatus
       }
     },
+    // Feature #1: Mark lead as converted
+    markLeadAsConverted: (state, action) => {
+      const { leadId, convertedProjectId, convertedClientId, convertedAt } = action.payload
+      const lead = state.leads.find(l => l.id === leadId)
+      if (lead) {
+        lead.converted = true
+        lead.convertedAt = convertedAt
+        lead.convertedProjectId = convertedProjectId
+        lead.convertedClientId = convertedClientId
+      }
+    },
   },
 })
 
@@ -69,6 +80,7 @@ export const {
   setAnalytics,
   setViewMode,
   optimisticUpdateLeadStatus,
+  markLeadAsConverted,
 } = crmSlice.actions
 
 export default crmSlice.reducer
