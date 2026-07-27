@@ -86,15 +86,17 @@ public class Lead {
     /**
      * FEATURE #1: Lead Conversion Tracking
      * Indicates whether this lead has been converted to a project
+     * Nullable for backward compatibility with existing database
      */
-    @Column(nullable = false)
+    @Column(nullable = true)
     @Builder.Default
     private Boolean converted = false;
     
     /**
      * Timestamp when lead was converted to project
+     * Nullable for non-converted leads
      */
-    @Column(name = "converted_at")
+    @Column(name = "converted_at", nullable = true)
     private LocalDateTime convertedAt;
     
     /**
@@ -102,7 +104,7 @@ public class Lead {
      * Nullable for leads that have not been converted
      */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "converted_project_id")
+    @JoinColumn(name = "converted_project_id", nullable = true)
     private Project convertedProject;
     
     /**
@@ -110,6 +112,6 @@ public class Lead {
      * Nullable for leads that have not been converted
      */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "converted_client_id")
+    @JoinColumn(name = "converted_client_id", nullable = true)
     private Client convertedClient;
 }

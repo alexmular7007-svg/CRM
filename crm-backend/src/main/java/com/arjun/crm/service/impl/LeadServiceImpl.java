@@ -410,6 +410,11 @@ public class LeadServiceImpl implements LeadService {
                 .createdBy(mapToUserSummary(lead.getCreatedBy()))
                 .createdAt(lead.getCreatedAt())
                 .updatedAt(lead.getUpdatedAt())
+                // Feature #1: Lead Conversion Fields (with null safety)
+                .converted(lead.getConverted() != null ? lead.getConverted() : false)
+                .convertedAt(lead.getConvertedAt())
+                .convertedProjectId(lead.getConvertedProject() != null ? lead.getConvertedProject().getId() : null)
+                .convertedClientId(lead.getConvertedClient() != null ? lead.getConvertedClient().getId() : null)
                 .build();
     }
     
