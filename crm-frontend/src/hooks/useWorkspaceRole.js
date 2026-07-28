@@ -48,5 +48,8 @@ export function useWorkspaceRole(workspaceId = null) {
     canManageTasks: role === 'OWNER' || role === 'ADMIN',
     canManageCRM: role === 'OWNER' || role === 'ADMIN',
     canCreateInvitations: role === 'OWNER' || role === 'ADMIN',
+    canManageLeadMagnets: role === 'OWNER' || role === 'ADMIN',
+    canCreateLeadMagnets: role === 'OWNER' || role === 'ADMIN',
+    canViewLeadMagnets: true,  // All members can view
   }
 }

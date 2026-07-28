@@ -1,9 +1,10 @@
 import { useDispatch, useSelector } from 'react-redux'
 import { NavLink } from 'react-router-dom'
 import { closeSidebar } from '../store/slices/sidebarSlice'
+import { useState } from 'react'
 import {
   LayoutDashboard, FolderOpen, CheckSquare, Users,
-  MessageSquare, BarChart3, Zap, Settings,
+  MessageSquare, BarChart3, Zap, Settings, Megaphone, ChevronDown
 } from 'lucide-react'
 
 const NAV = [
@@ -13,12 +14,24 @@ const NAV = [
   { path: '/chat',       icon: MessageSquare,    label: 'Chat'       },
   { path: '/analytics',  icon: BarChart3,        label: 'Analytics'  },
   { path: '/ai-insights',icon: Zap,              label: 'AI Insights'},
+  {
+    label: 'Marketing',
+    icon: Megaphone,
+    children: [
+      { path: '/marketing/lead-magnets', label: 'Lead Magnets' },
+    ]
+  },
   { path: '/settings',   icon: Settings,         label: 'Settings'   },
 ]
 
 const Sidebar = () => {
   const dispatch = useDispatch()
   const { isOpen } = useSelector((state) => state.sidebar)
+  const [expandedMenu, setExpandedMenu] = useState(null)
+
+  const toggleMenu = (label) => {
+    setExpandedMenu(expandedMenu === label ? null : label)
+  }
 
   return (
     <>
@@ -52,23 +65,74 @@ const Sidebar = () => {
 
         {/* Nav */}
         <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
-          {NAV.map(({ path, icon: Icon, label }) => (
-            <NavLink
-              key={path}
-              to={path}
-              onClick={() => dispatch(closeSidebar())}
-              className={({ isActive }) =>
-                `flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-colors duration-100 ${
-                  isActive
-                    ? 'bg-gray-100 dark:bg-[#21262D] text-gray-900 dark:text-[#E6EDF3]'
-                    : 'text-gray-600 dark:text-[#8B949E] hover:text-gray-900 dark:hover:text-[#E6EDF3] hover:bg-gray-100 dark:hover:bg-[#21262D]'
-                }`
-              }
-            >
-              <Icon size={15} className="flex-shrink-0" />
-              {label}
-            </NavLink>
-          ))}
+          {NAV.map((item) => {
+            // Parent menu with children
+            if (item.children) {
+              const Icon = item.icon
+              const isExpanded = expandedMenu === item.label
+              return (
+                <div key={item.label}>
+                  <button
+                    onClick={() => toggleMenu(item.label)}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-colors duration-100 ${
+                      expandedMenu === item.label
+                        ? 'bg-gray-100 dark:bg-[#21262D] text-gray-900 dark:text-[#E6EDF3]'
+                        : 'text-gray-600 dark:text-[#8B949E] hover:text-gray-900 dark:hover:text-[#E6EDF3] hover:bg-gray-100 dark:hover:bg-[#21262D]'
+                    }`}
+                  >
+                    <Icon size={15} className="flex-shrink-0" />
+                    {item.label}
+                    <ChevronDown 
+                      size={14} 
+                      className={`ml-auto flex-shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+                  
+                  {/* Children */}
+                  {isExpanded && (
+                    <div className="pl-4 space-y-0.5 mt-1">
+                      {item.children.map((child) => (
+                        <NavLink
+                          key={child.path}
+                          to={child.path}
+                          onClick={() => dispatch(closeSidebar())}
+                          className={({ isActive }) =>
+                            `flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-colors duration-100 ${
+                              isActive
+                                ? 'bg-gray-100 dark:bg-[#21262D] text-gray-900 dark:text-[#E6EDF3]'
+                                : 'text-gray-600 dark:text-[#8B949E] hover:text-gray-900 dark:hover:text-[#E6EDF3] hover:bg-gray-100 dark:hover:bg-[#21262D]'
+                            }`
+                          }
+                        >
+                          {child.label}
+                        </NavLink>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            }
+
+            // Regular single item
+            const { path, icon: Icon, label } = item
+            return (
+              <NavLink
+                key={path}
+                to={path}
+                onClick={() => dispatch(closeSidebar())}
+                className={({ isActive }) =>
+                  `flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-colors duration-100 ${
+                    isActive
+                      ? 'bg-gray-100 dark:bg-[#21262D] text-gray-900 dark:text-[#E6EDF3]'
+                      : 'text-gray-600 dark:text-[#8B949E] hover:text-gray-900 dark:hover:text-[#E6EDF3] hover:bg-gray-100 dark:hover:bg-[#21262D]'
+                  }`
+                }
+              >
+                <Icon size={15} className="flex-shrink-0" />
+                {label}
+              </NavLink>
+            )
+          })}
         </nav>
       </aside>
     </>

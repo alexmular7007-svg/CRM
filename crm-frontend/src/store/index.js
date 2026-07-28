@@ -11,6 +11,7 @@ import analyticsReducer from './slices/analyticsSlice'
 import aiReducer from './slices/aiSlice'
 import copilotReducer from './slices/copilotSlice'
 import sidebarReducer from './slices/sidebarSlice'
+import leadMagnetReducer from './slices/leadMagnetSlice'
 
 export const store = configureStore({
   reducer: {
@@ -26,6 +27,7 @@ export const store = configureStore({
     ai: aiReducer,
     copilot: copilotReducer,
     sidebar: sidebarReducer,
+    leadMagnet: leadMagnetReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
