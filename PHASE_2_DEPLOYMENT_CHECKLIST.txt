@@ -1,0 +1,532 @@
+================================================================================
+PHASE 2: LEAD MAGNET FRONTEND - DEPLOYMENT CHECKLIST
+================================================================================
+
+This document serves as a quality assurance checklist before deploying Phase 2.
+
+================================================================================
+PRE-DEPLOYMENT CHECKS (Technical)
+================================================================================
+
+Build & Compilation:
+  ☐ npm run build (should complete with 0 errors)
+  ☐ No TypeScript errors
+  ☐ No ESLint warnings
+  ☐ All imports resolve correctly
+  ☐ No console errors during build
+
+Dependencies:
+  ☐ All required packages are installed
+  ☐ No version conflicts
+  ☐ date-fns is available (for date formatting)
+  ☐ zod is available (for validation)
+  ☐ react-query is available (for data fetching)
+  ☐ redux/react-redux is available
+  ☐ lucide-react is available (for icons)
+  ☐ react-hot-toast is available (for notifications)
+
+File Structure:
+  ☐ All 3 pages created in src/pages/
+  ☐ All 7 components created in src/components/leadmagnet/
+  ☐ Service file created in src/services/
+  ☐ Schema file created in src/schemas/
+  ☐ Redux slice created in src/store/slices/
+  ☐ App.jsx updated with routes
+  ☐ Sidebar.jsx updated with navigation
+  ☐ store/index.js updated with reducer
+  ☐ useWorkspaceRole.js updated with permissions
+
+================================================================================
+FEATURE CHECKLIST - LIST PAGE
+================================================================================
+
+Navigation & Access:
+  ☐ Can navigate to /marketing/lead-magnets from sidebar
+  ☐ Marketing section appears in sidebar as collapsible parent
+  ☐ Lead Magnets appears as child under Marketing
+  ☐ Page requires authentication (protected route)
+  ☐ MEMBER can view list (read-only)
+  ☐ OWNER/ADMIN can view list (can create/edit/delete)
+
+Table Display:
+  ☐ Table displays with all 11 columns
+  ☐ Column headers visible: Name, Status, Views, Unique Views, Submissions, Conversion %, Created By, Created Date, Updated Date, Public URL, Actions
+  ☐ Data loads from API
+  ☐ Status badge shows (Active/Inactive with colors)
+  ☐ Conversion % calculated correctly (submissions/views*100)
+  ☐ Dates formatted correctly (MMM dd, yyyy)
+  ☐ Actions dropdown appears in last column
+
+Search:
+  ☐ Search field at top of page
+  ☐ Search filters campaigns by name in real-time
+  ☐ Search is case-insensitive
+  ☐ Clear search shows all campaigns again
+  ☐ Search resets page to 1
+
+Filter:
+  ☐ Status filter button visible
+  ☐ Filter shows "All" or "Active" button
+  ☐ Clicking filters campaigns by status
+  ☐ Filter is highlighted when active
+  ☐ Filter resets page to 1
+
+Sorting:
+  ☐ Column headers show sort indicator arrow
+  ☐ Click column header to sort (active columns: Name, Created Date, Updated Date)
+  ☐ Sort direction toggles (ASC/DESC)
+  ☐ Sort indicator highlights on active column
+  ☐ Other columns don't respond to clicks
+
+Pagination:
+  ☐ Pagination shows at bottom
+  ☐ Previous button disabled on first page
+  ☐ Next button disabled on last page
+  ☐ Page counter shows (Page X of Y)
+  ☐ Clicking buttons navigates pages
+  ☐ 20 rows per page displayed
+
+Actions:
+  ☐ Dropdown menu appears on row hover/click
+  ☐ Dropdown has options: View, Edit, Copy URL, Open Public, Delete
+  ☐ Copy URL copies to clipboard (shows toast)
+  ☐ Open Public opens new window
+  ☐ Edit opens modal (OWNER/ADMIN only)
+  ☐ Delete shows confirmation (OWNER/ADMIN only)
+  ☐ Create button at top right (OWNER/ADMIN only)
+
+States:
+  ☐ Loading skeleton appears on initial load
+  ☐ Empty state shows when no campaigns exist
+  ☐ Empty state has "Create Campaign" button
+  ☐ Error state shows if API fails
+  ☐ Error state has "Try again" button
+  ☐ Retry refreshes data
+
+Responsive:
+  ☐ Mobile (320px): Single column table, stacked view
+  ☐ Tablet (768px): 2-3 columns, adjusted spacing
+  ☐ Desktop (1024px): Full 11-column table
+  ☐ Touch targets are 48px minimum
+  ☐ Scrollable table on narrow viewports
+  ☐ Buttons accessible on mobile
+
+Dark Mode:
+  ☐ Page works in dark mode
+  ☐ Text readable in dark mode
+  ☐ Badges visible in dark mode
+  ☐ Table rows have proper hover effect in dark mode
+  ☐ Icons visible in dark mode
+
+================================================================================
+FEATURE CHECKLIST - MODAL & FORM
+================================================================================
+
+Modal Opening:
+  ☐ Create button opens modal (empty form)
+  ☐ Edit action opens modal (pre-filled form)
+  ☐ Modal has title: "Create Campaign" or "Edit Campaign"
+  ☐ Modal has close button (X)
+  ☐ Modal closes on cancel
+  ☐ Modal closes on successful submit
+
+Campaign Name Field:
+  ☐ Input accepts text
+  ☐ Field shows character counter (current/255)
+  ☐ Field is required
+  ☐ 255 character limit enforced
+  ☐ Validation error shows if empty
+
+Slug Field:
+  ☐ Slug field auto-generates from name on first input
+  ☐ Generated slug is lowercase
+  ☐ Generated slug uses hyphens (not underscores)
+  ☐ Example: "Free CRM Guide" → "free-crm-guide"
+  ☐ Manual edit stops auto-generation
+  ☐ Validation shows in real-time (debounced 500ms)
+  ☐ Valid slug shows ✓ (green checkmark)
+  ☐ Invalid/duplicate slug shows ✗ (red X)
+  ☐ Error message shows: "Already in use" or validation error
+  ☐ 100 character limit enforced
+  ☐ Format validation: lowercase letters, numbers, hyphens only
+
+Description Field:
+  ☐ Text area accepts text
+  ☐ Field shows character counter (current/1000)
+  ☐ Field is optional
+  ☐ 1000 character limit enforced
+  ☐ Multiple lines supported
+
+Status Toggle:
+  ☐ Checkbox labeled "Active"
+  ☐ Defaults to ON (active) for new campaigns
+  ☐ Pre-filled for edit campaigns
+  ☐ Toggle works properly
+
+Form Buttons:
+  ☐ Save button is full width
+  ☐ Save button says "Create" for new, "Update" for edit
+  ☐ Save button is disabled until form is valid
+  ☐ Save button shows spinner while saving
+  ☐ Save button is disabled while saving
+  ☐ Cancel button closes modal without saving
+
+Validation:
+  ☐ Submit empty form shows errors
+  ☐ Name required error shows
+  ☐ Slug required error shows
+  ☐ Slug format error shows for invalid characters
+  ☐ Slug length error shows for too short/long
+  ☐ Success toast appears after successful submit
+  ☐ Error toast appears on API failure
+  ☐ Modal closes on success
+  ☐ List page refreshes after success
+
+Responsive:
+  ☐ Modal 500px max width on desktop
+  ☐ Modal full screen on mobile
+  ☐ Form fields stack properly
+  ☐ Buttons readable on mobile
+
+Dark Mode:
+  ☐ Modal displays in dark mode
+  ☐ Form fields visible in dark mode
+  ☐ Text readable in dark mode
+  ☐ Validation icons visible in dark mode
+
+================================================================================
+FEATURE CHECKLIST - DETAILS PAGE
+================================================================================
+
+Page Load:
+  ☐ Can navigate from list page (click on campaign name or view action)
+  ☐ Page loads campaign data from API
+  ☐ Page has back button to return to list
+  ☐ Back button navigates correctly
+
+Header:
+  ☐ Campaign name displays as H1 heading
+  ☐ Campaign description displays as subtitle
+  ☐ Status badge shows (Active/Inactive)
+  ☐ Copy URL button visible
+  ☐ Open Public Page button visible
+  ☐ Edit button visible (OWNER/ADMIN only)
+  ☐ Delete button visible (OWNER/ADMIN only)
+
+Analytics Cards:
+  ☐ 4 cards display in responsive grid
+  ☐ Card 1: "Total Views" with count and eye icon (blue)
+  ☐ Card 2: "Unique Views" with count and users icon (purple)
+  ☐ Card 3: "Submissions" with count and form icon (green)
+  ☐ Card 4: "Conversion Rate" with percentage and trending icon (orange)
+  ☐ All metrics update correctly
+  ☐ Conversion rate calculates as (submissions/views)*100
+
+Campaign Information Card:
+  ☐ Shows: Status, Slug, Public Token, Created By, Created At
+  ☐ Public Token is copyable (has copy button)
+  ☐ Token copy shows toast notification
+  ☐ Timestamps display in readable format
+  ☐ Card styling matches design system
+
+Recent Submissions Table:
+  ☐ Shows last 5 submissions
+  ☐ Columns: Name, Email, Company, Submitted At
+  ☐ Empty state if no submissions
+  ☐ Timestamps formatted correctly
+  ☐ Table is scrollable on mobile
+
+Buttons & Actions:
+  ☐ Copy URL button copies public URL
+  ☐ Copy shows toast: "Copied!"
+  ☐ Open Public button opens new window
+  ☐ Edit button opens modal with prefilled data
+  ☐ Delete button shows confirmation dialog
+  ☐ Delete confirmed removes campaign
+  ☐ Page navigates to list after delete
+
+Responsive:
+  ☐ Desktop: 3-column layout (header, info card, submissions)
+  ☐ Tablet: Adjusted spacing, 2-column
+  ☐ Mobile: Full-width single column
+  ☐ Cards stack properly
+  ☐ Table scrollable on narrow viewports
+
+Dark Mode:
+  ☐ All sections display in dark mode
+  ☐ Cards visible in dark mode
+  ☐ Table readable in dark mode
+  ☐ Text contrast acceptable
+
+Error Handling:
+  ☐ 404 shows if campaign not found
+  ☐ Error state shows if API fails
+  ☐ Back button works from error state
+
+================================================================================
+FEATURE CHECKLIST - PUBLIC FORM PAGE
+================================================================================
+
+Route & Access:
+  ☐ Can navigate to /m/:publicToken/:slug
+  ☐ Page accessible WITHOUT authentication
+  ☐ Page accessible from copy URL button
+  ☐ Page accessible from open public button
+
+Page Design:
+  ☐ Professional SaaS landing page design
+  ☐ Gradient background (gray to light gray)
+  ☐ Centered layout with max-width 500px
+  ☐ Brand logo (Zap icon) at top
+  ☐ Campaign name as H1 heading
+  ☐ Campaign description as subtitle
+  ☐ Form below description
+
+Form Fields:
+  ☐ Name field (required, 2-255 chars)
+  ☐ Email field (required, valid email)
+  ☐ Phone field (optional)
+  ☐ Company field (optional)
+  ☐ Privacy notice at bottom
+  ☐ Submit button: "Get Access Now"
+
+Validation:
+  ☐ Name required validation
+  ☐ Email required validation
+  ☐ Email format validation
+  ☐ Real-time error display below fields
+  ☐ Error messages clear on input change
+  ☐ Submit button disabled if form invalid
+  ☐ Success after valid submission
+
+Success Screen:
+  ☐ Shows after successful submission
+  ☐ Success icon with glow effect
+  ☐ "Thank you!" heading
+  ☐ Confirmation message
+  ☐ Submitted email displays
+  ☐ Download button (if downloadUrl provided)
+  ☐ Close button to close window
+
+Responsive:
+  ☐ Mobile: Full width with padding
+  ☐ Tablet: 500px centered
+  ☐ Desktop: 500px centered
+  ☐ Form fields stack properly
+  ☐ Buttons accessible on mobile
+  ☐ Text readable on all sizes
+
+Dark Mode:
+  ☐ Background appropriate in dark mode
+  ☐ Form visible in dark mode
+  ☐ Text readable in dark mode
+  ☐ Buttons visible in dark mode
+
+Error Handling:
+  ☐ Invalid token shows 404
+  ☐ Inactive campaign shows message
+  ☐ API error shows with retry button
+  ☐ Network error handled gracefully
+
+Loading States:
+  ☐ Page loads campaign data
+  ☐ Submit button shows spinner while loading
+  ☐ Form disabled while submitting
+  ☐ Submit doesn't allow multiple clicks
+
+================================================================================
+PERMISSION CHECKLIST
+================================================================================
+
+OWNER Role:
+  ☐ Can view lead magnets list
+  ☐ Can create campaigns (button visible)
+  ☐ Can edit campaigns (action visible)
+  ☐ Can delete campaigns (action visible)
+  ☐ Can toggle status
+
+ADMIN Role:
+  ☐ Can view lead magnets list
+  ☐ Can create campaigns (button visible)
+  ☐ Can edit campaigns (action visible)
+  ☐ Can delete campaigns (action visible)
+  ☐ Can toggle status
+
+MEMBER Role:
+  ☐ Can view lead magnets list
+  ☐ Create button NOT visible
+  ☐ Edit action NOT visible
+  ☐ Delete action NOT visible
+  ☐ Can see all campaign details (read-only)
+  ☐ Can copy public URL
+  ☐ Can open public page
+
+NON-MEMBER Role:
+  ☐ Cannot access /marketing/lead-magnets
+  ☐ Redirected to dashboard or denied
+
+PUBLIC Access:
+  ☐ Can access /m/:publicToken/:slug
+  ☐ NO login required
+  ☐ Can submit form
+  ☐ No access to admin features
+
+================================================================================
+PERFORMANCE CHECKLIST
+================================================================================
+
+Page Load:
+  ☐ List page loads in < 2 seconds
+  ☐ Details page loads in < 2 seconds
+  ☐ Public form page loads in < 1 second (no auth)
+  ☐ Modal opens instantly
+
+API Calls:
+  ☐ List uses pagination (not all at once)
+  ☐ Search uses debounce (not on every keystroke)
+  ☐ Slug validation debounced 500ms
+  ☐ Sorting doesn't refetch unnecessarily
+
+Memory:
+  ☐ No memory leaks on component unmount
+  ☐ Event listeners cleaned up
+  ☐ No infinite loops
+
+================================================================================
+ACCESSIBILITY CHECKLIST
+================================================================================
+
+Keyboard Navigation:
+  ☐ Tab through form fields works
+  ☐ Enter submits form
+  ☐ Escape closes modal
+  ☐ Button focus visible
+  ☐ Table navigation accessible
+
+ARIA & Labels:
+  ☐ Form fields have associated labels
+  ☐ Buttons have descriptive text or aria-labels
+  ☐ Icons have aria-labels where needed
+  ☐ Headings use proper hierarchy
+
+Color & Contrast:
+  ☐ Color not used as only indicator
+  ☐ Status badges have text + color
+  ☐ Links underlined or clearly distinguished
+  ☐ Contrast ratio >= 4.5:1 for text
+  ☐ Contrast ratio >= 3:1 for UI components
+
+Touch Targets:
+  ☐ Buttons minimum 48px × 48px
+  ☐ Links minimum 48px × 48px
+  ☐ Form fields properly sized
+  ☐ Dropdown items easily clickable
+
+================================================================================
+BROWSER COMPATIBILITY CHECKLIST
+================================================================================
+
+Tested Browsers:
+  ☐ Chrome (latest)
+  ☐ Firefox (latest)
+  ☐ Safari (latest)
+  ☐ Edge (latest)
+
+Features:
+  ☐ CSS Grid/Flexbox works
+  ☐ Animations smooth
+  ☐ Form validation works
+  ☐ Local storage accessible
+  ☐ Clipboard API works (copy URL)
+
+================================================================================
+DOCUMENTATION CHECKLIST
+================================================================================
+
+Code Documentation:
+  ☐ Components have JSDoc comments
+  ☐ Functions documented
+  ☐ Complex logic explained
+  ☐ Props documented
+
+README:
+  ☐ Phase 2 documented
+  ☐ Setup instructions included
+  ☐ Feature list included
+  ☐ Known issues documented
+
+Git History:
+  ☐ Commits have descriptive messages
+  ☐ Branch naming follows convention
+  ☐ All files tracked properly
+
+================================================================================
+DEPLOYMENT STEPS
+================================================================================
+
+1. Pre-Deployment:
+   ☐ Run full test suite
+   ☐ Verify all checklist items above
+   ☐ No console errors in browser
+   ☐ No security vulnerabilities
+
+2. Build:
+   ☐ npm run build
+   ☐ Build completes successfully
+   ☐ No errors in output
+   ☐ dist/ folder created
+
+3. Deploy:
+   ☐ Deploy to staging environment first
+   ☐ Test on staging
+   ☐ Deploy to production
+   ☐ Verify live deployment
+
+4. Post-Deployment:
+   ☐ Monitor error logs
+   ☐ Check user feedback
+   ☐ Monitor performance metrics
+   ☐ Be ready for hotfixes
+
+================================================================================
+ROLLBACK PLAN
+================================================================================
+
+If critical issues are found:
+
+1. Immediately switch back to main branch
+2. Revert Phase 2 commit if needed
+3. Investigate issue
+4. Create hotfix branch
+5. Apply fix
+6. Re-test
+7. Re-deploy
+
+Critical Issues:
+- Authentication broken
+- API calls failing
+- Data corruption
+- Performance degradation
+- Security vulnerability
+
+Non-Critical:
+- UI glitches
+- Minor layout issues
+- Spelling errors
+(Can be fixed in patch release)
+
+================================================================================
+SIGN-OFF
+================================================================================
+
+This checklist must be completed before merging to main branch.
+
+Frontend Developer: _________________________ Date: _______
+QA Tester: _________________________ Date: _______
+Project Lead: _________________________ Date: _______
+
+Notes:
+_________________________________________________________________________
+_________________________________________________________________________
+
+================================================================================
