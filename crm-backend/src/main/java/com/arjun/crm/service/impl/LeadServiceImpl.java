@@ -23,6 +23,7 @@ import com.arjun.crm.repository.UserRepository;
 import com.arjun.crm.repository.WorkspaceMemberRepository;
 import com.arjun.crm.repository.WorkspaceRepository;
 import com.arjun.crm.service.LeadService;
+import com.arjun.crm.util.EmailNormalizer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -65,8 +66,11 @@ public class LeadServiceImpl implements LeadService {
         // Check workspace access
         validateWorkspaceAccess(userId, workspace.getId());
         
-        // Check duplicate email
-        if (leadRepository.existsByEmailAndWorkspaceId(request.getEmail(), workspace.getId())) {
+        // PHASE #2: Normalize email before duplicate check
+        String normalizedEmail = EmailNormalizer.normalize(request.getEmail());
+        
+        // Check duplicate email in workspace
+        if (leadRepository.existsByEmailAndWorkspaceId(normalizedEmail, workspace.getId())) {
             throw new DuplicateEmailException("Lead with this email already exists in workspace");
         }
         
@@ -79,7 +83,7 @@ public class LeadServiceImpl implements LeadService {
         
         Lead lead = Lead.builder()
                 .name(request.getName())
-                .email(request.getEmail())
+                .email(normalizedEmail)
                 .phone(request.getPhone())
                 .company(request.getCompany())
                 .position(request.getPosition())
@@ -130,11 +134,13 @@ public class LeadServiceImpl implements LeadService {
         }
         
         if (request.getEmail() != null && !request.getEmail().equals(lead.getEmail())) {
-            if (leadRepository.existsByEmailAndWorkspaceId(request.getEmail(), lead.getWorkspace().getId())) {
+            // PHASE #2: Normalize email before duplicate check
+            String normalizedEmail = EmailNormalizer.normalize(request.getEmail());
+            if (leadRepository.existsByEmailAndWorkspaceId(normalizedEmail, lead.getWorkspace().getId())) {
                 throw new DuplicateEmailException("Lead with this email already exists in workspace");
             }
-            createActivity(lead, user, "UPDATED", "Email changed", lead.getEmail(), request.getEmail());
-            lead.setEmail(request.getEmail());
+            createActivity(lead, user, "UPDATED", "Email changed", lead.getEmail(), normalizedEmail);
+            lead.setEmail(normalizedEmail);
         }
         
         if (request.getPhone() != null) {

@@ -1,0 +1,101 @@
+package com.arjun.crm.service;
+
+import com.arjun.crm.dto.request.LeadMagnetCreateRequest;
+import com.arjun.crm.dto.request.LeadMagnetUpdateRequest;
+import com.arjun.crm.dto.response.LeadMagnetResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
+/**
+ * LeadMagnetService - FEATURE #2 PHASE 1B
+ * 
+ * Service interface for authenticated lead magnet campaign management
+ * 
+ * Responsibilities:
+ * - Campaign CRUD operations (create, read, update)
+ * - Slug generation and collision resolution
+ * - Workspace isolation (cannot access campaigns from other workspaces)
+ * - Permission validation (owner/admin only)
+ * - Public token generation
+ * 
+ * Not included in Phase 1B:
+ * - Public submission handling
+ * - View tracking
+ * - Analytics
+ * - Rate limiting
+ * - Feature #1 lead conversion
+ */
+public interface LeadMagnetService {
+    
+    /**
+     * Create a new lead magnet campaign
+     * 
+     * Permission: OWNER or ADMIN only
+     * Authenticated user determined via WorkspaceAuthorizationService
+     * 
+     * @param workspaceId the workspace ID
+     * @param request creation request
+     * @return created campaign response
+     * @throws com.arjun.crm.exception.AccessDeniedException if insufficient permission
+     * @throws com.arjun.crm.exception.ResourceNotFoundException if workspace not found
+     */
+    LeadMagnetResponse createMagnet(Long workspaceId, LeadMagnetCreateRequest request);
+    
+    /**
+     * List all campaigns in a workspace (paginated)
+     * 
+     * Permission: Any workspace member
+     * Authenticated user determined via WorkspaceAuthorizationService
+     * 
+     * @param workspaceId the workspace ID
+     * @param pageable pagination settings
+     * @return page of campaigns
+     * @throws com.arjun.crm.exception.AccessDeniedException if not workspace member
+     */
+    Page<LeadMagnetResponse> listMagnets(Long workspaceId, Pageable pageable);
+    
+    /**
+     * Get a specific campaign by ID
+     * 
+     * Permission: Any workspace member
+     * Authenticated user determined via WorkspaceAuthorizationService
+     * 
+     * @param workspaceId the workspace ID
+     * @param magnetId the magnet ID
+     * @return campaign response
+     * @throws com.arjun.crm.exception.AccessDeniedException if not workspace member
+     * @throws com.arjun.crm.exception.ResourceNotFoundException if campaign not found
+     */
+    LeadMagnetResponse getMagnet(Long workspaceId, Long magnetId);
+    
+    /**
+     * Update a campaign (name, description, slug)
+     * 
+     * Permission: OWNER or ADMIN only
+     * Authenticated user determined via WorkspaceAuthorizationService
+     * 
+     * @param workspaceId the workspace ID
+     * @param magnetId the magnet ID
+     * @param request update request
+     * @return updated campaign response
+     * @throws com.arjun.crm.exception.AccessDeniedException if insufficient permission
+     * @throws com.arjun.crm.exception.ResourceNotFoundException if campaign not found
+     * @throws com.arjun.crm.exception.DuplicateResourceException if slug collision (409)
+     */
+    LeadMagnetResponse updateMagnet(Long workspaceId, Long magnetId, LeadMagnetUpdateRequest request);
+    
+    /**
+     * Toggle campaign status (activate/deactivate)
+     * 
+     * Permission: OWNER or ADMIN only
+     * Authenticated user determined via WorkspaceAuthorizationService
+     * 
+     * @param workspaceId the workspace ID
+     * @param magnetId the magnet ID
+     * @param isActive new status
+     * @return updated campaign response
+     * @throws com.arjun.crm.exception.AccessDeniedException if insufficient permission
+     * @throws com.arjun.crm.exception.ResourceNotFoundException if campaign not found
+     */
+    LeadMagnetResponse updateStatus(Long workspaceId, Long magnetId, boolean isActive);
+}
