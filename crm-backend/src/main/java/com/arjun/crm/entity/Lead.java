@@ -31,7 +31,15 @@ public class Lead {
     @Column(nullable = false)
     private String name;
     
-    @Column(nullable = false, unique = true)
+    /**
+     * Email address (normalized: lowercase + trim)
+     * PHASE #2 FEATURE: Changed from globally unique to unique per workspace
+     * Uniqueness constraint: UNIQUE(workspace_id, email) at database level
+     * This allows same email across different workspaces
+     * 
+     * Migration: V12 will drop global unique constraint and add composite constraint
+     */
+    @Column(nullable = false)
     private String email;
     
     private String phone;
@@ -82,6 +90,19 @@ public class Lead {
     @UpdateTimestamp
     @Column(nullable = false)
     private LocalDateTime updatedAt;
+    
+    /**
+     * FEATURE #2: Lead Source Magnet
+     * The lead magnet from which this lead originated (if any)
+     * Nullable: lead may be created manually in CRM without a magnet
+     * 
+     * Cascade semantics: SET NULL
+     * If magnet is deleted, lead remains but loses magnet reference
+     * Lead can be independently tracked/managed after magnet deletion
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "source_magnet_id", nullable = true)
+    private LeadMagnet sourceMagnet;
     
     /**
      * FEATURE #1: Lead Conversion Tracking

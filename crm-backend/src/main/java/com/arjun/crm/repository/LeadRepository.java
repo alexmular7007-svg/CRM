@@ -43,7 +43,24 @@ public interface LeadRepository extends JpaRepository<Lead, Long> {
     
     Optional<Lead> findByIdAndWorkspaceId(Long id, Long workspaceId);
     
+    /**
+     * PHASE #2: Check if email exists in workspace (normalized lookup)
+     * Email is normalized (lowercase + trimmed) before storage
+     * This method performs case-insensitive lookup within a workspace
+     */
     boolean existsByEmailAndWorkspaceId(String email, Long workspaceId);
+    
+    /**
+     * PHASE #2: Find a lead by normalized email and workspace
+     * Returns the lead if found (for duplicate/merge detection)
+     * Email is normalized (lowercase + trimmed) before comparison
+     * 
+     * @param email the normalized email
+     * @param workspaceId the workspace ID
+     * @return the lead if found, empty if not found
+     */
+    @Query("SELECT l FROM Lead l WHERE LOWER(TRIM(l.email)) = :email AND l.workspace.id = :workspaceId")
+    Optional<Lead> findByNormalizedEmailAndWorkspaceId(@Param("email") String email, @Param("workspaceId") Long workspaceId);
     
     long countByWorkspaceIdAndStatus(Long workspaceId, LeadStatus status);
     
