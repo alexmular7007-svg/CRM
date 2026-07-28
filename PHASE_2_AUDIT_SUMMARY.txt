@@ -117,13 +117,17 @@ Optional (use modal instead):
 ================================================================================
 
 In App.jsx (protected routes):
-  <Route path="/lead-magnets" element={<LeadMagnets />} />
-  <Route path="/lead-magnets/:id" element={<LeadMagnetDetails />} />
+  <Route path="/marketing/lead-magnets" element={<LeadMagnets />} />
+  <Route path="/marketing/lead-magnets/:id" element={<LeadMagnetDetails />} />
 
 In App.jsx (public routes - outside ProtectedRoute):
-  <Route path="/forms/:publicToken" element={<PublicFormPage />} />
+  <Route path="/m/:publicToken/:slug" element={<PublicFormPage />} />
+  Example: /m/AbC123xyz/free-crm-guide
 
 NO BREAKING CHANGES to existing routes.
+
+NOTE: Public route uses /m/:publicToken/:slug structure matching backend design.
+This allows future expansion for other public resources.
 
 ================================================================================
 6. WHICH FILES REQUIRE MODIFICATION?
@@ -131,16 +135,23 @@ NO BREAKING CHANGES to existing routes.
 
 MUST MODIFY:
 1. src/App.jsx
-   - Add 3 new routes
+   - Add 3 new routes (under /marketing namespace)
    - Import new page components
+   - Add public route: /m/:publicToken/:slug
 
 2. src/layouts/Sidebar.jsx
-   - Add "Lead Magnets" nav item
-   - Import Sparkles icon (or similar)
+   - Add "Marketing" parent section
+   - Add "Lead Magnets" as child under Marketing
+   - Structure for future modules:
+     * Email Campaigns
+     * Landing Pages
+     * AI Outreach
+     * Automation
 
 3. src/hooks/useWorkspaceRole.js
    - Add: canManageLeadMagnets (OWNER|ADMIN only)
    - Add: canViewLeadMagnets (all members)
+   - Add: canCreateLeadMagnets (OWNER|ADMIN only)
 
 MIGHT MODIFY (optional):
 - src/store/slices/workspaceSlice.js (if need workspace context)
