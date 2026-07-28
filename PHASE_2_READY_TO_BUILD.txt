@@ -1,0 +1,376 @@
+================================================================================
+PHASE 2: LEAD MAGNET FRONTEND - READY TO BUILD
+================================================================================
+
+Status: APPROVED + PUSHED TO GITHUB
+Date: July 28, 2026
+Branch: phase-1b-lead-magnet-admin
+
+================================================================================
+QUICK REFERENCE - ARCHITECTURE APPROVED
+================================================================================
+
+✓ PUBLIC ROUTE: /m/:publicToken/:slug (not /forms/:publicToken)
+✓ SIDEBAR: Marketing section (not flat) with Lead Magnets child
+✓ LIST PAGE: 10 columns with search/filter/sort/pagination
+✓ DETAILS PAGE: Dashboard with analytics, leads, submissions
+✓ CREATE/EDIT: Modal with auto-slug generation + real-time validation
+✓ PUBLIC FORM: Professional SaaS landing page (not plain form)
+✓ UX: Loading states, empty states, error states, dark mode, responsive
+✓ CODE: Zero new dependencies, reuse existing patterns
+✓ QUALITY: Enterprise SaaS level, accessible, keyboard navigable
+
+================================================================================
+FILES READY FOR REFERENCE
+================================================================================
+
+1. PHASE_2_FINAL_SPECIFICATIONS.txt
+   - Complete detailed specifications
+   - All pages, components, features defined
+   - Form validation rules
+   - UX requirements
+   - Implementation checklist
+   - START HERE for development
+
+2. PHASE_2_FRONTEND_ARCHITECTURE_AUDIT.md
+   - Reusable components identified
+   - Patterns to follow
+   - Best practices from existing code
+   - Reference: CRM Pipeline, Projects
+
+3. PHASE_2_AUDIT_SUMMARY.txt
+   - Quick overview
+   - 15 files to create
+   - 3 files to modify
+   - Dependencies: ZERO new
+
+================================================================================
+SERVICES TO CREATE
+================================================================================
+
+File: src/services/leadMagnetService.js
+
+Functions needed:
+  - createLeadMagnet(workspaceId, data)
+  - listLeadMagnets(workspaceId, params)
+  - getLeadMagnet(workspaceId, magnetId)
+  - updateLeadMagnet(workspaceId, magnetId, data)
+  - toggleStatus(workspaceId, magnetId, active)
+  - deleteLeadMagnet(workspaceId, magnetId)
+  - validateSlug(workspaceId, slug, magnetId?)
+  - getPublicForm(publicToken)
+  - submitPublicForm(publicToken, data)
+
+Pattern: Copy from crmService.js (unwrap function included)
+
+================================================================================
+VALIDATION SCHEMAS TO CREATE
+================================================================================
+
+File: src/schemas/leadMagnetSchemas.js
+
+Schemas needed:
+  - createLeadMagnetSchema (Zod)
+  - updateLeadMagnetSchema (Zod)
+  - publicFormSchema (Zod)
+
+Pattern: Copy from crmSchemas.js (same Zod structure)
+
+================================================================================
+REDUX STORE TO CREATE
+================================================================================
+
+File: src/store/slices/leadMagnetSlice.js
+
+Actions needed:
+  - setMagnets(magnets)
+  - setSelectedMagnet(magnet)
+  - setFilters(filters)
+  - clearFilters()
+  - setViewMode(mode)
+  - setPage(page)
+  - setSearchQuery(query)
+  - setLoading(loading)
+
+Pattern: Copy from crmSlice.js and pipelineSlice.js
+
+================================================================================
+PAGES TO CREATE
+================================================================================
+
+3 Pages:
+
+1. LeadMagnets.jsx (/marketing/lead-magnets)
+   - List page with table
+   - Search, filter, sort, pagination
+   - Loading skeleton, empty state, error state
+   - Create button → modal
+
+2. LeadMagnetDetails.jsx (/marketing/lead-magnets/:id)
+   - Dashboard layout
+   - 4 analytics cards
+   - 2 data tables (leads + submissions)
+   - Quick actions
+
+3. PublicFormPage.jsx (/m/:publicToken/:slug)
+   - Public form (NO AUTH)
+   - Hero section
+   - Form component
+   - Success screen
+
+================================================================================
+COMPONENTS TO CREATE
+================================================================================
+
+7+ Components:
+
+1. LeadMagnetModal.jsx
+   - Create/Edit modal (reusable)
+   - Wraps LeadMagnetForm
+
+2. LeadMagnetForm.jsx
+   - Shared form component
+   - Name, Slug, Description, Status
+   - Auto-slug generation logic
+   - Slug validation logic
+
+3. LeadMagnetTable.jsx
+   - Data table component
+   - Columns: Name, Status, Views, Submissions, etc.
+   - Actions dropdown
+   - Responsive (mobile: card view)
+
+4. AnalyticsCards.jsx
+   - 4 cards: Views, Unique Views, Submissions, Conversion %
+   - Responsive grid
+
+5. SubmissionsTable.jsx
+   - Table for recent submissions
+   - Name, Email, Company, Submitted At, Actions
+
+6. PublicFormComponent.jsx
+   - Form fields: Name, Email, Phone, Company
+   - Submit button
+   - Validation errors
+   - Loading state
+
+7. SuccessScreen.jsx
+   - Success animation/icon
+   - Thank you message
+   - Download button (optional)
+   - Close button
+
+================================================================================
+FILES TO MODIFY
+================================================================================
+
+3 Files:
+
+1. src/App.jsx
+   Add routes:
+   ```javascript
+   <Route path="/marketing/lead-magnets" element={<LeadMagnets />} />
+   <Route path="/marketing/lead-magnets/:id" element={<LeadMagnetDetails />} />
+   <Route path="/m/:publicToken/:slug" element={<PublicFormPage />} />
+   ```
+
+2. src/layouts/Sidebar.jsx
+   Modify NAV structure:
+   ```javascript
+   {
+     label: 'Marketing',
+     icon: Megaphone,
+     children: [
+       { path: '/marketing/lead-magnets', label: 'Lead Magnets' },
+     ]
+   }
+   ```
+
+3. src/hooks/useWorkspaceRole.js
+   Add permissions:
+   ```javascript
+   canManageLeadMagnets: role === 'OWNER' || role === 'ADMIN'
+   canCreateLeadMagnets: role === 'OWNER' || role === 'ADMIN'
+   canViewLeadMagnets: true  // all members
+   ```
+
+================================================================================
+BACKEND ENDPOINTS (READY - NO CHANGES NEEDED)
+================================================================================
+
+✓ POST   /api/workspaces/{workspaceId}/lead-magnets
+✓ GET    /api/workspaces/{workspaceId}/lead-magnets
+✓ GET    /api/workspaces/{workspaceId}/lead-magnets/{magnetId}
+✓ PUT    /api/workspaces/{workspaceId}/lead-magnets/{magnetId}
+✓ PATCH  /api/workspaces/{workspaceId}/lead-magnets/{magnetId}/status
+✓ DELETE /api/workspaces/{workspaceId}/lead-magnets/{magnetId}
+✓ GET    /api/public/lead-magnets/{publicToken}
+✓ POST   /api/public/lead-magnets/{publicToken}/submit
+
+All endpoints implemented and ready to use.
+
+================================================================================
+DEVELOPMENT TIMELINE
+================================================================================
+
+Total estimated: 6-7 days
+
+Day 1: Foundation
+  - Create services, schemas, store slice
+  - Update App.jsx, Sidebar.jsx, useWorkspaceRole.js
+
+Day 2-3: List Page
+  - Create LeadMagnets.jsx
+  - Create LeadMagnetTable.jsx
+  - Implement search, filter, sort, pagination
+  - Test permissions
+
+Day 3-4: Modal
+  - Create LeadMagnetModal.jsx
+  - Create LeadMagnetForm.jsx
+  - Implement auto-slug generation
+  - Test create/edit
+
+Day 4-5: Details Page
+  - Create LeadMagnetDetails.jsx
+  - Create AnalyticsCards.jsx
+  - Create SubmissionsTable.jsx
+  - Test dashboard layout
+
+Day 5-6: Public Form
+  - Create PublicFormPage.jsx
+  - Create PublicFormComponent.jsx
+  - Create SuccessScreen.jsx
+  - Test public submission
+
+Day 7: Polish
+  - Dark mode testing
+  - Responsive testing
+  - Permission testing
+  - Error handling
+  - Loading states
+  - Final QA
+
+================================================================================
+QUALITY ASSURANCE CHECKLIST
+================================================================================
+
+FUNCTIONALITY:
+  ☐ Create campaign (OWNER/ADMIN only)
+  ☐ Edit campaign (OWNER/ADMIN only)
+  ☐ Delete campaign (OWNER/ADMIN only)
+  ☐ Activate/Deactivate campaign
+  ☐ List campaigns (all members can view)
+  ☐ Search campaigns
+  ☐ Filter by status
+  ☐ Sort by columns
+  ☐ Paginate list
+  ☐ View details
+  ☐ View submissions
+  ☐ Public form submission
+  ☐ Slug uniqueness validation
+  ☐ Auto-slug generation
+
+PERMISSIONS:
+  ☐ OWNER: Full access
+  ☐ ADMIN: Full access
+  ☐ MEMBER: Read-only
+  ☐ NON-MEMBER: No access
+  ☐ PUBLIC: Unauthenticated form submission only
+
+UX/RESPONSIVE:
+  ☐ Loading states (skeleton, spinner)
+  ☐ Empty states
+  ☐ Error states with retry
+  ☐ Toast notifications
+  ☐ Mobile responsive (1 column)
+  ☐ Tablet responsive (2 columns)
+  ☐ Desktop full layout
+  ☐ Dark mode support
+  ☐ Keyboard navigation
+  ☐ Touch-friendly buttons (48px min)
+
+DESIGN:
+  ☐ Consistent with existing codebase
+  ☐ Same color scheme
+  ☐ Same typography
+  ☐ Same spacing
+  ☐ Same animations
+  ☐ Professional SaaS look
+  ☐ Accessible (WCAG AA)
+
+================================================================================
+COMMON REFERENCE PATTERNS
+================================================================================
+
+API CALL PATTERN (from crmService.js):
+  const unwrap = (response) => response?.data ?? response
+  export const createLead = async (data) => {
+    const response = await api.post('/leads', data)
+    return unwrap(response)
+  }
+
+MUTATION PATTERN (from CRMPipeline.jsx):
+  const createMutation = useMutation({
+    mutationFn: createLeadMagnet,
+    onSuccess: () => {
+      toast.success('Campaign created')
+      queryClient.invalidateQueries({ queryKey: ['lead-magnets'] })
+    },
+    onError: (error) => toast.error(error.message || 'Failed')
+  })
+
+FORM VALIDATION PATTERN (from crmSchemas.js):
+  export const createLeadMagnetSchema = z.object({
+    name: z.string().min(1, 'Name is required'),
+    slug: z.string().min(1, 'Slug is required'),
+    description: z.string().optional(),
+  })
+
+MODAL PATTERN (from Projects.jsx):
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  <CreateProjectModal
+    isOpen={showCreateModal}
+    onClose={() => setShowCreateModal(false)}
+    workspaceId={workspaceId}
+  />
+
+================================================================================
+NO CHANGES TO BACKEND
+================================================================================
+
+Backend is production-ready. Frontend consumes as-is.
+
+If issues discovered:
+  1. Document clearly
+  2. Create separate backend PR
+  3. Get approval from project owner
+
+================================================================================
+PUSHED TO GITHUB
+================================================================================
+
+Branch: phase-1b-lead-magnet-admin
+Commit: 9b27717
+Files: 4 new documentation files
+
+Ready for implementation when you are ready.
+
+================================================================================
+BEGIN IMPLEMENTATION WHEN READY
+================================================================================
+
+Start with:
+1. Read PHASE_2_FINAL_SPECIFICATIONS.txt (bookmark for reference)
+2. Create src/services/leadMagnetService.js
+3. Create src/schemas/leadMagnetSchemas.js
+4. Create src/store/slices/leadMagnetSlice.js
+5. Update App.jsx with routes
+6. Update Sidebar.jsx with Marketing section
+7. Update useWorkspaceRole.js with permissions
+
+Then follow the 6-day implementation plan.
+
+Good luck! 🚀
+
+================================================================================

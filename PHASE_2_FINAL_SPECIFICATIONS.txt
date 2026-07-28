@@ -1,0 +1,592 @@
+================================================================================
+PHASE 2: LEAD MAGNET FRONTEND - FINAL ARCHITECTURAL SPECIFICATIONS
+================================================================================
+
+Status: APPROVED - Ready for Implementation
+Date: July 28, 2026
+
+================================================================================
+1. PUBLIC ROUTE STRUCTURE
+================================================================================
+
+INCORRECT (old):
+  /forms/:publicToken
+
+CORRECT (new):
+  /m/:publicToken/:slug
+
+EXAMPLES:
+  /m/AbC123xyz/free-crm-guide
+  /m/xY9zZq2Kk/email-automation-guide
+  /m/pOlKjHgF2/saas-onboarding-checklist
+
+RATIONALE:
+- Matches backend URL design
+- SEO-friendly (slug in URL)
+- Memorable and shareable
+- Allows future expansion (/m/ namespace)
+- Can add /m/a/ for AI resources, /m/e/ for email, etc.
+
+FRONTEND ROUTE:
+  <Route path="/m/:publicToken/:slug" element={<PublicFormPage />} />
+
+FRONTEND WILL:
+  - Extract publicToken from URL
+  - Extract slug from URL (for display/validation)
+  - Call backend: GET /api/public/lead-magnets/{publicToken}
+  - Display campaign based on publicToken
+  - Validate slug matches campaign slug
+  - Show 404 if slug doesn't match
+
+================================================================================
+2. SIDEBAR ARCHITECTURE - MARKETING SECTION
+================================================================================
+
+CURRENT STRUCTURE:
+  Dashboard
+  Workspaces
+  CRM Pipeline
+  Chat
+  Analytics
+  AI Insights
+  Settings
+
+NEW STRUCTURE:
+  Dashboard
+  Workspaces
+  CRM Pipeline
+  Chat
+  Analytics
+  AI Insights
+  Marketing
+    └── Lead Magnets
+  Settings
+
+RATIONALE:
+- Parent section "Marketing" for future features
+- Can add without restructuring:
+  * Email Campaigns
+  * Landing Pages
+  * AI Outreach
+  * Automations
+  * Forms
+  * Templates
+
+IMPLEMENTATION:
+  ```javascript
+  const NAV = [
+    { path: '/dashboard',      icon: LayoutDashboard, label: 'Dashboard'  },
+    { path: '/workspaces',     icon: FolderOpen,      label: 'Workspaces' },
+    { path: '/crm',            icon: Users,           label: 'CRM Pipeline'},
+    { path: '/chat',           icon: MessageSquare,   label: 'Chat'       },
+    { path: '/analytics',      icon: BarChart3,       label: 'Analytics'  },
+    { path: '/ai-insights',    icon: Zap,             label: 'AI Insights'},
+    // NEW SECTION
+    {
+      label: 'Marketing',
+      icon: Megaphone,  // or TrendingUp, Target, Sparkles
+      children: [
+        { path: '/marketing/lead-magnets', label: 'Lead Magnets' },
+        // Future items will go here
+      ]
+    },
+    { path: '/settings',       icon: Settings,        label: 'Settings'   },
+  ]
+  ```
+
+STYLING:
+  - Parent collapses/expands
+  - Child links indented
+  - Active state shows on child
+  - Parent highlights when any child is active
+  - Follow existing pattern from Sidebar.jsx
+
+================================================================================
+3. LIST PAGE SPECIFICATIONS
+================================================================================
+
+PATH: /marketing/lead-magnets
+COMPONENT: LeadMagnets.jsx
+
+COLUMNS (in order):
+  1. Campaign Name (searchable, sortable)
+  2. Status (badge: Active/Inactive)
+  3. Views (total count)
+  4. Unique Views
+  5. Submissions (total count)
+  6. Conversion % (submissions/views * 100)
+  7. Created By (user name)
+  8. Created Date (sortable)
+  9. Updated Date (sortable)
+  10. Public URL (display with copy button)
+  11. Actions (dropdown: View, Edit, Toggle, Copy URL, Open Public, Delete)
+
+FEATURES:
+  ✓ Search by campaign name
+  ✓ Sort by: name, views, submissions, created date, updated date
+  ✓ Filter by status: All, Active, Inactive
+  ✓ Pagination: 20 rows per page
+  ✓ Loading skeleton (9 rows)
+  ✓ Empty state with "Create Campaign" button
+  ✓ Error state with retry button
+  ✓ Copy public URL button (with toast: "Copied!")
+  ✓ Open public page button (new window)
+  ✓ Create button (top right)
+  ✓ Edit button (row action)
+  ✓ Toggle active/inactive (row action)
+  ✓ Delete button (row action with confirmation)
+  ✓ Responsive (mobile: collapse columns, show card view)
+  ✓ Dark mode support
+
+TABLE LAYOUT:
+  - Desktop: Full table with all columns
+  - Tablet: Hide "Created By", collapse actions to dropdown
+  - Mobile: Card view with key info + action dropdown
+
+ACTIONS DROPDOWN:
+  - View Details
+  - Edit Campaign
+  - Toggle Active/Inactive (shows current state)
+  - Copy Public URL
+  - Open Public Form (new window)
+  - Delete (with confirmation modal)
+
+================================================================================
+4. DETAILS PAGE SPECIFICATIONS
+================================================================================
+
+PATH: /marketing/lead-magnets/:id
+COMPONENT: LeadMagnetDetails.jsx
+TYPE: Dashboard (not just details)
+
+SECTIONS (in order):
+
+A. HEADER
+  ├─ Campaign Name (large heading)
+  ├─ Status Badge (Active/Inactive)
+  ├─ Quick Actions Buttons:
+  │  ├─ Copy Public URL (with icon)
+  │  ├─ Open Public Form (with icon)
+  │  ├─ Edit Campaign (button)
+  │  └─ Delete Campaign (danger button)
+  └─ Breadcrumb: Marketing > Lead Magnets > [Campaign Name]
+
+B. CAMPAIGN INFORMATION CARD
+  ├─ Campaign Name
+  ├─ Description
+  ├─ Slug
+  ├─ Public URL (with copy button)
+  ├─ Status (toggle: Active/Inactive)
+  ├─ Created By: [User Name]
+  ├─ Created Date: [Date + Time]
+  ├─ Updated Date: [Date + Time]
+  └─ Public Token: [AbC123xyz] (read-only, selectable)
+
+C. ANALYTICS CARDS (4 cards in a row, responsive to 2x2 or 1 col)
+  ├─ Views (large number, icon)
+  │  └─ Trend indicator (optional)
+  ├─ Unique Views
+  │  └─ Trend indicator (optional)
+  ├─ Submissions
+  │  └─ Trend indicator (optional)
+  └─ Conversion Rate (%)
+     └─ Formula: (submissions / views * 100)
+
+D. RECENT LEADS TABLE (last 5 submissions)
+  ├─ Column: Name
+  ├─ Column: Email
+  ├─ Column: Company
+  ├─ Column: Submitted At
+  ├─ Column: Actions (View, etc.)
+  └─ Link: "View All Submissions" (future feature)
+
+E. RECENT SUBMISSIONS TABLE (last 5 form submissions)
+  ├─ Column: Name
+  ├─ Column: Email
+  ├─ Column: Company
+  ├─ Column: Phone
+  ├─ Column: Submitted At
+  └─ Column: Actions
+
+RESPONSIVE:
+  - Desktop: 2 columns
+  - Tablet: 1 column
+  - Mobile: Full width stacked
+
+LOADING STATE:
+  - Skeleton loaders for all cards
+  - Skeleton table with 5 rows
+
+EMPTY STATE:
+  - "No submissions yet" if no data
+  - "No recent leads" if no leads
+
+ERROR STATE:
+  - Error message with retry button
+
+================================================================================
+5. CREATE / EDIT PAGE SPECIFICATIONS
+================================================================================
+
+IMPLEMENTATION: Modal (not separate page)
+COMPONENT: LeadMagnetModal.jsx
+SHARED FORM: LeadMagnetForm.jsx
+
+FORM FIELDS (in order):
+
+1. Campaign Name (required)
+   - Type: Text input
+   - Max length: 255
+   - Placeholder: "e.g., Free CRM Guide"
+   - Validation: Required, max 255 chars
+   - On change: Auto-generate slug (if not manually edited)
+
+2. Slug (required, auto-generated but editable)
+   - Type: Text input
+   - Max length: 100
+   - Placeholder: "free-crm-guide"
+   - Validation: Required, lowercase, alphanumeric + hyphens only
+   - Logic:
+     * Auto-generate from name on first input
+     * Stop auto-generation if user manually edits
+     * Validate uniqueness: POST /api/workspaces/{id}/lead-magnets/validate-slug
+     * Show: "✓ Available" or "✗ Already in use"
+   - Real-time validation as user types
+
+3. Description (optional)
+   - Type: Text area
+   - Max length: 1000
+   - Placeholder: "Describe your lead magnet..."
+   - Rows: 4
+   - Character count: "250/1000"
+
+4. Status (optional)
+   - Type: Toggle switch
+   - Label: "Active"
+   - Default: ON (active)
+
+BUTTONS:
+  ├─ Save (primary, full width)
+  ├─ Cancel (secondary)
+  └─ Unsaved Changes Dialog: "You have unsaved changes. Discard?"
+
+MODAL LAYOUT:
+  - Title: "Create Lead Magnet" or "Edit Lead Magnet"
+  - Size: 500px max-width
+  - Close button (X)
+
+VALIDATION:
+  ✓ Client-side: Zod schema
+  ✓ Server-side: Backend validation
+  ✓ Slug uniqueness: Real-time via API
+  ✓ Show validation errors below fields
+  ✓ Disable Save button until form is valid
+
+AUTO-SLUG GENERATION:
+  ```
+  "Free CRM Guide" → "free-crm-guide"
+  "Email Automation (2024)" → "email-automation-2024"
+  "Lead Scoring 101!" → "lead-scoring-101"
+  ```
+
+SLUG VALIDATION:
+  - Lowercase only
+  - Alphanumeric + hyphens only
+  - No spaces, underscores, or special chars
+  - Min 3 chars, max 100 chars
+  - Show error: "Only lowercase letters, numbers, and hyphens allowed"
+
+LOADING STATE:
+  - Save button shows spinner
+  - Form disabled during submit
+
+ERROR STATE:
+  - Toast error: "Failed to save campaign"
+  - Show field error if slug not unique
+
+SUCCESS STATE:
+  - Toast: "Campaign created/updated successfully"
+  - Close modal
+  - Refresh list page
+
+================================================================================
+6. PUBLIC LANDING PAGE SPECIFICATIONS
+================================================================================
+
+PATH: /m/:publicToken/:slug
+COMPONENT: PublicFormPage.jsx
+
+STRUCTURE:
+
+A. HERO SECTION
+  ├─ Campaign Name (as H1)
+  ├─ Description (as subtitle)
+  ├─ Brand/logo (optional, if backend supports)
+  └─ Visual element (gradient background, icon, or image)
+
+B. LEAD FORM
+  ├─ Name (required)
+  ├─ Email (required)
+  ├─ Phone (optional)
+  ├─ Company (optional)
+  ├─ Custom fields (if backend sends)
+  ├─ Submit button
+  └─ Privacy note: "We respect your privacy. See our [Privacy Policy]"
+
+C. SUCCESS SCREEN (after submit)
+  ├─ Success icon/animation
+  ├─ "Thank you!" heading
+  ├─ Confirmation message: "We've received your information..."
+  ├─ "Download" button (if backend provides file)
+  └─ Optional: "Close" button
+
+DESIGN REQUIREMENTS:
+  ✓ Professional SaaS landing page (not plain HTML form)
+  ✓ Single column, centered layout
+  ✓ Max width: 500px for form
+  ✓ White/gradient background
+  ✓ Smooth animations
+  ✓ Professional typography (headings, body text)
+  ✓ Proper spacing and padding
+  ✓ Professional form styling (inputs, buttons)
+  ✓ Button: Primary color (blue/purple gradient)
+  ✓ Responsive: Mobile, tablet, desktop
+  ✓ Dark mode support
+
+FORM VALIDATION:
+  - Name: Required, min 2 chars
+  - Email: Required, valid email
+  - Phone: Optional, valid phone format
+  - Company: Optional, max 255 chars
+  - Custom fields: Based on schema
+
+LOADING STATE:
+  - Submit button shows spinner
+  - Form disabled during submit
+  - Skeleton loader if campaign data loading
+
+ERROR HANDLING:
+  - Network error: Toast + retry button
+  - Validation error: Field-level error messages
+  - 404: "Campaign not found" message
+  - 410: "Campaign has been deleted" message
+  - Rate limiting: "Too many submissions. Please try again later."
+  - Duplicate: "This email has already submitted" or let server decide
+
+DUPLICATE DETECTION:
+  - Backend handles via session token (browser fingerprint)
+  - Frontend: Show error "You've already submitted this form"
+  - Retry logic: Show timestamp of previous submission
+
+RESPONSIVE:
+  - Mobile: Full width with padding
+  - Tablet: 500px centered
+  - Desktop: 500px centered
+
+ANALYTICS:
+  - Track page view (session token)
+  - Track form submission
+  - Track success
+
+================================================================================
+7. UX REQUIREMENTS - ALL PAGES
+================================================================================
+
+LOADING STATE:
+  ✓ Skeleton loader on initial page load
+  ✓ Spinner for buttons during action
+  ✓ Fade animation when content loads
+
+EMPTY STATE:
+  ✓ "No campaigns yet" on list page
+  ✓ Link to "Create Campaign"
+  ✓ Illustration (optional)
+
+ERROR STATE:
+  ✓ Error message (user-friendly)
+  ✓ "Retry" button
+  ✓ Toast notification for alerts
+
+TOAST NOTIFICATIONS:
+  ✓ Success: "Campaign created successfully"
+  ✓ Error: "Failed to create campaign"
+  ✓ Info: "Copied to clipboard"
+  ✓ Warning: "Unsaved changes"
+  ✓ Auto-dismiss after 3 seconds
+
+RESPONSIVE LAYOUT:
+  ✓ Mobile: 1 column, stacked
+  ✓ Tablet: 2 columns where appropriate
+  ✓ Desktop: Full layout with proper spacing
+  ✓ Min touch target: 48px (buttons, links)
+
+DARK MODE:
+  ✓ All pages support dark mode
+  ✓ Use Tailwind dark: prefix
+  ✓ Theme toggle in settings
+  ✓ useTheme() hook for dynamic support
+
+KEYBOARD NAVIGATION:
+  ✓ Tab through form fields
+  ✓ Enter to submit
+  ✓ Escape to close modal
+  ✓ Shift+Tab to go back
+
+ACCESSIBILITY:
+  ✓ ARIA labels on form inputs
+  ✓ Alt text on images
+  ✓ Semantic HTML (labels, headings hierarchy)
+  ✓ Color contrast (WCAG AA)
+  ✓ Focus indicators visible
+
+================================================================================
+8. CODE QUALITY REQUIREMENTS
+================================================================================
+
+REUSE EXISTING:
+  ✓ Components: Button, Input, Modal, Card, Table, Badge, Spinner
+  ✓ Hooks: useAuth, useWorkspaceRole, useTheme, useQuery, useMutation
+  ✓ Redux: Store slices, dispatch patterns
+  ✓ React Query: useQuery, useMutation, queryClient
+  ✓ Tables: Copy table patterns from Projects/CRM
+  ✓ Cards: Copy card patterns from Projects/CRM
+  ✓ Dialogs: Copy dialog patterns from existing modals
+  ✓ Forms: Copy form patterns from Projects/CRM
+  ✓ Buttons: Use existing button styles
+  ✓ Theme: Use existing theme system
+  ✓ Icons: Use lucide-react (same as everywhere)
+
+DO NOT INTRODUCE:
+  ✗ New UI libraries
+  ✗ New styling systems (CSS-in-JS, new CSS frameworks)
+  ✗ New state management (Zustand, Context, Jotai)
+  ✗ New HTTP clients (Fetch, graphql-request)
+  ✗ New validation (Formik, react-hook-form, AJV)
+  ✗ New component libraries (shadcn, MUI, Chakra)
+
+FOLLOW PATTERNS:
+  ✓ Service layer for all API calls
+  ✓ Zod schemas for validation
+  ✓ Redux slices for UI state
+  ✓ React Query for server state
+  ✓ useWorkspaceRole for permissions
+  ✓ Toast for notifications
+  ✓ Skeleton loaders for loading
+  ✓ Error boundary (if needed)
+
+CODE ORGANIZATION:
+  ✓ Components in components/leadmagnet/
+  ✓ Services in services/leadMagnetService.js
+  ✓ Schemas in schemas/leadMagnetSchemas.js
+  ✓ Store in store/slices/leadMagnetSlice.js
+  ✓ Pages in pages/
+
+NAMING CONVENTIONS:
+  ✓ Components: PascalCase (LeadMagnetList.jsx)
+  ✓ Functions: camelCase (handleCreateCampaign)
+  ✓ Constants: UPPER_SNAKE_CASE (MAX_LENGTH = 255)
+  ✓ Types: PascalCase if exported
+
+================================================================================
+9. DO NOT MODIFY
+================================================================================
+
+PROTECTED:
+  ✗ Backend business logic (unless bug discovered)
+  ✗ Backend API responses (unless format error)
+  ✗ Existing React components (reuse, don't modify)
+  ✗ Existing hooks (create new if needed)
+  ✗ Redux patterns (follow, don't change)
+  ✗ API client interceptors
+  ✗ Error handling middleware
+  ✗ Theme system
+
+IF BUG FOUND:
+  ✓ Document it clearly
+  ✓ Get approval before fixing
+  ✓ Create separate backend PR
+
+================================================================================
+10. IMPLEMENTATION CHECKLIST
+================================================================================
+
+PHASE 1: FOUNDATION (Day 1)
+  ☐ Create leadMagnetService.js
+  ☐ Create leadMagnetSchemas.js
+  ☐ Create leadMagnetSlice.js
+  ☐ Update App.jsx with routes
+  ☐ Update Sidebar.jsx with Marketing section
+  ☐ Update useWorkspaceRole.js with permissions
+
+PHASE 2: LIST PAGE (Days 2-3)
+  ☐ Create LeadMagnets.jsx (list page)
+  ☐ Create LeadMagnetTable.jsx (table component)
+  ☐ Implement search, filter, sort
+  ☐ Implement pagination
+  ☐ Test permissions (MEMBER can view, OWNER can create)
+
+PHASE 3: MODAL (Days 3-4)
+  ☐ Create LeadMagnetModal.jsx
+  ☐ Create LeadMagnetForm.jsx
+  ☐ Implement auto-slug generation
+  ☐ Implement slug validation
+  ☐ Test create and edit
+
+PHASE 4: DETAILS (Days 4-5)
+  ☐ Create LeadMagnetDetails.jsx
+  ☐ Create AnalyticsCards.jsx
+  ☐ Create SubmissionsTable.jsx
+  ☐ Implement dashboard layout
+
+PHASE 5: PUBLIC FORM (Days 5-6)
+  ☐ Create PublicFormPage.jsx
+  ☐ Create PublicFormComponent.jsx
+  ☐ Create SuccessScreen.jsx
+  ☐ Implement form validation
+  ☐ Implement duplicate detection
+  ☐ Test public submission
+
+PHASE 6: POLISH (Day 7)
+  ☐ Dark mode testing
+  ☐ Responsive testing
+  ☐ Permission testing
+  ☐ Error handling
+  ☐ Loading states
+  ☐ Toast notifications
+  ☐ Final QA
+
+================================================================================
+FINAL SUMMARY
+================================================================================
+
+ROUTES:
+  Protected: /marketing/lead-magnets, /marketing/lead-magnets/:id
+  Public: /m/:publicToken/:slug
+
+SIDEBAR:
+  Marketing section with Lead Magnets sub-item
+
+PAGES:
+  - LeadMagnets.jsx (list)
+  - LeadMagnetDetails.jsx (dashboard)
+  - PublicFormPage.jsx (public form)
+  - Modal for Create/Edit (no separate pages)
+
+COMPONENTS:
+  ~15 new files total
+
+ARCHITECTURE:
+  - CRM Pipeline for structure
+  - Projects for modal pattern
+  - Zero new dependencies
+
+QUALITY:
+  - Enterprise SaaS level
+  - Consistent with existing codebase
+  - Full dark mode support
+  - Responsive design
+  - Accessibility ready
+
+READY TO CODE: YES ✓
+
+================================================================================

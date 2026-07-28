@@ -32,6 +32,9 @@ const AIInsights = lazy(() => import('./pages/AIInsights'))
 const Profile = lazy(() => import('./pages/Profile'))
 const Settings = lazy(() => import('./pages/Settings'))
 const WorkspaceSettings = lazy(() => import('./pages/WorkspaceSettings'))
+const LeadMagnets = lazy(() => import('./pages/LeadMagnets'))
+const LeadMagnetDetails = lazy(() => import('./pages/LeadMagnetDetails'))
+const PublicFormPage = lazy(() => import('./pages/PublicFormPage'))
 
 const PageLoader = () => (
   <div className="flex h-full min-h-[50vh] items-center justify-center">
@@ -95,6 +98,9 @@ function AppContent() {
         {/* Invitation acceptance — can be public or authenticated - NO THEME */}
         <Route path="/invitations/:token" element={<Suspense fallback={<PageLoader />}><InvitationAccept /></Suspense>} />
 
+        {/* Public Lead Magnet Form - NO AUTH REQUIRED - NO THEME */}
+        <Route path="/m/:publicToken/:slug" element={<Suspense fallback={<PageLoader />}><PublicFormPage /></Suspense>} />
+
         {/* Protected Routes - WITH THEME SYSTEM */}
         <Route element={<ProtectedRoute><AuthenticatedLayout /></ProtectedRoute>}>
           <Route path="/dashboard" element={<Suspense fallback={<PageLoader />}><Dashboard /></Suspense>} />
@@ -107,6 +113,8 @@ function AppContent() {
           <Route path="/chat/:roomId" element={<Suspense fallback={<PageLoader />}><Chat /></Suspense>} />
           <Route path="/analytics" element={<Suspense fallback={<PageLoader />}><Analytics /></Suspense>} />
           <Route path="/ai-insights" element={<Suspense fallback={<PageLoader />}><AIInsights /></Suspense>} />
+          <Route path="/marketing/lead-magnets" element={<Suspense fallback={<PageLoader />}><LeadMagnets /></Suspense>} />
+          <Route path="/marketing/lead-magnets/:id" element={<Suspense fallback={<PageLoader />}><LeadMagnetDetails /></Suspense>} />
           <Route path="/profile" element={<Suspense fallback={<PageLoader />}><Profile /></Suspense>} />
           <Route path="/settings" element={<Suspense fallback={<PageLoader />}><Settings /></Suspense>} />
           <Route path="/workspaces/:workspaceId/settings" element={<Suspense fallback={<PageLoader />}><WorkspaceSettings /></Suspense>} />
@@ -121,3 +129,4 @@ function AppContent() {
     </>
   )
 }
+
