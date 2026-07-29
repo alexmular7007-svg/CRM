@@ -17,6 +17,10 @@ export function useWorkspaceRole(workspaceId = null) {
   // Persist last known role so it never resets to null during refetch
   const lastRoleRef = useRef(null)
 
+  // Start with Redux userRole if available (from workspace list response)
+  const reduxRole = currentWorkspace?.userRole ?? null
+  if (reduxRole) lastRoleRef.current = reduxRole
+
   const { data, isLoading, error, isError } = useQuery({
     queryKey: ['my-role', activeId],
     queryFn: () => workspaceService.getMyRole(activeId),
@@ -40,7 +44,8 @@ export function useWorkspaceRole(workspaceId = null) {
   // Extract role — fall back to last known role while refetching
   const freshRole = data?.role ?? null
   if (freshRole) lastRoleRef.current = freshRole
-  const role = freshRole ?? lastRoleRef.current
+  // Use Redux role as initial value, then update from API
+  const role = freshRole ?? lastRoleRef.current ?? reduxRole
 
   return {
     role,

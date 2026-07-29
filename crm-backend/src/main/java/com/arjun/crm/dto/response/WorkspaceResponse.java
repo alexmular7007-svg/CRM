@@ -18,6 +18,7 @@ public class WorkspaceResponse {
     private String ownerName;
     private Integer memberCount;
     private Integer projectCount;
+    private com.arjun.crm.enums.WorkspaceRole userRole;  // Current user's role in this workspace
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

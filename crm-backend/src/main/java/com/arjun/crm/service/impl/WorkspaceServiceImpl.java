@@ -290,7 +290,25 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         Page<Workspace> workspaces = workspaceRepository
                 .findAllByUserIdAsOwnerOrMember(currentUser.getId(), pageable);
 
-        return workspaces.map(WorkspaceResponse::fromEntity);
+        return workspaces.map(workspace -> buildWorkspaceResponse(workspace, currentUser));
+    }
+
+    /**
+     * Build workspace response with current user's role
+     */
+    private WorkspaceResponse buildWorkspaceResponse(Workspace workspace, User currentUser) {
+        WorkspaceResponse response = WorkspaceResponse.fromEntity(workspace);
+        
+        // Determine user's role in this workspace
+        if (workspace.getOwner().getId().equals(currentUser.getId())) {
+            response.setUserRole(com.arjun.crm.enums.WorkspaceRole.OWNER);
+        } else {
+            // Look up role from WorkspaceMember table
+            workspaceMemberRepository.findByWorkspaceIdAndUserId(workspace.getId(), currentUser.getId())
+                    .ifPresent(member -> response.setUserRole(member.getRole()));
+        }
+        
+        return response;
     }
 
     /**
