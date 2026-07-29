@@ -32,7 +32,8 @@ public class WorkspaceMember {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private WorkspaceRole role;
+    @Builder.Default
+    private WorkspaceRole role = WorkspaceRole.MEMBER;  // Default to MEMBER if not specified
 
     // Member status: ACTIVE = direct member, PENDING_INVITATION = invited but not yet accepted
     @Column(length = 20)

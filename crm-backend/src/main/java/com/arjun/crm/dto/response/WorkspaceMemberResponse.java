@@ -25,12 +25,18 @@ public class WorkspaceMemberResponse {
                 ? member.getUser().getFullName()
                 : member.getUser().getEmail();
         
+        // Validate role is not null
+        WorkspaceRole role = member.getRole();
+        if (role == null) {
+            role = WorkspaceRole.MEMBER;  // Fallback to MEMBER if null
+        }
+        
         return WorkspaceMemberResponse.builder()
                 .id(member.getId())
                 .userId(member.getUser().getId())
                 .userName(displayName)
                 .userEmail(member.getUser().getEmail())
-                .role(member.getRole())
+                .role(role)
                 .joinedAt(member.getJoinedAt())
                 .build();
     }
