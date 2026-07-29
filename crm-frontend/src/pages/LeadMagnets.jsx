@@ -93,6 +93,18 @@ const LeadMagnets = () => {
 
   return (
     <div className="p-6 space-y-6">
+      {/* DEBUG: Permission Instrumentation */}
+      <div className="bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded-lg p-4 mb-4">
+        <h3 className="font-bold text-yellow-900 dark:text-yellow-200 mb-2">🔍 DEBUG: Permission Values</h3>
+        <div className="text-xs font-mono text-yellow-800 dark:text-yellow-300 space-y-1">
+          <div>Workspace ID: <strong>{currentWorkspace?.id || 'null'}</strong></div>
+          <div>Workspace Name: <strong>{currentWorkspace?.name || 'null'}</strong></div>
+          <div>Role: <strong>{currentWorkspace?.userRole || 'null'}</strong></div>
+          <div>canCreateLeadMagnets: <strong>{String(canCreateLeadMagnets)}</strong></div>
+          <div>Loading: <strong>{String(isLoading)}</strong></div>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
