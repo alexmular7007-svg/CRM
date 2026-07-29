@@ -43,14 +43,26 @@ const LeadMagnetForm = ({ magnet, onSuccess }) => {
     const validateSlugAsync = async () => {
       setIsValidatingSlug(true)
       try {
-        await leadMagnetService.validateSlug(
+        const response = await leadMagnetService.validateSlug(
           currentWorkspace?.id,
           formData.slug,
           magnet?.id
         )
-        setSlugValidation({ valid: true, message: 'Slug is available' })
+        // Backend returns { available: true/false }
+        if (response?.available) {
+          setSlugValidation({ valid: true, message: 'Slug is available' })
+        } else {
+          setSlugValidation({ valid: false, message: 'Slug already in use' })
+        }
       } catch (error) {
-        setSlugValidation({ valid: false, message: 'Slug already in use' })
+        // Only show "Slug already in use" if backend explicitly returned 409 Conflict or {"available": false}
+        // For any other error (404, 500, network, etc), show unavailable service message
+        const status = error?.response?.status
+        if (status === 409 || error?.data?.available === false) {
+          setSlugValidation({ valid: false, message: 'Slug already in use' })
+        } else {
+          setSlugValidation({ valid: false, message: 'Validation service unavailable' })
+        }
       } finally {
         setIsValidatingSlug(false)
       }
