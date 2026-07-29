@@ -157,12 +157,15 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
 
         // Check if user is the original owner (legacy support)
         if (workspace.getOwner().getId().equals(currentUser.getId())) {
+            log.info("User {} is workspace owner of workspace {}", currentUser.getEmail(), workspaceId);
             WorkspaceMember ownerMember = WorkspaceMember.builder()
                     .workspace(workspace)
                     .user(currentUser)
                     .role(WorkspaceRole.OWNER)
                     .build();
-            return WorkspaceMemberResponse.fromEntity(ownerMember);
+            WorkspaceMemberResponse response = WorkspaceMemberResponse.fromEntity(ownerMember);
+            log.info("Returning OWNER role response: role={}", response.getRole());
+            return response;
         }
 
         // Check if user has a member record in the workspace
@@ -174,6 +177,7 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
             throw new AccessDeniedException("You have been removed from this workspace");
         }
 
+        log.info("User {} has role {} in workspace {}", currentUser.getEmail(), member.getRole(), workspaceId);
         return WorkspaceMemberResponse.fromEntity(member);
     }
 

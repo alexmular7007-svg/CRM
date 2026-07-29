@@ -11,7 +11,19 @@ import LeadMagnetTable from '../components/leadmagnet/LeadMagnetTable'
 const LeadMagnets = () => {
   const queryClient = useQueryClient()
   const { currentWorkspace } = useSelector((state) => state.workspace)
-  const { canCreateLeadMagnets } = useWorkspaceRole(currentWorkspace?.id)
+  const workspaceRoleData = useWorkspaceRole(currentWorkspace?.id)
+  const { canCreateLeadMagnets, role, isLoading: roleLoading } = workspaceRoleData
+  
+  // Debug: Log to console
+  console.log('🔍 LeadMagnets Debug:', {
+    workspaceId: currentWorkspace?.id,
+    workspaceName: currentWorkspace?.name,
+    reduxUserRole: currentWorkspace?.userRole,
+    hookRole: role,
+    hookCanCreateLeadMagnets: canCreateLeadMagnets,
+    hookIsLoading: roleLoading,
+    workspaceRoleData,
+  })
   
   const [showModal, setShowModal] = useState(false)
   const [selectedMagnet, setSelectedMagnet] = useState(null)
@@ -99,9 +111,11 @@ const LeadMagnets = () => {
         <div className="text-xs font-mono text-yellow-800 dark:text-yellow-300 space-y-1">
           <div>Workspace ID: <strong>{currentWorkspace?.id || 'null'}</strong></div>
           <div>Workspace Name: <strong>{currentWorkspace?.name || 'null'}</strong></div>
-          <div>Role: <strong>{currentWorkspace?.userRole || 'null'}</strong></div>
+          <div>Redux userRole: <strong>{currentWorkspace?.userRole || 'null'}</strong></div>
+          <div>Hook role: <strong>{role || 'null'}</strong></div>
           <div>canCreateLeadMagnets: <strong>{String(canCreateLeadMagnets)}</strong></div>
-          <div>Loading: <strong>{String(isLoading)}</strong></div>
+          <div>Hook isLoading: <strong>{String(roleLoading)}</strong></div>
+          <div>Page isLoading: <strong>{String(isLoading)}</strong></div>
         </div>
       </div>
 

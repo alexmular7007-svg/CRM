@@ -17,7 +17,7 @@ export function useWorkspaceRole(workspaceId = null) {
   // Persist last known role so it never resets to null during refetch
   const lastRoleRef = useRef(null)
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error, isError } = useQuery({
     queryKey: ['my-role', activeId],
     queryFn: () => workspaceService.getMyRole(activeId),
     enabled: Boolean(activeId),
@@ -26,6 +26,16 @@ export function useWorkspaceRole(workspaceId = null) {
     retry: 1,
     placeholderData: keepPreviousData, // never flash null during background refetch
   })
+  
+  // Debug: Log errors
+  if (isError) {
+    console.error('🔴 useWorkspaceRole error:', {
+      activeId,
+      error: error?.message || error,
+      errorStatus: error?.response?.status,
+      errorData: error?.response?.data,
+    })
+  }
 
   // Extract role — fall back to last known role while refetching
   const freshRole = data?.role ?? null
