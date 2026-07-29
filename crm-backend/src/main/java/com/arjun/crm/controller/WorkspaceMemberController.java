@@ -45,13 +45,14 @@ public class WorkspaceMemberController {
     @GetMapping("/role")
     public ResponseEntity<ApiResponse<WorkspaceMemberResponse>> getMyRole(
             @PathVariable Long workspaceId) {
-        log.info("Get my role request received for workspace ID: {}", workspaceId);
+        log.info("=== GET /members/role ===");
+        log.info("Workspace ID: {}", workspaceId);
         try {
             WorkspaceMemberResponse response = workspaceMemberService.getMyRole(workspaceId);
-            log.info("Role response: role={}, userId={}, email={}", response.getRole(), response.getUserId(), response.getUserEmail());
+            log.info("✅ Role response: role={}, userId={}, email={}", response.getRole(), response.getUserId(), response.getUserEmail());
             return ResponseEntity.ok(ApiResponse.success("Role fetched successfully", response));
         } catch (Exception e) {
-            log.error("Error getting my role for workspace {}: {}", workspaceId, e.getMessage(), e);
+            log.error("❌ Error getting my role for workspace {}: {}", workspaceId, e.getMessage(), e);
             throw e;
         }
     }

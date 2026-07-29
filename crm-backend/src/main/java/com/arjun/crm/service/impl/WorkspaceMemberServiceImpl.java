@@ -150,14 +150,18 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
     @Transactional(readOnly = true)
     public WorkspaceMemberResponse getMyRole(Long workspaceId) {
         User currentUser = getAuthenticatedUser();
-        log.info("Getting role for user: {} in workspace: {}", currentUser.getEmail(), workspaceId);
+        log.info("=== getMyRole ===");
+        log.info("Current user: {} (ID: {})", currentUser.getEmail(), currentUser.getId());
+        log.info("Workspace ID: {}", workspaceId);
 
         Workspace workspace = workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Workspace not found with ID: " + workspaceId));
 
+        log.info("Workspace owner ID: {}", workspace.getOwner().getId());
+
         // Check if user is the original owner (legacy support)
         if (workspace.getOwner().getId().equals(currentUser.getId())) {
-            log.info("User {} is workspace owner of workspace {}", currentUser.getEmail(), workspaceId);
+            log.info("✅ User {} IS the workspace owner", currentUser.getEmail());
             WorkspaceMember ownerMember = WorkspaceMember.builder()
                     .workspace(workspace)
                     .user(currentUser)
@@ -168,9 +172,16 @@ public class WorkspaceMemberServiceImpl implements WorkspaceMemberService {
             return response;
         }
 
-        // Check if user has a member record in the workspace
+        log.info("User {} is NOT the workspace owner", currentUser.getEmail());
         WorkspaceMember member = workspaceMemberRepository.findByWorkspaceIdAndUserId(workspaceId, currentUser.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("User is not a member of this workspace"));
+                .orElseThrow(() -> {
+                    log.error("❌ NO WorkspaceMember found for workspace {} and user {} ({})", 
+                            workspaceId, currentUser.getId(), currentUser.getEmail());
+                    return new ResourceNotFoundException("User is not a member of this workspace");
+                });
+        
+        log.info("✅ Found WorkspaceMember: status={}, deletedAt={}, role={}", 
+                member.getStatus(), member.getDeletedAt(), member.getRole());
 
         // Check if member was soft-deleted
         if (member.getDeletedAt() != null) {

@@ -52,7 +52,9 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     @Transactional
     public WorkspaceResponse createWorkspace(WorkspaceCreateRequest request) {
         User currentUser = getAuthenticatedUser();
-        log.info("Creating workspace '{}' for user: {}", request.getName(), currentUser.getEmail());
+        log.info("=== Creating workspace ===");
+        log.info("User: {} (ID: {})", currentUser.getEmail(), currentUser.getId());
+        log.info("Workspace name: {}", request.getName());
 
         Workspace workspace = Workspace.builder()
                 .name(request.getName())
@@ -61,6 +63,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
                 .build();
 
         Workspace savedWorkspace = workspaceRepository.save(workspace);
+        log.info("✅ Workspace saved with ID: {}", savedWorkspace.getId());
         
         // Auto-add the creator as a workspace member with OWNER role
         // This is crucial because access validation checks the WorkspaceMember table
@@ -69,7 +72,13 @@ public class WorkspaceServiceImpl implements WorkspaceService {
                 .user(currentUser)
                 .role(com.arjun.crm.enums.WorkspaceRole.OWNER)
                 .build();
-        workspaceMemberRepository.save(member);
+        
+        log.info("Creating WorkspaceMember: workspace={}, user={}, role=OWNER, status=ACTIVE (default)", 
+                savedWorkspace.getId(), currentUser.getId());
+        
+        com.arjun.crm.entity.WorkspaceMember savedMember = workspaceMemberRepository.save(member);
+        
+        log.info("✅ WorkspaceMember saved with ID: {}, status: {}", savedMember.getId(), savedMember.getStatus());
 
         log.info("Workspace created successfully with ID: {}", savedWorkspace.getId());
 
