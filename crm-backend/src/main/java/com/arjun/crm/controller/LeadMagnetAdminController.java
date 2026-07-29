@@ -192,6 +192,60 @@ public class LeadMagnetAdminController {
     }
     
     /**
+     * VALIDATE SLUG: GET /api/workspaces/{workspaceId}/lead-magnets/validate-slug/{slug}
+     * 
+     * Validate if a slug is available (not in use by another campaign)
+     * Permission: OWNER/ADMIN only
+     * Authenticated via JWT → SecurityContext
+     * 
+     * Query parameters:
+     * - magnetId: (optional) the campaign ID to exclude from collision check
+     *   Used when updating existing campaign (allows keeping same slug)
+     * 
+     * Response:
+     * {
+     *   "available": true/false,
+     *   "message": "Slug is available" or "Slug is already in use"
+     * }
+     * 
+     * @param workspaceId the workspace ID
+     * @param slug the slug to validate
+     * @param magnetId optional campaign ID to exclude from check
+     * @return 200 OK with availability status
+     */
+    @GetMapping("/validate-slug/{slug}")
+    public ResponseEntity<ApiResponse<SlugValidationResponse>> validateSlug(
+            @PathVariable Long workspaceId,
+            @PathVariable String slug,
+            @RequestParam(required = false) Long magnetId) {
+        
+        log.info("GET /api/workspaces/{}/lead-magnets/validate-slug/{} - Validating slug", 
+                workspaceId, slug);
+        
+        boolean available = leadMagnetService.isSlugAvailable(workspaceId, slug, magnetId);
+        
+        return ResponseEntity.ok()
+                .body(ApiResponse.success(
+                        "Slug validation completed",
+                        new SlugValidationResponse(
+                                available,
+                                available ? "Slug is available" : "Slug is already in use"
+                        )
+                ));
+    }
+    
+    /**
+     * Inner class for slug validation response
+     */
+    @lombok.Data
+    @lombok.NoArgsConstructor
+    @lombok.AllArgsConstructor
+    public static class SlugValidationResponse {
+        private boolean available;
+        private String message;
+    }
+    
+    /**
      * Inner class for status update request
      */
     @lombok.Data

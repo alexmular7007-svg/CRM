@@ -181,6 +181,43 @@ public class LeadMagnetServiceImpl implements LeadMagnetService {
         return mapToResponse(magnet);
     }
     
+    @Override
+    @Transactional(readOnly = true)
+    public boolean isSlugAvailable(Long workspaceId, String slug, Long magnetId) {
+        log.info("Checking slug availability in workspace: {} for slug: '{}'", workspaceId, slug);
+        
+        // Validate workspace access and permission
+        WorkspaceMember member = workspaceAuthService.validateWorkspaceAccess(workspaceId);
+        workspaceAuthService.validateOwnerOrAdmin(member);
+        
+        // Normalize the slug
+        String normalizedSlug = SlugGenerator.generate(slug);
+        
+        if (!SlugGenerator.isValid(normalizedSlug)) {
+            log.warn("Invalid slug format: '{}'", normalizedSlug);
+            return false;
+        }
+        
+        // Check if slug exists in workspace
+        boolean exists = magnetRepository.existsByWorkspaceIdAndSlug(workspaceId, normalizedSlug);
+        
+        // If magnetId provided, exclude it from collision check (for updates)
+        if (magnetId != null && exists) {
+            LeadMagnet existingMagnet = magnetRepository.findByIdAndWorkspaceId(magnetId, workspaceId)
+                    .orElse(null);
+            
+            if (existingMagnet != null && existingMagnet.getSlug().equals(normalizedSlug)) {
+                // Same magnet has same slug - allowed for updates
+                log.debug("Slug '{}' belongs to same magnet {} - available for update", normalizedSlug, magnetId);
+                return true;
+            }
+        }
+        
+        boolean available = !exists;
+        log.info("Slug '{}' availability in workspace {}: {}", normalizedSlug, workspaceId, available);
+        return available;
+    }
+    
     // ═══════════════════════════════════════════════════════════════════════════
     // PRIVATE HELPER METHODS
     // ═══════════════════════════════════════════════════════════════════════════

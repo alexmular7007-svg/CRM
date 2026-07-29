@@ -98,4 +98,19 @@ public interface LeadMagnetService {
      * @throws com.arjun.crm.exception.ResourceNotFoundException if campaign not found
      */
     LeadMagnetResponse updateStatus(Long workspaceId, Long magnetId, boolean isActive);
+    
+    /**
+     * Check if a slug is available in a workspace
+     * 
+     * Permission: OWNER or ADMIN only
+     * Authenticated user determined via WorkspaceAuthorizationService
+     * 
+     * @param workspaceId the workspace ID
+     * @param slug the slug to check
+     * @param magnetId optional campaign ID to exclude from check
+     *                 (used when updating existing campaign to allow keeping same slug)
+     * @return true if slug is available, false if already in use
+     * @throws com.arjun.crm.exception.AccessDeniedException if insufficient permission
+     */
+    boolean isSlugAvailable(Long workspaceId, String slug, Long magnetId);
 }
