@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Repository
 public interface TaskActivityRepository extends JpaRepository<TaskActivity, Long> {
@@ -93,4 +94,17 @@ public interface TaskActivityRepository extends JpaRepository<TaskActivity, Long
     @org.springframework.data.jpa.repository.Modifying
     @Query("DELETE FROM TaskActivity ta WHERE ta.task.id = :taskId")
     int deleteByTaskId(@Param("taskId") Long taskId);
+
+    /**
+     * PERFORMANCE OPTIMIZATION: Get all activity statistics in single query
+     * Returns: Map with keys "today", "week", "month"
+     */
+    @Query("SELECT new map(" +
+           "COUNT(CASE WHEN a.createdAt > :today THEN 1 END) as today, " +
+           "COUNT(CASE WHEN a.createdAt > :weekAgo THEN 1 END) as week, " +
+           "COUNT(CASE WHEN a.createdAt > :monthAgo THEN 1 END) as month) " +
+           "FROM TaskActivity a")
+    Map<String, Long> getActivityStatistics(@Param("today") LocalDateTime today, 
+                                            @Param("weekAgo") LocalDateTime weekAgo, 
+                                            @Param("monthAgo") LocalDateTime monthAgo);
 }

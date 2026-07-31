@@ -18,4 +18,10 @@ public interface WorkspaceRepository extends JpaRepository<Workspace, Long> {
            "LEFT JOIN w.members m " +
            "WHERE w.owner.id = :userId OR (m.user.id = :userId AND m.deletedAt IS NULL)")
     Page<Workspace> findAllByUserIdAsOwnerOrMember(@Param("userId") Long userId, Pageable pageable);
+    
+    @Query("SELECT DISTINCT w FROM Workspace w " +
+           "LEFT JOIN FETCH w.members m " +
+           "LEFT JOIN FETCH m.user " +
+           "WHERE w.owner.id = :userId OR (m.user.id = :userId AND m.deletedAt IS NULL)")
+    Page<Workspace> findAllByUserIdAsOwnerOrMemberWithMembers(@Param("userId") Long userId, Pageable pageable);
 }

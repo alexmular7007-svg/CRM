@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.util.Map;
 
 @Repository
 public interface ProjectRepository extends JpaRepository<Project, Long> {
@@ -94,4 +95,15 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
      */
     @Query("SELECT DISTINCT wm.user FROM WorkspaceMember wm WHERE wm.workspace.id = :workspaceId AND wm.deletedAt IS NULL AND wm.status = 'ACTIVE' ORDER BY wm.user.fullName")
     java.util.List<User> findAssignableProjectMembersInWorkspace(@Param("workspaceId") Long workspaceId);
+
+    /**
+     * PERFORMANCE OPTIMIZATION: Get all project statistics for workspace in single query
+     * Returns: Map with keys "total", "active", "completed"
+     */
+    @Query("SELECT new map(" +
+           "COUNT(CASE WHEN p.status IS NOT NULL THEN 1 END) as total, " +
+           "COUNT(CASE WHEN p.status = 'ACTIVE' THEN 1 END) as active, " +
+           "COUNT(CASE WHEN p.status = 'COMPLETED' THEN 1 END) as completed) " +
+           "FROM Project p WHERE p.workspace.id = :workspaceId")
+    Map<String, Long> getWorkspaceProjectStatistics(@Param("workspaceId") Long workspaceId);
 }

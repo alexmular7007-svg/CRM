@@ -23,6 +23,7 @@ import { workspaceService } from '../services/workspaceService'
 import UserAvatar from '../components/common/UserAvatar'
 import AuthenticatedSidebar from './AuthenticatedSidebar'
 import { useThemeContext } from '../contexts/ThemeContext'
+import { perfMonitor } from '../utils/performanceMonitor'
 
 // Navigation items for mobile drawer
 const MOBILE_NAV_ITEMS = [
@@ -546,7 +547,13 @@ const AuthenticatedLayout = () => {
   // Fetch workspaces - optimized with staleTime to prevent refetch on every mount
   const { data: workspacesData, isLoading: isLoadingWorkspaces, error: workspacesError } = useQuery({
     queryKey: ['workspaces'],
-    queryFn: workspaceService.getAll,
+    queryFn: () => {
+      perfMonitor.mark('workspaces_fetch_start')
+      return workspaceService.getAll().then(data => {
+        perfMonitor.mark('workspaces_fetch_complete')
+        return data
+      })
+    },
     enabled: isAuthenticated,
     retry: 1,
     staleTime: 5 * 60 * 1000,  // 5 minutes - workspaces rarely change
@@ -556,9 +563,11 @@ const AuthenticatedLayout = () => {
   // Initialize workspace on first load
   useEffect(() => {
     if (workspacesData && !currentWorkspace) {
+      perfMonitor.mark('workspace_initialization_start')
       const list = Array.isArray(workspacesData) ? workspacesData : workspacesData?.content ?? []
       if (list.length > 0) {
         dispatch(setCurrentWorkspace(list[0]))
+        perfMonitor.mark('workspace_initialization_complete')
       }
     }
   }, [workspacesData, currentWorkspace, dispatch, isLoadingWorkspaces, workspacesError])
@@ -595,7 +604,7 @@ const AuthenticatedLayout = () => {
       className="flex h-screen overflow-hidden flex-col lg:flex-row"
     >
       {/* Sidebar - Desktop Only (lg and above) */}
-      <div className="hidden lg:flex lg:flex-col">
+      <div className="hidden lg:flex lg:flex-col" onLoad={() => { perfMonitor.mark('sidebar_rendered') }}>
         <AuthenticatedSidebar />
       </div>
 

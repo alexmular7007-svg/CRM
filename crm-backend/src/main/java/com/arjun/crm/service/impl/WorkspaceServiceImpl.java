@@ -296,24 +296,27 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         User currentUser = getAuthenticatedUser();
         log.info("Listing workspaces for user: {}", currentUser.getEmail());
 
+        // Fetch workspaces with eager-loaded members to avoid N+1
         Page<Workspace> workspaces = workspaceRepository
-                .findAllByUserIdAsOwnerOrMember(currentUser.getId(), pageable);
+                .findAllByUserIdAsOwnerOrMemberWithMembers(currentUser.getId(), pageable);
 
-        return workspaces.map(workspace -> buildWorkspaceResponse(workspace, currentUser));
+        return workspaces.map(workspace -> buildWorkspaceResponseOptimized(workspace, currentUser));
     }
 
     /**
-     * Build workspace response with current user's role
+     * Build workspace response with current user's role - optimized (no extra queries)
      */
-    private WorkspaceResponse buildWorkspaceResponse(Workspace workspace, User currentUser) {
+    private WorkspaceResponse buildWorkspaceResponseOptimized(Workspace workspace, User currentUser) {
         WorkspaceResponse response = WorkspaceResponse.fromEntity(workspace);
         
-        // Determine user's role in this workspace
+        // Determine user's role in this workspace (no database query - already loaded)
         if (workspace.getOwner().getId().equals(currentUser.getId())) {
             response.setUserRole(com.arjun.crm.enums.WorkspaceRole.OWNER);
         } else {
-            // Look up role from WorkspaceMember table
-            workspaceMemberRepository.findByWorkspaceIdAndUserId(workspace.getId(), currentUser.getId())
+            // Role is already loaded from eager fetch - find from in-memory collection
+            workspace.getMembers().stream()
+                    .filter(member -> member.getUser().getId().equals(currentUser.getId()) && member.getDeletedAt() == null)
+                    .findFirst()
                     .ifPresent(member -> response.setUserRole(member.getRole()));
         }
         

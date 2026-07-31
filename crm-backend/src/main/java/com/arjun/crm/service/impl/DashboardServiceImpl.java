@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -40,7 +41,6 @@ public class DashboardServiceImpl implements DashboardService {
         
         if (workspaceId == null) {
             log.error("❌ getDashboardOverview called with NULL workspaceId for user: {}", currentUser.getEmail());
-            // Return empty response instead of processing with null
             return DashboardOverviewResponse.builder()
                     .taskStatistics(DashboardOverviewResponse.TaskStatistics.builder()
                             .totalTasks(0L)
@@ -75,14 +75,15 @@ public class DashboardServiceImpl implements DashboardService {
         
         log.info("Fetching dashboard overview for workspace: {} and user: {}", workspaceId, currentUser.getEmail());
 
-        // Task Statistics - WORKSPACE SCOPED
-        Long totalTasks = taskRepository.countByWorkspaceId(workspaceId);
-        Long completedTasks = taskRepository.countByWorkspaceIdAndStatus(workspaceId, TaskStatus.DONE);
+        // OPTIMIZED: Get all task statistics in ONE query
+        Map<String, Long> taskStats = taskRepository.getWorkspaceTaskStatistics(workspaceId);
+        Long totalTasks = taskStats.getOrDefault("total", 0L);
+        Long completedTasks = taskStats.getOrDefault("completed", 0L);
+        Long inProgressTasks = taskStats.getOrDefault("inProgress", 0L);
         Long overdueTasks = (long) taskRepository.findOverdueTasksByWorkspace(workspaceId, LocalDate.now()).size();
-        Long inProgressTasks = taskRepository.countByWorkspaceIdAndStatus(workspaceId, TaskStatus.IN_PROGRESS);
         Double completionRate = totalTasks > 0 ? (completedTasks * 100.0 / totalTasks) : 0.0;
 
-        DashboardOverviewResponse.TaskStatistics taskStats = DashboardOverviewResponse.TaskStatistics.builder()
+        DashboardOverviewResponse.TaskStatistics taskStatsResponse = DashboardOverviewResponse.TaskStatistics.builder()
                 .totalTasks(totalTasks)
                 .completedTasks(completedTasks)
                 .overdueTasks(overdueTasks)
@@ -90,47 +91,51 @@ public class DashboardServiceImpl implements DashboardService {
                 .completionRate(Math.round(completionRate * 100.0) / 100.0)
                 .build();
 
-        // Project Statistics - WORKSPACE SCOPED
-        Long totalProjects = projectRepository.countByWorkspaceId(workspaceId);
-        Long activeProjects = projectRepository.countByWorkspaceIdAndStatus(workspaceId, ProjectStatus.ACTIVE);
-        Long completedProjects = projectRepository.countByWorkspaceIdAndStatus(workspaceId, ProjectStatus.COMPLETED);
+        // OPTIMIZED: Get all project statistics in ONE query
+        Map<String, Long> projectStats = projectRepository.getWorkspaceProjectStatistics(workspaceId);
+        Long totalProjects = projectStats.getOrDefault("total", 0L);
+        Long activeProjects = projectStats.getOrDefault("active", 0L);
+        Long completedProjects = projectStats.getOrDefault("completed", 0L);
         Double averageProgress = 0.0;
 
-        DashboardOverviewResponse.ProjectStatistics projectStats = DashboardOverviewResponse.ProjectStatistics.builder()
+        DashboardOverviewResponse.ProjectStatistics projectStatsResponse = DashboardOverviewResponse.ProjectStatistics.builder()
                 .totalProjects(totalProjects)
                 .activeProjects(activeProjects)
                 .completedProjects(completedProjects)
                 .averageProgress(averageProgress)
                 .build();
 
-        // Notification Statistics
-        Long unreadNotifications = notificationRepository.countByRecipientIdAndIsReadFalse(currentUser.getId());
-        Long totalNotifications = notificationRepository.countByRecipientIdOrderByCreatedAtDesc(currentUser.getId());
+        // OPTIMIZED: Get all notification statistics in ONE query
+        Map<String, Long> notificationStats = notificationRepository.getNotificationStatistics(currentUser.getId());
+        Long unreadNotifications = notificationStats.getOrDefault("unread", 0L);
+        Long totalNotifications = notificationStats.getOrDefault("total", 0L);
 
-        DashboardOverviewResponse.NotificationStatistics notificationStats = DashboardOverviewResponse.NotificationStatistics.builder()
+        DashboardOverviewResponse.NotificationStatistics notificationStatsResponse = DashboardOverviewResponse.NotificationStatistics.builder()
                 .unreadCount(unreadNotifications)
                 .totalCount(totalNotifications)
                 .build();
 
-        // Activity Statistics
+        // OPTIMIZED: Get all activity statistics in ONE query
         LocalDateTime today = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
         LocalDateTime weekAgo = today.minusDays(7);
         LocalDateTime monthAgo = today.minusDays(30);
 
-        Long todayActivities = taskActivityRepository.countByCreatedAtAfter(today);
-        Long weekActivities = taskActivityRepository.countByCreatedAtAfter(weekAgo);
-        Long monthActivities = taskActivityRepository.countByCreatedAtAfter(monthAgo);
+        Map<String, Long> activityStats = taskActivityRepository.getActivityStatistics(today, weekAgo, monthAgo);
+        Long todayActivities = activityStats.getOrDefault("today", 0L);
+        Long weekActivities = activityStats.getOrDefault("week", 0L);
+        Long monthActivities = activityStats.getOrDefault("month", 0L);
 
-        DashboardOverviewResponse.ActivityStatistics activityStats = DashboardOverviewResponse.ActivityStatistics.builder()
+        DashboardOverviewResponse.ActivityStatistics activityStatsResponse = DashboardOverviewResponse.ActivityStatistics.builder()
                 .todayActivities(todayActivities)
                 .weekActivities(weekActivities)
                 .monthActivities(monthActivities)
                 .build();
 
-        // User Productivity - Count tasks ASSIGNED to user and completed (not created by)
-        Long userTasksCompleted = taskRepository.countByAssignedToIdAndStatus(currentUser.getId(), TaskStatus.DONE);
-        Long userComments = taskCommentRepository.countByUserId(currentUser.getId());
-        Long userMessages = chatMessageRepository.countBySenderId(currentUser.getId());
+        // OPTIMIZED: Get all user productivity statistics in ONE query
+        Map<String, Long> userProductivityStats = taskRepository.getUserProductivityStatistics(currentUser.getId());
+        Long userTasksCompleted = userProductivityStats.getOrDefault("tasksCompleted", 0L);
+        Long userComments = userProductivityStats.getOrDefault("comments", 0L);
+        Long userMessages = userProductivityStats.getOrDefault("messages", 0L);
         Double activityScore = calculateActivityScore(userTasksCompleted, userComments, userMessages);
 
         DashboardOverviewResponse.UserProductivity userProductivity = DashboardOverviewResponse.UserProductivity.builder()
@@ -141,10 +146,10 @@ public class DashboardServiceImpl implements DashboardService {
                 .build();
 
         return DashboardOverviewResponse.builder()
-                .taskStatistics(taskStats)
-                .projectStatistics(projectStats)
-                .notificationStatistics(notificationStats)
-                .activityStatistics(activityStats)
+                .taskStatistics(taskStatsResponse)
+                .projectStatistics(projectStatsResponse)
+                .notificationStatistics(notificationStatsResponse)
+                .activityStatistics(activityStatsResponse)
                 .userProductivity(userProductivity)
                 .build();
     }

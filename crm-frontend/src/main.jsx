@@ -6,7 +6,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import App from './App'
 import { store } from './store'
+import { perfMonitor } from './utils/performanceMonitor'
 import './index.css'
+
+// STEP 1: Record application start
+perfMonitor.mark('app_start')
 
 /**
  * On every app boot, validate that the cached currentWorkspace actually
@@ -16,6 +20,7 @@ import './index.css'
  */
 ;(function clearStaleWorkspaceCache() {
   try {
+    perfMonitor.mark('workspace_cache_check_start')
     const token = localStorage.getItem('token')
     const workspace = localStorage.getItem('currentWorkspace')
     if (!token || !workspace) return
@@ -35,6 +40,7 @@ import './index.css'
     // The app will re-fetch and re-set it from the API response.
     localStorage.removeItem('currentWorkspace')
     localStorage.removeItem('currentProject')
+    perfMonitor.mark('workspace_cache_check_end')
   } catch {
     localStorage.removeItem('currentWorkspace')
     localStorage.removeItem('currentProject')
@@ -53,6 +59,8 @@ const queryClient = new QueryClient({
 
 // Make queryClient globally accessible for OAuth2Callback and other async contexts
 window.__queryClient = queryClient
+
+perfMonitor.mark('react_dom_render_start')
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -89,3 +97,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     </Provider>
   </React.StrictMode>,
 )
+
+// Mark render as complete after React has finished
+setTimeout(() => {
+  perfMonitor.mark('react_dom_render_complete')
+  perfMonitor.measure('react_render_duration', 'react_dom_render_start', 'react_dom_render_complete')
+}, 0)

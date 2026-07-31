@@ -14,6 +14,7 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Repository
 public interface TaskRepository extends JpaRepository<Task, Long> {
@@ -202,4 +203,27 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
            "WHERE wm.workspace.id = :workspaceId AND wm.deletedAt IS NULL AND wm.status = 'ACTIVE' " +
            "ORDER BY wm.user.fullName")
     List<User> findAssignableUsersInWorkspace(@Param("workspaceId") Long workspaceId);
+
+    /**
+     * PERFORMANCE OPTIMIZATION: Get all task statistics for workspace in single query
+     * Returns: Map with keys "total", "completed", "inProgress"
+     */
+    @Query("SELECT new map(" +
+           "COUNT(CASE WHEN t.status IS NOT NULL THEN 1 END) as total, " +
+           "COUNT(CASE WHEN t.status = 'DONE' THEN 1 END) as completed, " +
+           "COUNT(CASE WHEN t.status = 'IN_PROGRESS' THEN 1 END) as inProgress) " +
+           "FROM Task t WHERE t.workspace.id = :workspaceId")
+    Map<String, Long> getWorkspaceTaskStatistics(@Param("workspaceId") Long workspaceId);
+
+    /**
+     * PERFORMANCE OPTIMIZATION: Get all user productivity statistics in single query
+     * Returns: Map with keys "tasksCompleted", "comments", "messages"
+     */
+    @Query("SELECT new map(" +
+           "COUNT(DISTINCT CASE WHEN t.assignedTo.id = :userId AND t.status = 'DONE' THEN t.id END) as tasksCompleted, " +
+           "(SELECT COUNT(c) FROM TaskComment c WHERE c.user.id = :userId) as comments, " +
+           "(SELECT COUNT(m) FROM ChatMessage m WHERE m.sender.id = :userId) as messages) " +
+           "FROM Task t WHERE 1=1")
+    Map<String, Long> getUserProductivityStatistics(@Param("userId") Long userId);
 }
+

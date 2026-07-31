@@ -1,11 +1,12 @@
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
-import { memo } from 'react'
+import { memo, useEffect } from 'react'
 import { analyticsService } from '../services/analyticsService'
 import { useSelector, shallowEqual } from 'react-redux'
 import Spinner from '../components/common/Spinner'
 import { FiCheckCircle, FiClock, FiAlertCircle, FiTrendingUp } from 'react-icons/fi'
 import { format } from 'date-fns'
 import { useThemeContext } from '../contexts/ThemeContext'
+import { perfMonitor } from '../utils/performanceMonitor'
 
 // Skeleton Loader Component
 const StatsSkeleton = memo(() => (
@@ -98,13 +99,24 @@ const Dashboard = memo(() => {
     shallowEqual
   )
 
+  // Track when dashboard component mounts
+  useEffect(() => {
+    perfMonitor.mark('dashboard_component_mounted')
+  }, [])
+
   const { data: dashboardData, isLoading, error } = useQuery({
     queryKey: ['dashboard', currentWorkspace?.id],
     queryFn: () => {
       if (!currentWorkspace?.id) return Promise.resolve(null)
+      perfMonitor.mark('dashboard_api_request_start')
       return analyticsService.getDashboard(currentWorkspace.id)
+        .then(data => {
+          perfMonitor.mark('dashboard_api_request_complete')
+          return data
+        })
         .catch(err => {
           console.error('Dashboard API error:', err)
+          perfMonitor.mark('dashboard_api_request_error')
           throw err
         })
     },
@@ -120,9 +132,15 @@ const Dashboard = memo(() => {
     queryKey: ['recentActivities', currentWorkspace?.id],
     queryFn: () => {
       if (!currentWorkspace?.id) return Promise.resolve([])
+      perfMonitor.mark('activities_api_request_start')
       return analyticsService.getRecentActivities(currentWorkspace.id, 10)
+        .then(data => {
+          perfMonitor.mark('activities_api_request_complete')
+          return data
+        })
         .catch(err => {
           console.error('Activities API error:', err)
+          perfMonitor.mark('activities_api_request_error')
           return []
         })
     },
@@ -132,6 +150,13 @@ const Dashboard = memo(() => {
     retry: false,
     placeholderData: keepPreviousData,  // ✅ Show previous activities while refetching
   })
+
+  // Track when dashboard renders with data
+  useEffect(() => {
+    if (dashboardData && !isLoading) {
+      perfMonitor.mark('dashboard_data_rendered')
+    }
+  }, [dashboardData, isLoading])
 
   if (!currentWorkspace) {
     return (

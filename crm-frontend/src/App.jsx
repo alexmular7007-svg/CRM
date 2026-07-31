@@ -6,6 +6,7 @@ import PublicLayout from './layouts/PublicLayout'
 import AuthLayout from './layouts/AuthLayout'
 import AuthenticatedLayout from './layouts/AuthenticatedLayout'
 import { ThemeProvider, useThemeContext } from './contexts/ThemeContext'
+import { perfMonitor } from './utils/performanceMonitor'
 
 // Components
 import ProtectedRoute from './components/auth/ProtectedRoute'
@@ -53,6 +54,13 @@ export default function App() {
 function AppContent() {
   const { theme } = useThemeContext()
   const { isAuthenticated } = useSelector((state) => state.auth)
+
+  // STEP 2: Track authentication completion
+  useEffect(() => {
+    if (isAuthenticated) {
+      perfMonitor.mark('authentication_complete')
+    }
+  }, [isAuthenticated])
 
   useEffect(() => {
     if (theme === 'dark') {

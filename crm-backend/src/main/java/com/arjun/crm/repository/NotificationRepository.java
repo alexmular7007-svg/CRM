@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @Repository
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
@@ -73,4 +74,14 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     @Modifying(clearAutomatically = true)
     @Query("DELETE FROM Notification n WHERE n.workspace.id = :workspaceId")
     int deleteByWorkspaceId(@Param("workspaceId") Long workspaceId);
+
+    /**
+     * PERFORMANCE OPTIMIZATION: Get all notification statistics in single query
+     * Returns: Map with keys "unread", "total"
+     */
+    @Query("SELECT new map(" +
+           "COUNT(CASE WHEN n.isRead = false THEN 1 END) as unread, " +
+           "COUNT(n) as total) " +
+           "FROM Notification n WHERE n.recipient.id = :recipientId")
+    Map<String, Long> getNotificationStatistics(@Param("recipientId") Long recipientId);
 }

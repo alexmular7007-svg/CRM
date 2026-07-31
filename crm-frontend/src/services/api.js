@@ -2,6 +2,7 @@ import axios from 'axios'
 import { store } from '../store'
 import { logout } from '../store/slices/authSlice'
 import toast from 'react-hot-toast'
+import { perfMonitor } from '../utils/performanceMonitor'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL
@@ -15,6 +16,11 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
+    // Mark request start
+    config.__requestStartTime = performance.now()
+    config.__requestPath = config.url
+    perfMonitor.mark(`api_request_start_${config.url}`)
+    
     const token = store.getState().auth.token
     if (token) {
       // Proactive expiry check: decode the exp claim without a library
@@ -42,9 +48,24 @@ api.interceptors.request.use(
 // Response interceptor
 api.interceptors.response.use(
   (response) => {
+    // Calculate request duration
+    if (response.config.__requestStartTime) {
+      const duration = performance.now() - response.config.__requestStartTime
+      const endpoint = response.config.__requestPath
+      console.log(`[API] ${response.config.method.toUpperCase()} ${endpoint}: ${duration.toFixed(2)}ms`)
+      perfMonitor.mark(`api_response_complete_${endpoint}`)
+    }
     return response.data
   },
   (error) => {
+    // Calculate failed request duration
+    if (error.config?.__requestStartTime) {
+      const duration = performance.now() - error.config.__requestStartTime
+      const endpoint = error.config.__requestPath
+      console.log(`[API] ${error.config.method.toUpperCase()} ${endpoint}: FAILED ${duration.toFixed(2)}ms`)
+      perfMonitor.mark(`api_response_error_${endpoint}`)
+    }
+    
     if (error.response) {
       const { status, data, config } = error.response
 
