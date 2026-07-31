@@ -19,15 +19,8 @@ const RegisterForm = ({ onSwitchToLogin }) => {
   const [passwordMatch, setPasswordMatch] = useState(true)
   const { register, isRegistering } = useAuth()
 
-  // DEBUG: Log version to console
-  console.log('🔧 RegisterForm Component v3.1.0-VERIFICATION loaded')
-  console.log('✅ Placeholders: "Enter your name", "name@example.com"')
-  console.log('✅ Terms link: /terms | Privacy link: /privacy')
-  console.log('✅ Browser autofill disabled')
-
   // Force clear any browser auto-filled values on mount + localStorage
   useEffect(() => {
-    console.log('🧹 useEffect: Clearing autofilled values and localStorage')
     
     // Clear localStorage
     try {
@@ -241,7 +234,6 @@ const RegisterForm = ({ onSwitchToLogin }) => {
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => {
-                console.log('✅ Terms link clicked - opening /terms in new tab')
                 e.preventDefault()
                 window.open(window.location.origin + '/terms', '_blank', 'noopener,noreferrer')
               }}
@@ -255,7 +247,6 @@ const RegisterForm = ({ onSwitchToLogin }) => {
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => {
-                console.log('✅ Privacy link clicked - opening /privacy in new tab')
                 e.preventDefault()
                 window.open(window.location.origin + '/privacy', '_blank', 'noopener,noreferrer')
               }}

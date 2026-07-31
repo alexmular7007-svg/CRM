@@ -468,20 +468,10 @@ const AuthenticatedLayout = () => {
 
   // Initialize workspace on first load
   useEffect(() => {
-    console.log('🔍 AuthenticatedLayout workspace effect:')
-    console.log('  workspacesData:', workspacesData)
-    console.log('  isLoadingWorkspaces:', isLoadingWorkspaces)
-    console.log('  workspacesError:', workspacesError)
-    console.log('  currentWorkspace:', currentWorkspace)
-
     if (workspacesData && !currentWorkspace) {
       const list = Array.isArray(workspacesData) ? workspacesData : workspacesData?.content ?? []
-      console.log('  Extracted list:', list, 'length:', list.length)
       if (list.length > 0) {
-        console.log('  Setting first workspace:', list[0])
         dispatch(setCurrentWorkspace(list[0]))
-      } else {
-        console.warn('  ⚠️ No workspaces found for user')
       }
     }
   }, [workspacesData, currentWorkspace, dispatch, isLoadingWorkspaces, workspacesError])

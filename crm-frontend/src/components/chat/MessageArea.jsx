@@ -76,8 +76,6 @@ const MessageArea = ({
       // Get signed URL + metadata from backend (validates permissions)
       const urlData = await attachmentService.getDownloadUrl(msg.attachmentId)
       const downloadUrl = urlData.downloadUrl
-      // ✅ Use the filename from backend, NOT from message
-      // Backend returns the ORIGINAL filename (e.g., "Resume.pdf")
       const filename = urlData.filename
       
       // For images: open in new tab for preview
@@ -86,42 +84,14 @@ const MessageArea = ({
         toast.success('Image opened')
       } else {
         // For PDFs/DOCX/Videos: fetch as Blob to preserve binary integrity
-        // This ensures downloaded file is byte-for-byte identical to original
         const response = await fetch(downloadUrl)
         
         if (!response.ok) {
           throw new Error(`Download failed: ${response.status} ${response.statusText}`)
         }
         
-        // Log HTTP response details
-        console.log('🔍 HTTP Response Details:')
-        console.log('   Status:', response.status)
-        console.log('   Content-Type:', response.headers.get('content-type'))
-        console.log('   Content-Length:', response.headers.get('content-length'))
-        
         // Convert response to Blob (preserves exact binary data)
         const blob = await response.blob()
-        
-        // Log Blob details
-        console.log('🔍 Blob Details:')
-        console.log('   Blob Type:', blob.type)
-        console.log('   Blob Size:', blob.size, 'bytes')
-        console.log('   Filename:', filename)
-        
-        // Check first 8 bytes of downloaded Blob - should be %PDF (25 50 44 46)
-        const buffer = await blob.arrayBuffer()
-        const bytes = new Uint8Array(buffer)
-        const firstBytes = Array.from(bytes.slice(0, 8))
-        console.log('📋 First 8 bytes (decimal):', firstBytes)
-        console.log('📋 First 8 bytes (hex):', firstBytes.map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' '))
-        console.log('   Should be: 25 50 44 46 (which is %PDF)')
-        console.log('   Match: ', firstBytes[0] === 0x25 && firstBytes[1] === 0x50 && firstBytes[2] === 0x44 && firstBytes[3] === 0x46 ? '✅ YES' : '❌ NO')
-        
-        // Size comparison
-        console.log('📊 [SIZE COMPARISON]')
-        console.log('   Content-Length from header:', response.headers.get('content-length'))
-        console.log('   Blob Size:', blob.size)
-        console.log('   Match: ', response.headers.get('content-length') == blob.size ? '✅ YES' : '❌ NO')
         
         // Create object URL from Blob
         const blobUrl = window.URL.createObjectURL(blob)

@@ -101,15 +101,10 @@ const Dashboard = () => {
   const { data: dashboardData, isLoading, error } = useQuery({
     queryKey: ['dashboard', currentWorkspace?.id],
     queryFn: () => {
-      console.log('📊 Fetching dashboard for workspace:', currentWorkspace?.id)
       if (!currentWorkspace?.id) return Promise.resolve(null)
       return analyticsService.getDashboard(currentWorkspace.id)
-        .then(data => {
-          console.log('✅ Dashboard data received:', data)
-          return data
-        })
         .catch(err => {
-          console.error('❌ Dashboard API error:', err)
+          console.error('Dashboard API error:', err)
           throw err
         })
     },
@@ -122,15 +117,10 @@ const Dashboard = () => {
   const { data: recentActivities = [], isLoading: isLoadingActivities } = useQuery({
     queryKey: ['recentActivities', currentWorkspace?.id],
     queryFn: () => {
-      console.log('📌 Fetching recent activities for workspace:', currentWorkspace?.id)
       if (!currentWorkspace?.id) return Promise.resolve([])
       return analyticsService.getRecentActivities(currentWorkspace.id, 10)
-        .then(data => {
-          console.log('✅ Activities data received:', data)
-          return data
-        })
         .catch(err => {
-          console.error('❌ Activities API error:', err)
+          console.error('Activities API error:', err)
           return []
         })
     },
