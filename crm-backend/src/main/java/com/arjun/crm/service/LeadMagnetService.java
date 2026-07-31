@@ -1,8 +1,11 @@
 package com.arjun.crm.service;
 
 import com.arjun.crm.dto.request.LeadMagnetCreateRequest;
+import com.arjun.crm.dto.request.LeadMagnetSubmissionRequest;
 import com.arjun.crm.dto.request.LeadMagnetUpdateRequest;
 import com.arjun.crm.dto.response.LeadMagnetResponse;
+import com.arjun.crm.dto.response.SubmissionResponse;
+import com.arjun.crm.entity.LeadMagnet;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -113,4 +116,25 @@ public interface LeadMagnetService {
      * @throws com.arjun.crm.exception.AccessDeniedException if insufficient permission
      */
     boolean isSlugAvailable(Long workspaceId, String slug, Long magnetId);
+    
+    /**
+     * Submit a public lead magnet form (create lead from visitor submission)
+     * 
+     * Permission: PUBLIC - NO AUTHENTICATION REQUIRED
+     * 
+     * Creates a new Lead entity from visitor submission:
+     * - Sets status to LEAD (entry status)
+     * - Sets priority to MEDIUM (default)
+     * - Associates lead with the magnet's workspace
+     * - Links lead to the source magnet
+     * - Uses magnet creator as lead's createdBy
+     * - Increments submission counter on magnet
+     * 
+     * @param magnet the magnet (must be active)
+     * @param request submission data (name, email, phone, company, notes)
+     * @return SubmissionResponse with created lead details
+     */
+    com.arjun.crm.dto.response.SubmissionResponse submitPublicForm(
+            com.arjun.crm.entity.LeadMagnet magnet, 
+            com.arjun.crm.dto.request.LeadMagnetSubmissionRequest request);
 }

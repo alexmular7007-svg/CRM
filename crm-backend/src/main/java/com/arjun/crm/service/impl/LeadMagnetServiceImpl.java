@@ -1,15 +1,21 @@
 package com.arjun.crm.service.impl;
 
 import com.arjun.crm.dto.request.LeadMagnetCreateRequest;
+import com.arjun.crm.dto.request.LeadMagnetSubmissionRequest;
 import com.arjun.crm.dto.request.LeadMagnetUpdateRequest;
 import com.arjun.crm.dto.response.LeadMagnetResponse;
+import com.arjun.crm.dto.response.SubmissionResponse;
+import com.arjun.crm.entity.Lead;
 import com.arjun.crm.entity.LeadMagnet;
 import com.arjun.crm.entity.User;
 import com.arjun.crm.entity.Workspace;
 import com.arjun.crm.entity.WorkspaceMember;
+import com.arjun.crm.enums.LeadPriority;
+import com.arjun.crm.enums.LeadStatus;
 import com.arjun.crm.exception.ConflictException;
 import com.arjun.crm.exception.ResourceNotFoundException;
 import com.arjun.crm.repository.LeadMagnetRepository;
+import com.arjun.crm.repository.LeadRepository;
 import com.arjun.crm.repository.WorkspaceRepository;
 import com.arjun.crm.security.WorkspaceAuthorizationService;
 import com.arjun.crm.service.LeadMagnetService;
@@ -21,6 +27,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
@@ -48,6 +55,7 @@ import java.util.UUID;
 public class LeadMagnetServiceImpl implements LeadMagnetService {
     
     private final LeadMagnetRepository magnetRepository;
+    private final LeadRepository leadRepository;
     private final WorkspaceRepository workspaceRepository;
     private final WorkspaceAuthorizationService workspaceAuthService;
     
@@ -216,6 +224,47 @@ public class LeadMagnetServiceImpl implements LeadMagnetService {
         boolean available = !exists;
         log.info("Slug '{}' availability in workspace {}: {}", normalizedSlug, workspaceId, available);
         return available;
+    }
+    
+    @Override
+    public SubmissionResponse submitPublicForm(LeadMagnet magnet, LeadMagnetSubmissionRequest request) {
+        log.info("=== SUBMIT PUBLIC FORM ===");
+        log.info("Magnet: id={}, workspace={}", magnet.getId(), magnet.getWorkspace().getId());
+        log.info("Submission: name={}, email={}", request.getName(), request.getEmail());
+        
+        // Create Lead entity from submission
+        Lead lead = Lead.builder()
+                .name(request.getName())
+                .email(request.getEmail())
+                .phone(request.getPhone())
+                .company(request.getCompany())
+                .status(LeadStatus.LEAD)  // Entry status for new leads
+                .priority(LeadPriority.MEDIUM)  // Default priority
+                .workspace(magnet.getWorkspace())
+                .sourceMagnet(magnet)  // Link to the source magnet
+                .createdBy(magnet.getCreatedBy())  // Use magnet creator
+                .notes(request.getNotes())
+                .build();
+        
+        // Save lead
+        lead = leadRepository.save(lead);
+        log.info("✅ Lead created successfully: id={}, email={}", lead.getId(), lead.getEmail());
+        
+        // Build and return response
+        SubmissionResponse response = SubmissionResponse.builder()
+                .leadId(lead.getId())
+                .name(lead.getName())
+                .email(lead.getEmail())
+                .phone(lead.getPhone())
+                .company(lead.getCompany())
+                .status(lead.getStatus().toString())
+                .magnetName(magnet.getName())
+                .submittedAt(LocalDateTime.now())
+                .thankYouMessage("Thank you for your interest! Our team will follow up soon.")
+                .build();
+        
+        log.info("✅ Submission response created: {}", response.getLeadId());
+        return response;
     }
     
     // ═══════════════════════════════════════════════════════════════════════════
