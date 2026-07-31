@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { memo } from 'react'
 import { analyticsService } from '../services/analyticsService'
 import { useSelector, shallowEqual } from 'react-redux'
@@ -112,8 +112,10 @@ const Dashboard = memo(() => {
     retry: 1,
     staleTime: 30000,
     gcTime: 5 * 60 * 1000,
+    placeholderData: keepPreviousData,  // ✅ Show previous data while refetching
   })
 
+  // Load recent activities - parallel with dashboard
   const { data: recentActivities = [], isLoading: isLoadingActivities } = useQuery({
     queryKey: ['recentActivities', currentWorkspace?.id],
     queryFn: () => {
@@ -125,9 +127,10 @@ const Dashboard = memo(() => {
         })
     },
     enabled: !!currentWorkspace?.id,
-    staleTime: 45000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: 30000,
+    gcTime: 5 * 60 * 1000,
     retry: false,
+    placeholderData: keepPreviousData,  // ✅ Show previous activities while refetching
   })
 
   if (!currentWorkspace) {
