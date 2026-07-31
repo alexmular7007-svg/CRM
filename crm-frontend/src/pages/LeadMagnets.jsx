@@ -127,7 +127,7 @@ const LeadMagnets = () => {
             Create and manage your lead magnet campaigns
           </p>
         </div>
-        {canCreateLeadMagnets && (
+        {(canCreateLeadMagnets || roleLoading) && (
           <button
             onClick={handleCreate}
             className="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors"
