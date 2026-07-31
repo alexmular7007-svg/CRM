@@ -19,6 +19,7 @@ import com.arjun.crm.repository.LeadRepository;
 import com.arjun.crm.repository.WorkspaceRepository;
 import com.arjun.crm.security.WorkspaceAuthorizationService;
 import com.arjun.crm.service.LeadMagnetService;
+import com.arjun.crm.service.CacheEvictionService;
 import com.arjun.crm.util.SlugGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -58,6 +59,7 @@ public class LeadMagnetServiceImpl implements LeadMagnetService {
     private final LeadRepository leadRepository;
     private final WorkspaceRepository workspaceRepository;
     private final WorkspaceAuthorizationService workspaceAuthService;
+    private final CacheEvictionService cacheEvictionService;
     
     @Override
     public LeadMagnetResponse createMagnet(Long workspaceId, LeadMagnetCreateRequest request) {
@@ -249,6 +251,10 @@ public class LeadMagnetServiceImpl implements LeadMagnetService {
         // Save lead
         lead = leadRepository.save(lead);
         log.info("✅ Lead created successfully: id={}, email={}", lead.getId(), lead.getEmail());
+        
+        // Evict dashboard cache to ensure fresh data is shown
+        cacheEvictionService.evictDashboardCache();
+        log.debug("Dashboard cache evicted after new lead submission");
         
         // Build and return response
         SubmissionResponse response = SubmissionResponse.builder()
