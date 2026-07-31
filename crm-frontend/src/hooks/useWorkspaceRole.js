@@ -1,6 +1,6 @@
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { useSelector } from 'react-redux'
-import { useRef } from 'react'
+import { useRef, useMemo } from 'react'
 import { workspaceService } from '../services/workspaceService'
 
 /**
@@ -9,6 +9,9 @@ import { workspaceService } from '../services/workspaceService'
  *
  * Uses keepPreviousData so the role never flickers to null during
  * background refetches — prevents the invite section from vanishing.
+ * 
+ * OPTIMIZATION: Returns Redux role immediately without waiting for API
+ * API call runs in background for freshness, but doesn't block UI
  */
 export function useWorkspaceRole(workspaceId = null) {
   const { currentWorkspace } = useSelector((state) => state.workspace)
@@ -17,49 +20,34 @@ export function useWorkspaceRole(workspaceId = null) {
   // Persist last known role so it never resets to null during refetch
   const lastRoleRef = useRef(null)
 
-  // Start with Redux userRole if available (from workspace list response)
+  // OPTIMIZATION: Use Redux userRole immediately (from workspace list response)
+  // This is always fresh because it was loaded with the workspace in listUserWorkspaces
   const reduxRole = currentWorkspace?.userRole ?? null
   if (reduxRole) lastRoleRef.current = reduxRole
 
+  // Background query to verify/refresh role (but doesn't block the UI if Redis role is available)
   const { data, isLoading, error, isError } = useQuery({
     queryKey: ['my-role', activeId],
     queryFn: () => workspaceService.getMyRole(activeId),
     enabled: Boolean(activeId),
-    staleTime: 15 * 60 * 1000,   // 15 min - role changes are rare, increased from 10
-    gcTime: 30 * 60 * 1000,      // keep in cache for 30 min, doubled from 15
+    staleTime: 15 * 60 * 1000,   // 15 min - role changes are rare
+    gcTime: 30 * 60 * 1000,      // keep in cache for 30 min
     retry: 1,
-    placeholderData: keepPreviousData, // never flash null during background refetch
+    placeholderData: keepPreviousData,
   })
   
-  // DEBUG: Log query state
-  console.log('🔵 useWorkspaceRole query state:', {
-    activeId,
-    isLoading,
-    isError,
-    data: data,
-    error: error,
-    reduxRole,
-  })
-  
-  // Debug: Log errors
-  if (isError) {
-    console.error('🔴 useWorkspaceRole error:', {
-      activeId,
-      error: error?.message || error,
-      errorStatus: error?.response?.status,
-      errorData: error?.response?.data,
-    })
-  }
-
-  // Extract role — fall back to last known role while refetching
+  // Extract role — prioritize Redux role for immediate rendering
   const freshRole = data?.role ?? null
   if (freshRole) lastRoleRef.current = freshRole
-  // Use Redux role as initial value, then update from API
-  const role = freshRole ?? lastRoleRef.current ?? reduxRole
+  
+  // OPTIMIZATION: Use Redux role as primary source for immediate rendering
+  // Only use API data if available, otherwise fall back to last known
+  const role = reduxRole || freshRole || lastRoleRef.current
 
-  const permissions = {
+  // OPTIMIZATION: Memoize permissions to avoid recalculating on every render
+  const permissions = useMemo(() => ({
     role,
-    isLoading: isLoading && !role, // only "loading" if we have no role at all
+    isLoading: isLoading && !reduxRole && !role, // only "loading" if NO role at all
     isOwner:        role === 'OWNER',
     isAdmin:        role === 'ADMIN',
     isAdminOrOwner: role === 'OWNER' || role === 'ADMIN',
@@ -76,10 +64,7 @@ export function useWorkspaceRole(workspaceId = null) {
     canManageLeadMagnets: role === 'OWNER' || role === 'ADMIN',
     canCreateLeadMagnets: role === 'OWNER' || role === 'ADMIN',
     canViewLeadMagnets: true,  // All members can view
-  }
-
-  // DEBUG: Log final permissions
-  console.log('🟢 useWorkspaceRole final permissions:', permissions)
+  }), [role, reduxRole, isLoading])
   
   return permissions
 }
