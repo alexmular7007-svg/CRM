@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, memo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useSelector, shallowEqual } from 'react-redux'
 import { motion } from 'framer-motion'
@@ -18,6 +18,33 @@ import Spinner from '../components/common/Spinner'
 import MobileDrawer from '../components/layout/MobileDrawer'
 import { useAutoRefreshOnMemberRemoval } from '../hooks/useAutoRefreshOnMemberRemoval'
 import { useQueryClient } from '@tanstack/react-query'
+
+// ✅ Message skeleton loader for smooth loading
+const MessageSkeleton = memo(() => (
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    className="flex gap-3 mb-4"
+  >
+    <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
+    <div className="flex-1 space-y-2">
+      <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+      <div className="h-4 w-full bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+      <div className="h-4 w-4/5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+    </div>
+  </motion.div>
+))
+MessageSkeleton.displayName = 'MessageSkeleton'
+
+// ✅ Messages area skeleton
+const MessagesLoadingSkeleton = memo(() => (
+  <div className="flex-1 flex flex-col overflow-y-auto p-4 space-y-4">
+    {[...Array(5)].map((_, i) => (
+      <MessageSkeleton key={i} />
+    ))}
+  </div>
+))
+MessagesLoadingSkeleton.displayName = 'MessagesLoadingSkeleton'
 
 const Chat = () => {
   const { roomId } = useParams()
@@ -105,8 +132,26 @@ const Chat = () => {
 
   if (roomsLoading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <Spinner size="lg" />
+      <div className="flex h-full overflow-hidden bg-gray-50 dark:bg-gray-900">
+        {/* Left Sidebar - Loading */}
+        <div className="hidden lg:flex lg:flex-col lg:w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 space-y-3 p-4">
+          {[...Array(5)].map((_, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+              className="h-20 bg-gray-100 dark:bg-gray-700 rounded-lg animate-pulse"
+            ></motion.div>
+          ))}
+        </div>
+
+        {/* Main Area - Loading */}
+        <div className="flex-1 flex flex-col">
+          <div className="h-16 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 animate-pulse"></div>
+          <MessagesLoadingSkeleton />
+          <div className="h-20 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 animate-pulse"></div>
+        </div>
       </div>
     )
   }
@@ -262,9 +307,7 @@ const Chat = () => {
 
             {/* Messages - Scrollable */}
             {messagesLoading ? (
-              <div className="flex-1 flex items-center justify-center">
-                <Spinner size="lg" />
-              </div>
+              <MessagesLoadingSkeleton />
             ) : (
               <MessageArea
                 messages={messages}

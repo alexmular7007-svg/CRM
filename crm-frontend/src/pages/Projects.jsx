@@ -12,6 +12,55 @@ import CreateProjectModal from '../components/project/CreateProjectModal'
 import EditProjectModal from '../components/project/EditProjectModal'
 import Spinner from '../components/common/Spinner'
 
+// ✅ Project Card Skeleton for loading state
+const ProjectCardSkeleton = ({ index }) => (
+  <motion.div
+    key={`skeleton-${index}`}
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay: index * 0.05 }}
+    className="rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-6 space-y-4"
+  >
+    <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+    <div className="space-y-2">
+      <div className="h-4 w-full bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+      <div className="h-4 w-3/4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+    </div>
+    <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+  </motion.div>
+)
+
+// ✅ Projects skeleton loader
+const ProjectsLoadingSkeleton = () => (
+  <div className="space-y-6">
+    {/* Header Skeleton */}
+    <div className="flex items-center justify-between">
+      <div className="flex items-center space-x-4">
+        <div className="h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+        <div className="space-y-2">
+          <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+          <div className="h-4 w-64 bg-gray-100 dark:bg-gray-800 rounded animate-pulse"></div>
+        </div>
+      </div>
+      <div className="h-12 w-40 bg-blue-100 dark:bg-blue-900/30 rounded-lg animate-pulse"></div>
+    </div>
+
+    {/* Search Bar Skeleton */}
+    <div className="flex items-center space-x-4">
+      <div className="flex-1 h-12 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+      <div className="h-12 w-24 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+      <div className="h-12 w-32 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+    </div>
+
+    {/* Projects Grid Skeleton */}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {[...Array(6)].map((_, i) => (
+        <ProjectCardSkeleton key={i} index={i} />
+      ))}
+    </div>
+  </div>
+)
+
 const Projects = () => {
   const { workspaceId } = useParams()
   const navigate = useNavigate()
@@ -113,11 +162,7 @@ const Projects = () => {
   const workspaceName = currentWorkspace?.name || workspace?.name || 'Workspace'
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <Spinner size="lg" />
-      </div>
-    )
+    return <ProjectsLoadingSkeleton />
   }
 
   return (
