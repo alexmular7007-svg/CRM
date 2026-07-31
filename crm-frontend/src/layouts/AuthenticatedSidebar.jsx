@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, memo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
@@ -33,7 +33,7 @@ const NAV = [
   { path: '/settings', icon: Settings, label: 'Settings' },
 ]
 
-const AuthenticatedSidebar = () => {
+const AuthenticatedSidebar = memo(() => {
   // State management
   const [sidebarState, setSidebarState] = useState(() => {
     const saved = localStorage.getItem('sidebar-state')
@@ -550,6 +550,8 @@ const AuthenticatedSidebar = () => {
       )}
     </>
   )
-}
+})
+
+AuthenticatedSidebar.displayName = 'AuthenticatedSidebar'
 
 export default AuthenticatedSidebar

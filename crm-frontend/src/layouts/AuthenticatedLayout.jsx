@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, memo } from 'react'
 import { Outlet, useLocation, useNavigate, Link } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import { FiBell, FiLogOut, FiUser, FiSettings, FiChevronDown, FiMoon, FiSun, FiMenu, FiX } from 'react-icons/fi'
@@ -9,6 +9,8 @@ import {
   MessageSquare,
   BarChart3,
   Zap,
+  Megaphone,
+  ChevronDown,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
@@ -30,6 +32,13 @@ const MOBILE_NAV_ITEMS = [
   { path: '/chat', icon: MessageSquare, label: 'Chat' },
   { path: '/analytics', icon: BarChart3, label: 'Analytics' },
   { path: '/ai-insights', icon: Zap, label: 'AI Insights' },
+  {
+    label: 'Marketing',
+    icon: Megaphone,
+    children: [
+      { path: '/marketing/lead-magnets', label: 'Lead Magnets' },
+    ],
+  },
 ]
 
 /* ─── User dropdown menu ───────────────────────────────────────────────── */
@@ -227,9 +236,10 @@ const UserMenu = ({ user, logout, unreadCount, onNotifications }) => {
 }
 
 /* ─── Mobile Navigation Drawer ─────────────────────────────────────────── */
-const MobileNavigationDrawer = ({ isOpen, onClose, user, logout, unreadCount, onNotifications, currentTheme }) => {
+const MobileNavigationDrawer = memo(({ isOpen, onClose, user, logout, unreadCount, onNotifications, currentTheme }) => {
   const navigate = useNavigate()
   const location = useLocation()
+  const [expandedMenu, setExpandedMenu] = useState(null)
 
   const handleNavigation = (path) => {
     navigate(path)
@@ -246,7 +256,7 @@ const MobileNavigationDrawer = ({ isOpen, onClose, user, logout, unreadCount, on
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black z-40 md:hidden"
+            className="fixed inset-0 bg-black z-40 lg:hidden"
             style={{ opacity: 0.5 }}
             aria-hidden="true"
           />
@@ -261,7 +271,7 @@ const MobileNavigationDrawer = ({ isOpen, onClose, user, logout, unreadCount, on
               backgroundColor: currentTheme.colors.sidebar,
               borderColor: currentTheme.colors.border,
             }}
-            className="fixed left-0 top-0 bottom-0 w-64 border-r h-screen overflow-y-auto flex flex-col z-50 md:hidden"
+            className="fixed left-0 top-0 bottom-0 w-64 border-r h-screen overflow-y-auto flex flex-col z-50 lg:hidden"
           >
             {/* Drawer Header */}
             <div
@@ -293,7 +303,80 @@ const MobileNavigationDrawer = ({ isOpen, onClose, user, logout, unreadCount, on
 
             {/* Navigation Links */}
             <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-              {MOBILE_NAV_ITEMS.map(({ path, icon: Icon, label }) => {
+              {MOBILE_NAV_ITEMS.map((item) => {
+                if (item.children) {
+                  const Icon = item.icon
+                  const isExpanded = expandedMenu === item.label
+                  const hasActiveChild = item.children.some((child) => location.pathname.startsWith(child.path))
+
+                  return (
+                    <div key={item.label}>
+                      <button
+                        onClick={() => setExpandedMenu(isExpanded ? null : item.label)}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors relative touch-target"
+                        style={{
+                          backgroundColor: isExpanded || hasActiveChild ? currentTheme.colors.surface : 'transparent',
+                          color: isExpanded || hasActiveChild ? currentTheme.colors.primary : currentTheme.colors.textSecondary,
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = currentTheme.colors.surfaceSecondary
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = isExpanded || hasActiveChild ? currentTheme.colors.surface : 'transparent'
+                        }}
+                      >
+                        <Icon size={18} className="flex-shrink-0" />
+                        <span className="text-sm font-medium flex-1 text-left">{item.label}</span>
+                        <ChevronDown
+                          size={14}
+                          className="flex-shrink-0 transition-transform duration-200"
+                          style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                        />
+                        {(isExpanded || hasActiveChild) && (
+                          <div
+                            className="absolute left-0 top-0 bottom-0 w-1 rounded-r-lg"
+                            style={{ backgroundColor: currentTheme.colors.primary }}
+                          />
+                        )}
+                      </button>
+
+                      {isExpanded && (
+                        <div className="pl-4 space-y-0.5 mt-1">
+                          {item.children.map((child) => {
+                            const isActive = location.pathname.startsWith(child.path)
+                            return (
+                              <button
+                                key={child.path}
+                                onClick={() => handleNavigation(child.path)}
+                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors relative touch-target"
+                                style={{
+                                  backgroundColor: isActive ? currentTheme.colors.surface : 'transparent',
+                                  color: isActive ? currentTheme.colors.primary : currentTheme.colors.textSecondary,
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.backgroundColor = currentTheme.colors.surfaceSecondary
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.backgroundColor = isActive ? currentTheme.colors.surface : 'transparent'
+                                }}
+                              >
+                                <span className="text-sm font-medium flex-1 text-left">{child.label}</span>
+                                {isActive && (
+                                  <div
+                                    className="absolute left-0 top-0 bottom-0 w-1 rounded-r-lg"
+                                    style={{ backgroundColor: currentTheme.colors.primary }}
+                                  />
+                                )}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )
+                }
+
+                const { path, icon: Icon, label } = item
                 const isActive = location.pathname.startsWith(path)
                 return (
                   <button
@@ -436,7 +519,9 @@ const MobileNavigationDrawer = ({ isOpen, onClose, user, logout, unreadCount, on
       )}
     </AnimatePresence>
   )
-}
+})
+
+MobileNavigationDrawer.displayName = 'MobileNavigationDrawer'
 
 /* ─── Main Authenticated Layout ─────────────────────────────────────────── */
 const AuthenticatedLayout = () => {
@@ -458,12 +543,14 @@ const AuthenticatedLayout = () => {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  // Fetch workspaces
+  // Fetch workspaces - optimized with staleTime to prevent refetch on every mount
   const { data: workspacesData, isLoading: isLoadingWorkspaces, error: workspacesError } = useQuery({
     queryKey: ['workspaces'],
     queryFn: workspaceService.getAll,
     enabled: isAuthenticated,
     retry: 1,
+    staleTime: 5 * 60 * 1000,  // 5 minutes - workspaces rarely change
+    gcTime: 10 * 60 * 1000,    // 10 minutes - keep in cache
   })
 
   // Initialize workspace on first load

@@ -89,7 +89,7 @@ const ActivityItem = memo(({ activity, index, lastIndex, c }) => (
   return prev.activity.id === next.activity.id && prev.index === next.index
 })
 
-const Dashboard = () => {
+const Dashboard = memo(() => {
   const { currentTheme } = useThemeContext()
   const c = currentTheme?.colors || {}
 
@@ -247,6 +247,8 @@ const Dashboard = () => {
       </div>
     </div>
   )
-}
+})
+
+Dashboard.displayName = 'Dashboard'
 
 export default Dashboard

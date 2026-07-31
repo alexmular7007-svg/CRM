@@ -25,10 +25,20 @@ export function useWorkspaceRole(workspaceId = null) {
     queryKey: ['my-role', activeId],
     queryFn: () => workspaceService.getMyRole(activeId),
     enabled: Boolean(activeId),
-    staleTime: 10 * 60 * 1000,   // 10 min — role changes are rare
-    gcTime: 15 * 60 * 1000,      // keep in cache for 15 min
+    staleTime: 15 * 60 * 1000,   // 15 min - role changes are rare, increased from 10
+    gcTime: 30 * 60 * 1000,      // keep in cache for 30 min, doubled from 15
     retry: 1,
     placeholderData: keepPreviousData, // never flash null during background refetch
+  })
+  
+  // DEBUG: Log query state
+  console.log('🔵 useWorkspaceRole query state:', {
+    activeId,
+    isLoading,
+    isError,
+    data: data,
+    error: error,
+    reduxRole,
   })
   
   // Debug: Log errors
@@ -47,7 +57,7 @@ export function useWorkspaceRole(workspaceId = null) {
   // Use Redux role as initial value, then update from API
   const role = freshRole ?? lastRoleRef.current ?? reduxRole
 
-  return {
+  const permissions = {
     role,
     isLoading: isLoading && !role, // only "loading" if we have no role at all
     isOwner:        role === 'OWNER',
@@ -67,4 +77,9 @@ export function useWorkspaceRole(workspaceId = null) {
     canCreateLeadMagnets: role === 'OWNER' || role === 'ADMIN',
     canViewLeadMagnets: true,  // All members can view
   }
+
+  // DEBUG: Log final permissions
+  console.log('🟢 useWorkspaceRole final permissions:', permissions)
+  
+  return permissions
 }
