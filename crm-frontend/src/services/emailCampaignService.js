@@ -42,4 +42,7 @@ export const emailCampaignService = {
   async listSegments(workspaceId, { page = 0, size = 100, sortBy = 'createdAt' } = {}) {
     return unwrap(await api.get(`/workspaces/${workspaceId}/email-segments`, { params: { page, size, sortBy } }))
   },
+  async createTemplate(workspaceId, payload) {
+    return unwrap(await api.post(`/workspaces/${workspaceId}/email-templates`, payload))
+  },
 }
