@@ -100,6 +100,12 @@ public class EmailCampaign {
     @Column(columnDefinition = "jsonb")
     private String segmentFilter;  // JSON filter criteria
     
+    @Column(length = 50)
+    private String recipientMode;  // MANUAL, SEGMENT, CRM_FILTER
+    
+    @Column(columnDefinition = "jsonb")
+    private String recipientData;  // JSON data for recipients (emails, segmentId, or filters)
+    
     @Column
     private Integer retryCount;
     

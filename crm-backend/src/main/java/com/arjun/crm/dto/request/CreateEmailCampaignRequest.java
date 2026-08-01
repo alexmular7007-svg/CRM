@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
  * CreateEmailCampaignRequest - FEATURE #3
  * 
  * Request DTO for creating a new email campaign
+ * Supports multiple content modes (TEMPLATE or CUSTOM) and recipient modes (MANUAL, SEGMENT, CRM_FILTER)
  */
 @Data
 @NoArgsConstructor
@@ -29,17 +30,26 @@ public class CreateEmailCampaignRequest {
     @Size(min = 1, max = 255, message = "Subject must be between 1 and 255 characters")
     private String subject;
     
-    private Long templateId;  // nullable
+    private Long templateId;  // nullable - required when contentType = TEMPLATE
     
-    private String contentType;  // TEMPLATE, CUSTOM_HTML, MARKDOWN
+    private String contentType;  // TEMPLATE, CUSTOM
     
-    private String htmlContent;  // required if contentType != TEMPLATE
+    private String htmlContent;  // required if contentType = CUSTOM
     
     private String plainTextContent;
     
     private String[] variables;  // Array of variable names
     
-    private String segmentFilter;  // JSON filter criteria
+    // NEW: Recipient mode - MANUAL, SEGMENT, or CRM_FILTER
+    private String recipientMode;  // MANUAL, SEGMENT, CRM_FILTER
+    
+    // NEW: Recipient data as JSON string
+    // For MANUAL: { "type": "MANUAL", "emails": "email1@example.com,email2@example.com" }
+    // For SEGMENT: { "type": "SEGMENT", "segmentId": 123 }
+    // For CRM_FILTER: { "type": "CRM_FILTER", "filters": { "leadStatus": "LEAD", "country": "USA" } }
+    private String recipientData;  // JSON string containing recipient information
+    
+    private String status;  // DRAFT, SCHEDULED, SENT
     
     @Builder.Default
     private Boolean isActive = true;

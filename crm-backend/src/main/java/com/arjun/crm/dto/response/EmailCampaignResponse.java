@@ -51,6 +51,10 @@ public class EmailCampaignResponse {
     
     private Long totalRecipients;
     
+    private String recipientMode;
+    
+    private String recipientData;
+    
     private LocalDateTime createdAt;
     
     private LocalDateTime updatedAt;

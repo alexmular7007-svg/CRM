@@ -80,16 +80,18 @@ public class EmailCampaignServiceImpl implements EmailCampaignService {
                 .subjectVariables(request.getVariables())
                 .template(template)
                 .contentType(request.getContentType() != null ? request.getContentType() : "TEMPLATE")
-                .status("DRAFT")
+                .status(request.getStatus() != null ? request.getStatus() : "DRAFT")
                 .isActive(request.getIsActive() != null ? request.getIsActive() : true)
                 .createdBy(authenticatedUser)
-                .segmentFilter(request.getSegmentFilter())
+                .recipientMode(request.getRecipientMode())
+                .recipientData(request.getRecipientData())
                 .totalRecipients(0L)
                 .retryCount(0)
                 .build();
         
         campaign = campaignRepository.save(campaign);
-        log.info("Campaign created: {} (ID: {})", campaign.getName(), campaign.getId());
+        log.info("Campaign created: {} (ID: {}) with recipientMode: {}", 
+                campaign.getName(), campaign.getId(), campaign.getRecipientMode());
         
         return mapToResponse(campaign);
     }
@@ -312,6 +314,8 @@ public class EmailCampaignServiceImpl implements EmailCampaignService {
                 .sendStartedAt(campaign.getSendStartedAt())
                 .sendCompletedAt(campaign.getSendCompletedAt())
                 .totalRecipients(campaign.getTotalRecipients())
+                .recipientMode(campaign.getRecipientMode())
+                .recipientData(campaign.getRecipientData())
                 .createdAt(campaign.getCreatedAt())
                 .updatedAt(campaign.getUpdatedAt())
                 .deletedAt(campaign.getDeletedAt())
