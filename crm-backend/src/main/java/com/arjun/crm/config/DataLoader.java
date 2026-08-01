@@ -8,6 +8,7 @@ import com.arjun.crm.entity.Project;
 import com.arjun.crm.entity.LeadMagnet;
 import com.arjun.crm.entity.EmailCampaign;
 import com.arjun.crm.entity.EmailTemplate;
+import com.arjun.crm.entity.EmailCampaignSegment;
 import com.arjun.crm.enums.Role;
 import com.arjun.crm.enums.UserStatus;
 import com.arjun.crm.enums.WorkspaceRole;
@@ -22,6 +23,7 @@ import com.arjun.crm.repository.ProjectRepository;
 import com.arjun.crm.repository.LeadMagnetRepository;
 import com.arjun.crm.repository.EmailCampaignRepository;
 import com.arjun.crm.repository.EmailTemplateRepository;
+import com.arjun.crm.repository.EmailCampaignSegmentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -51,6 +53,7 @@ public class DataLoader {
             LeadMagnetRepository leadMagnetRepository,
             EmailCampaignRepository emailCampaignRepository,
             EmailTemplateRepository emailTemplateRepository,
+            EmailCampaignSegmentRepository segmentRepository,
             PasswordEncoder passwordEncoder) {
         return args -> {
             log.info("═══════════════════════════════════════════════════════════════");
@@ -324,6 +327,49 @@ public class DataLoader {
                 emailTemplateRepository.save(template4);
 
                 log.info("✓ Created 4 demo email templates");
+
+                // Create demo EmailCampaignSegments for workspace 1
+                EmailCampaignSegment segment1 = EmailCampaignSegment.builder()
+                        .workspace(workspace1)
+                        .name("Active Subscribers")
+                        .description("Segment containing all active subscribers")
+                        .filterCriteria("{\"status\": \"ACTIVE\", \"subscriptionStatus\": \"SUBSCRIBED\"}")
+                        .leadCount(150L)
+                        .createdBy(testUser1)
+                        .build();
+                segmentRepository.save(segment1);
+
+                EmailCampaignSegment segment2 = EmailCampaignSegment.builder()
+                        .workspace(workspace1)
+                        .name("Premium Members")
+                        .description("Segment for premium tier subscribers")
+                        .filterCriteria("{\"tier\": \"PREMIUM\", \"subscriptionStatus\": \"SUBSCRIBED\"}")
+                        .leadCount(45L)
+                        .createdBy(testUser1)
+                        .build();
+                segmentRepository.save(segment2);
+
+                EmailCampaignSegment segment3 = EmailCampaignSegment.builder()
+                        .workspace(workspace1)
+                        .name("Engaged Users")
+                        .description("Segment for users with high engagement")
+                        .filterCriteria("{\"engagementScore\": {\"gt\": 70}, \"lastClickDate\": {\"after\": \"30 days ago\"}}")
+                        .leadCount(98L)
+                        .createdBy(testUser1)
+                        .build();
+                segmentRepository.save(segment3);
+
+                EmailCampaignSegment segment4 = EmailCampaignSegment.builder()
+                        .workspace(workspace1)
+                        .name("Recent Signups")
+                        .description("Segment for users who signed up in the last 30 days")
+                        .filterCriteria("{\"signupDate\": {\"after\": \"30 days ago\"}}")
+                        .leadCount(67L)
+                        .createdBy(testUser1)
+                        .build();
+                segmentRepository.save(segment4);
+
+                log.info("✓ Created 4 demo email campaign segments");
 
                 // ═══════════════════════════════════════════════════════════════
                 log.info("  ✓ TEST DATA INITIALIZATION COMPLETE");
