@@ -9,12 +9,15 @@ import com.arjun.crm.entity.LeadMagnet;
 import com.arjun.crm.entity.EmailCampaign;
 import com.arjun.crm.entity.EmailTemplate;
 import com.arjun.crm.entity.EmailCampaignSegment;
+import com.arjun.crm.entity.Lead;
 import com.arjun.crm.enums.Role;
 import com.arjun.crm.enums.UserStatus;
 import com.arjun.crm.enums.WorkspaceRole;
 import com.arjun.crm.enums.TaskStatus;
 import com.arjun.crm.enums.TaskPriority;
 import com.arjun.crm.enums.ProjectStatus;
+import com.arjun.crm.enums.LeadStatus;
+import com.arjun.crm.enums.LeadPriority;
 import com.arjun.crm.repository.UserRepository;
 import com.arjun.crm.repository.WorkspaceRepository;
 import com.arjun.crm.repository.WorkspaceMemberRepository;
@@ -24,6 +27,7 @@ import com.arjun.crm.repository.LeadMagnetRepository;
 import com.arjun.crm.repository.EmailCampaignRepository;
 import com.arjun.crm.repository.EmailTemplateRepository;
 import com.arjun.crm.repository.EmailCampaignSegmentRepository;
+import com.arjun.crm.repository.LeadRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -54,6 +58,7 @@ public class DataLoader {
             EmailCampaignRepository emailCampaignRepository,
             EmailTemplateRepository emailTemplateRepository,
             EmailCampaignSegmentRepository segmentRepository,
+            LeadRepository leadRepository,
             PasswordEncoder passwordEncoder) {
         return args -> {
             log.info("═══════════════════════════════════════════════════════════════");
@@ -269,7 +274,132 @@ public class DataLoader {
 
                 log.info("✓ Created 3 demo email campaigns");
 
-                // Create demo EmailTemplates for workspace 1
+                // Create demo CRM Leads for workspace 1
+                Lead lead1 = Lead.builder()
+                        .workspace(workspace1)
+                        .name("Sarah Johnson")
+                        .email("sarah.johnson@example.com")
+                        .phone("+1-555-0101")
+                        .company("TechCorp Inc")
+                        .position("Chief Technology Officer")
+                        .status(LeadStatus.LEAD)
+                        .priority(LeadPriority.HIGH)
+                        .dealValue(new java.math.BigDecimal("50000.00"))
+                        .expectedCloseDate(LocalDateTime.now().plusDays(30).toLocalDate())
+                        .createdBy(testUser1)
+                        .build();
+                leadRepository.save(lead1);
+
+                Lead lead2 = Lead.builder()
+                        .workspace(workspace1)
+                        .name("Michael Chen")
+                        .email("michael.chen@example.com")
+                        .phone("+1-555-0102")
+                        .company("Innovation Labs")
+                        .position("Marketing Manager")
+                        .status(LeadStatus.QUALIFIED)
+                        .priority(LeadPriority.HIGH)
+                        .dealValue(new java.math.BigDecimal("75000.00"))
+                        .expectedCloseDate(LocalDateTime.now().plusDays(45).toLocalDate())
+                        .createdBy(testUser1)
+                        .build();
+                leadRepository.save(lead2);
+
+                Lead lead3 = Lead.builder()
+                        .workspace(workspace1)
+                        .name("Emily Rodriguez")
+                        .email("emily.rodriguez@example.com")
+                        .phone("+1-555-0103")
+                        .company("Digital Solutions")
+                        .position("Business Development")
+                        .status(LeadStatus.PROPOSAL)
+                        .priority(LeadPriority.MEDIUM)
+                        .dealValue(new java.math.BigDecimal("100000.00"))
+                        .expectedCloseDate(LocalDateTime.now().plusDays(20).toLocalDate())
+                        .createdBy(testUser1)
+                        .build();
+                leadRepository.save(lead3);
+
+                Lead lead4 = Lead.builder()
+                        .workspace(workspace1)
+                        .name("David Williams")
+                        .email("david.williams@example.com")
+                        .phone("+1-555-0104")
+                        .company("Enterprise Systems")
+                        .position("Procurement Director")
+                        .status(LeadStatus.NEGOTIATION)
+                        .priority(LeadPriority.MEDIUM)
+                        .dealValue(new java.math.BigDecimal("150000.00"))
+                        .expectedCloseDate(LocalDateTime.now().plusDays(15).toLocalDate())
+                        .createdBy(testUser1)
+                        .build();
+                leadRepository.save(lead4);
+
+                Lead lead5 = Lead.builder()
+                        .workspace(workspace1)
+                        .name("Jessica Martinez")
+                        .email("jessica.martinez@example.com")
+                        .phone("+1-555-0105")
+                        .company("Growth Partners")
+                        .position("General Manager")
+                        .status(LeadStatus.WON)
+                        .priority(LeadPriority.HIGH)
+                        .dealValue(new java.math.BigDecimal("200000.00"))
+                        .expectedCloseDate(LocalDateTime.now().minusDays(5).toLocalDate())
+                        .converted(true)
+                        .convertedAt(LocalDateTime.now().minusDays(10))
+                        .createdBy(testUser1)
+                        .build();
+                leadRepository.save(lead5);
+
+                Lead lead6 = Lead.builder()
+                        .workspace(workspace1)
+                        .name("Robert Taylor")
+                        .email("robert.taylor@example.com")
+                        .phone("+1-555-0106")
+                        .company("Market Insights")
+                        .position("VP Sales")
+                        .status(LeadStatus.LEAD)
+                        .priority(LeadPriority.MEDIUM)
+                        .dealValue(new java.math.BigDecimal("45000.00"))
+                        .expectedCloseDate(LocalDateTime.now().plusDays(60).toLocalDate())
+                        .createdBy(testUser1)
+                        .build();
+                leadRepository.save(lead6);
+
+                Lead lead7 = Lead.builder()
+                        .workspace(workspace1)
+                        .name("Amanda Thompson")
+                        .email("amanda.thompson@example.com")
+                        .phone("+1-555-0107")
+                        .company("Future Tech")
+                        .position("Operations Manager")
+                        .status(LeadStatus.QUALIFIED)
+                        .priority(LeadPriority.LOW)
+                        .dealValue(new java.math.BigDecimal("85000.00"))
+                        .expectedCloseDate(LocalDateTime.now().plusDays(35).toLocalDate())
+                        .createdBy(testUser1)
+                        .build();
+                leadRepository.save(lead7);
+
+                Lead lead8 = Lead.builder()
+                        .workspace(workspace1)
+                        .name("James Anderson")
+                        .email("james.anderson@example.com")
+                        .phone("+1-555-0108")
+                        .company("Next Generation")
+                        .position("Finance Director")
+                        .status(LeadStatus.LOST)
+                        .priority(LeadPriority.LOW)
+                        .dealValue(new java.math.BigDecimal("60000.00"))
+                        .expectedCloseDate(LocalDateTime.now().minusDays(20).toLocalDate())
+                        .createdBy(testUser1)
+                        .build();
+                leadRepository.save(lead8);
+
+                log.info("✓ Created 8 demo CRM leads across all pipeline stages");
+
+                // ═══════════════════════════════════════════════════════════════
                 EmailTemplate template1 = EmailTemplate.builder()
                         .workspace(workspace1)
                         .name("Welcome Email")
