@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSelector } from 'react-redux'
 import { useWorkspaceRole } from '../hooks/useWorkspaceRole'
@@ -13,6 +13,15 @@ const LeadMagnets = () => {
   const { currentWorkspace } = useSelector((state) => state.workspace)
   const { canCreateLeadMagnets } = useWorkspaceRole(currentWorkspace?.id)
   
+  // Log currentWorkspace changes
+  useEffect(() => {
+    console.log('🟡 [LeadMagnets] currentWorkspace changed:', {
+      value: currentWorkspace,
+      id: currentWorkspace?.id,
+      timestamp: new Date().toISOString()
+    })
+  }, [currentWorkspace])
+  
   const [showModal, setShowModal] = useState(false)
   const [selectedMagnet, setSelectedMagnet] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -26,14 +35,29 @@ const LeadMagnets = () => {
   // Fetch lead magnets
   const { data: response, isLoading, error } = useQuery({
     queryKey: ['lead-magnets', currentWorkspace?.id, currentPage, sortBy, sortDir],
-    queryFn: () => leadMagnetService.listLeadMagnets(currentWorkspace?.id, {
-      page: currentPage,
-      size: PAGE_SIZE,
-      sortBy,
-      sortDir,
-    }),
+    queryFn: () => {
+      if (!currentWorkspace?.id) {
+        console.log('🔴 [LeadMagnets Query] Guard clause triggered - returning null. currentWorkspace:', currentWorkspace)
+        return Promise.resolve(null)
+      }
+      console.log('🟢 [LeadMagnets Query] queryFn executing! workspaceId:', currentWorkspace.id, 'timestamp:', new Date().toISOString())
+      return leadMagnetService.listLeadMagnets(currentWorkspace?.id, {
+        page: currentPage,
+        size: PAGE_SIZE,
+        sortBy,
+        sortDir,
+      }).then(data => {
+        console.log('🟢 [LeadMagnets Query] API Response received:', data)
+        return data
+      }).catch(err => {
+        console.error('🔴 [LeadMagnets Query] API Error:', err)
+        throw err
+      })
+    },
     enabled: !!currentWorkspace?.id,
   })
+
+  console.log('🟠 [LeadMagnets] Query state - enabled:', !!currentWorkspace?.id, 'isLoading:', isLoading, 'error:', error, 'data:', response)
 
   const magnets = response?.content || []
   const totalPages = response?.totalPages || 0
