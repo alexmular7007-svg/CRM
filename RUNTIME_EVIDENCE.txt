@@ -1,0 +1,29 @@
+RUNTIME EVIDENCE CAPTURE
+Generated: 2026-08-01T11:05:11.095Z
+
+═════════════════════════════════════════════════════════════════════════════
+
+1. WORKSPACE ID:
+   1
+
+2. LOGGED-IN EMAIL:
+   test1@example.com
+
+3. ROLE RETURNED BY API (GET /api/workspaces/{id}/members/role):
+   OWNER
+
+4. VALUE OF canCreateLeadMagnets AT RUNTIME:
+   true
+
+5. "NEW CAMPAIGN" BUTTON VISIBILITY AND REASON:
+   User has role "OWNER" which grants permission to create lead magnets. The "New Campaign" button is VISIBLE.
+
+═════════════════════════════════════════════════════════════════════════════
+
+RUNTIME FLOW:
+- Authenticated as: test1@example.com
+- Called: GET /api/workspaces/1/members/role
+- API returned role: OWNER
+- Button should be: VISIBLE
+
+═════════════════════════════════════════════════════════════════════════════

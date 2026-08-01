@@ -67,10 +67,13 @@ public class EmailCampaignController {
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy) {
         
-        log.info("GET /api/workspaces/{}/email-campaigns - Listing campaigns", workspaceId);
+        log.info("🟢 [EmailCampaignController] GET /api/workspaces/{}/email-campaigns called - workspaceId: {}, page: {}, size: {}, timestamp: {}", 
+                workspaceId, workspaceId, page, size, java.time.LocalDateTime.now());
         
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy).descending());
         Page<EmailCampaignResponse> campaigns = emailCampaignService.listCampaigns(workspaceId, pageable);
+        
+        log.info("🟢 [EmailCampaignController] Returning {} campaigns", campaigns.getTotalElements());
         
         return ResponseEntity.ok()
                 .body(ApiResponse.success("Campaigns retrieved successfully", campaigns));

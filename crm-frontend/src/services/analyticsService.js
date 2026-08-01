@@ -4,9 +4,11 @@ const unwrap = (response) => response?.data ?? response
 
 export const analyticsService = {
   getDashboard: async (workspaceId) => {
+    console.log('📡 [analyticsService.getDashboard] Called with workspaceId:', workspaceId)
     const response = await api.get('/dashboard/overview', {
       params: { workspaceId }
     })
+    console.log('📡 [analyticsService.getDashboard] Response:', response)
     return unwrap(response)
   },
 

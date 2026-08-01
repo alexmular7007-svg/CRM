@@ -39,8 +39,10 @@ public class DashboardServiceImpl implements DashboardService {
     public DashboardOverviewResponse getDashboardOverview(Long workspaceId) {
         User currentUser = getAuthenticatedUser();
         
+        log.info("[TRACE-Dashboard-Service-START] workspaceId={}, user={}", workspaceId, currentUser.getEmail());
+        
         if (workspaceId == null) {
-            log.error("❌ getDashboardOverview called with NULL workspaceId for user: {}", currentUser.getEmail());
+            log.error("[TRACE-Dashboard-Service-NULL-ID] Returning zeros because workspaceId is null");
             return DashboardOverviewResponse.builder()
                     .taskStatistics(DashboardOverviewResponse.TaskStatistics.builder()
                             .totalTasks(0L)
@@ -73,7 +75,7 @@ public class DashboardServiceImpl implements DashboardService {
                     .build();
         }
         
-        log.info("Fetching dashboard overview for workspace: {} and user: {}", workspaceId, currentUser.getEmail());
+        log.info("[TRACE-Dashboard-Service-FETCHING] workspace_id={}, user_email={}", workspaceId, currentUser.getEmail());
 
         // OPTIMIZED: Get all task statistics in ONE query
         Map<String, Long> taskStats = taskRepository.getWorkspaceTaskStatistics(workspaceId);
@@ -82,6 +84,9 @@ public class DashboardServiceImpl implements DashboardService {
         Long inProgressTasks = taskStats.getOrDefault("inProgress", 0L);
         Long overdueTasks = (long) taskRepository.findOverdueTasksByWorkspace(workspaceId, LocalDate.now()).size();
         Double completionRate = totalTasks > 0 ? (completedTasks * 100.0 / totalTasks) : 0.0;
+        
+        log.info("[TRACE-Dashboard-Repository-TaskStats] total={}, completed={}, inProgress={}, overdue={}", 
+                totalTasks, completedTasks, inProgressTasks, overdueTasks);
 
         DashboardOverviewResponse.TaskStatistics taskStatsResponse = DashboardOverviewResponse.TaskStatistics.builder()
                 .totalTasks(totalTasks)
@@ -145,13 +150,21 @@ public class DashboardServiceImpl implements DashboardService {
                 .activityScore(activityScore)
                 .build();
 
-        return DashboardOverviewResponse.builder()
+        DashboardOverviewResponse response = DashboardOverviewResponse.builder()
                 .taskStatistics(taskStatsResponse)
                 .projectStatistics(projectStatsResponse)
                 .notificationStatistics(notificationStatsResponse)
                 .activityStatistics(activityStatsResponse)
                 .userProductivity(userProductivity)
                 .build();
+        
+        log.info("[TRACE-Dashboard-Service-RESPONSE] taskStats={}, projectStats={}, notifStats={}, activityStats={}", 
+                response.getTaskStatistics().getTotalTasks(),
+                response.getProjectStatistics().getTotalProjects(),
+                response.getNotificationStatistics().getTotalCount(),
+                response.getActivityStatistics().getTodayActivities());
+        
+        return response;
     }
 
     private Double calculateActivityScore(Long tasks, Long comments, Long messages) {

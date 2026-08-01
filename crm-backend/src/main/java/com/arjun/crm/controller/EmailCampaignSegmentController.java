@@ -1,25 +1,25 @@
 package com.arjun.crm.controller;
 
-import com.arjun.crm.dto.request.CreateEmailSegmentRequest;
 import com.arjun.crm.dto.response.ApiResponse;
 import com.arjun.crm.dto.response.EmailCampaignSegmentResponse;
 import com.arjun.crm.service.EmailCampaignSegmentService;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 /**
  * EmailCampaignSegmentController - FEATURE #3
  * 
- * REST API for email campaign segment (audience) management
+ * REST API for email campaign segment management
  * Base path: /api/workspaces/{workspaceId}/email-segments
+ * 
+ * All endpoints require authentication and workspace access.
+ * READ (list/get) available to all workspace members.
  */
 @RestController
 @RequestMapping("/api/workspaces/{workspaceId}/email-segments")
@@ -31,27 +31,9 @@ public class EmailCampaignSegmentController {
     private final EmailCampaignSegmentService segmentService;
     
     /**
-     * CREATE: POST /api/workspaces/{workspaceId}/email-segments
-     * 
-     * Create a new email segment (saved audience filter)
-     * Permission: OWNER/ADMIN only
-     */
-    @PostMapping
-    public ResponseEntity<ApiResponse<EmailCampaignSegmentResponse>> createSegment(
-            @PathVariable Long workspaceId,
-            @Valid @RequestBody CreateEmailSegmentRequest request) {
-        
-        log.info("POST /api/workspaces/{}/email-segments - Creating segment", workspaceId);
-        EmailCampaignSegmentResponse response = segmentService.createSegment(workspaceId, request);
-        
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Segment created successfully", response));
-    }
-    
-    /**
      * LIST: GET /api/workspaces/{workspaceId}/email-segments
      * 
-     * List all segments in workspace
+     * List all segments in workspace (paginated)
      * Permission: Any workspace member
      */
     @GetMapping
@@ -73,7 +55,7 @@ public class EmailCampaignSegmentController {
     /**
      * GET: GET /api/workspaces/{workspaceId}/email-segments/{segmentId}
      * 
-     * Get segment details
+     * Get segment details by ID
      * Permission: Any workspace member
      */
     @GetMapping("/{segmentId}")
@@ -86,23 +68,5 @@ public class EmailCampaignSegmentController {
         
         return ResponseEntity.ok()
                 .body(ApiResponse.success("Segment retrieved successfully", segment));
-    }
-    
-    /**
-     * DELETE: DELETE /api/workspaces/{workspaceId}/email-segments/{segmentId}
-     * 
-     * Delete segment
-     * Permission: OWNER/ADMIN only
-     */
-    @DeleteMapping("/{segmentId}")
-    public ResponseEntity<ApiResponse<Void>> deleteSegment(
-            @PathVariable Long workspaceId,
-            @PathVariable Long segmentId) {
-        
-        log.info("DELETE /api/workspaces/{}/email-segments/{} - Deleting segment", workspaceId, segmentId);
-        segmentService.deleteSegment(workspaceId, segmentId);
-        
-        return ResponseEntity.ok()
-                .body(ApiResponse.success("Segment deleted successfully", null));
     }
 }

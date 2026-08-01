@@ -104,14 +104,22 @@ public class LeadMagnetServiceImpl implements LeadMagnetService {
     @Override
     @Transactional(readOnly = true)
     public Page<LeadMagnetResponse> listMagnets(Long workspaceId, Pageable pageable) {
-        log.info("Listing lead magnets for workspace: {}", workspaceId);
+        log.info("[TRACE-LeadMagnet-Service-START] workspaceId={}, page={}, size={}", 
+                workspaceId, pageable.getPageNumber(), pageable.getPageSize());
         
         // Validate workspace access (any member can read)
         // Authenticated user from SecurityContext
         workspaceAuthService.validateWorkspaceAccess(workspaceId);
         
+        log.info("[TRACE-LeadMagnet-Repository-CALLING] workspace_id={}", workspaceId);
         Page<LeadMagnet> magnets = magnetRepository.findByWorkspaceId(workspaceId, pageable);
-        return magnets.map(this::mapToResponse);
+        log.info("[TRACE-LeadMagnet-Repository-RESULT] total_elements={}, page_size={}, pages={}", 
+                magnets.getTotalElements(), magnets.getSize(), magnets.getTotalPages());
+        
+        Page<LeadMagnetResponse> response = magnets.map(this::mapToResponse);
+        log.info("[TRACE-LeadMagnet-Service-RESPONSE] mapped_elements={}", response.getTotalElements());
+        
+        return response;
     }
     
     @Override

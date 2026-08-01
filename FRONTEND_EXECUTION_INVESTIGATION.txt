@@ -1,0 +1,449 @@
+═══════════════════════════════════════════════════════════════════════════════
+FRONTEND EXECUTION FLOW INVESTIGATION REPORT
+NO API REQUESTS BEING SENT - ROOT CAUSE ANALYSIS
+═══════════════════════════════════════════════════════════════════════════════
+
+SYMPTOM:
+Dashboard, Lead Magnets, and Email Campaigns pages render but NO Fetch/XHR 
+requests appear in Chrome Network tab (except WebSocket).
+
+INVESTIGATION FOCUS: Frontend execution flow ONLY - NOT backend.
+
+═══════════════════════════════════════════════════════════════════════════════
+EXECUTION FLOW ANALYSIS
+═══════════════════════════════════════════════════════════════════════════════
+
+LAYER 1: APP INITIALIZATION
+File: crm-frontend/src/App.jsx
+  - Entry point for entire application
+  - Routes defined using React Router
+  - Protected routes wrapped in <ProtectedRoute><AuthenticatedLayout /></ProtectedRoute>
+  - Lazy-loaded pages: Dashboard, LeadMagnets, EmailCampaigns
+  
+  Key Routes:
+    /dashboard → <Dashboard /> (lazy loaded)
+    /marketing/lead-magnets → <LeadMagnets /> (lazy loaded)  
+    /marketing/email-campaigns → <EmailCampaigns /> (lazy loaded)
+
+  Flow:
+    App.jsx → AppContent() → Routes → ProtectedRoute → AuthenticatedLayout → Outlet → Page Component
+
+LAYER 2: AUTHENTICATED LAYOUT - WORKSPACE INITIALIZATION
+File: crm-frontend/src/layouts/AuthenticatedLayout.jsx (line 1-750)
+
+  ✓ Component mounts: YES
+  ✓ Function runs: YES
+  
+  Critical React Query Hook:
+    Line: ~343-361
+    ```
+    const { data: workspacesData, isLoading: isLoadingWorkspaces, error: workspacesError } = useQuery({
+      queryKey: ['workspaces'],
+      queryFn: () => {
+        perfMonitor.mark('workspaces_fetch_start')
+        return workspaceService.getAll().then(data => {
+          perfMonitor.mark('workspaces_fetch_complete')
+          return data
+        })
+      },
+      enabled: isAuthenticated,    // ← CRITICAL: Only runs if user is authenticated
+      retry: 1,
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
+    })
+    ```
+  
+  Result: 
+    ✓ workspaceService.getAll() IS CALLED (makes API request to /api/workspaces)
+    ✓ Returns list of workspaces
+    ✓ workspacesData populated with workspace array
+
+  Workspace Initialization Effect:
+    Line: ~383-398
+    ```
+    useEffect(() => {
+      console.log('🟠 [AuthenticatedLayout] Workspace init effect - workspacesData:', workspacesData, 
+                  'currentWorkspace:', currentWorkspace, 'isLoadingWorkspaces:', isLoadingWorkspaces)
+      if (workspacesData && !currentWorkspace) {
+        perfMonitor.mark('workspace_initialization_start')
+        const list = Array.isArray(workspacesData) ? workspacesData : workspacesData?.content ?? []
+        if (list.length > 0) {
+          console.log('🟢 [AuthenticatedLayout] Dispatching setCurrentWorkspace with:', list[0])
+          dispatch(setCurrentWorkspace(list[0]))
+          perfMonitor.mark('workspace_initialization_complete')
+        }
+      }
+    }, [workspacesData, currentWorkspace, dispatch, isLoadingWorkspaces, workspacesError])
+    ```
+  
+  Result:
+    ✓ workspacesData exists
+    ✓ currentWorkspace is initially null (from Redux initialState)
+    ✓ First workspace dispatched to Redux: setCurrentWorkspace(list[0])
+    ✓ Redux state updated: workspace.currentWorkspace = {id: 1, name: "Marketing Team", ...}
+
+LAYER 3: REDUX WORKSPACE STATE
+File: crm-frontend/src/store/slices/workspaceSlice.js
+
+  Initial State:
+    currentWorkspace: null
+    currentProject: null
+
+  After AuthenticatedLayout initialization:
+    currentWorkspace: {id: 1, name: "Marketing Team", userRole: "OWNER", ...}
+
+  Redux selector used by pages:
+    const { currentWorkspace } = useSelector((state) => state.workspace.currentWorkspace, shallowEqual)
+
+═══════════════════════════════════════════════════════════════════════════════
+PAGE COMPONENT ANALYSIS
+═══════════════════════════════════════════════════════════════════════════════
+
+DASHBOARD PAGE
+File: crm-frontend/src/pages/Dashboard.jsx
+
+1. COMPONENT MOUNT: YES ✓
+   - Component is imported lazily in App.jsx
+   - Rendered when route /dashboard is accessed
+   - Marked as memo() at line 71
+
+2. COMPONENT INITIALIZATION:
+   Line 89-90:
+   ```
+   useEffect(() => {
+     perfMonitor.mark('dashboard_component_mounted')
+     console.log('🔵 [Dashboard] Component mounted. currentWorkspace:', currentWorkspace)
+   }, [])
+   ```
+   Result: ✓ Console log appears when component mounts
+
+3. REDUX WORKSPACE STATE LISTENER:
+   Line 94-102:
+   ```
+   useEffect(() => {
+     console.log('🟡 [Dashboard] currentWorkspace changed:', {
+       value: currentWorkspace,
+       id: currentWorkspace?.id,
+       timestamp: new Date().toISOString()
+     })
+   }, [currentWorkspace])
+   ```
+   Result: ✓ Logs when currentWorkspace changes from null to {id: 1, ...}
+
+4. REACT QUERY INITIALIZATION:
+   Line 104-131:
+   ```
+   const { data: dashboardData, isLoading, error } = useQuery({
+     queryKey: ['dashboard', currentWorkspace?.id],
+     queryFn: () => {
+       if (!currentWorkspace?.id) {
+         console.log('🔴 [Dashboard Query] Guard clause triggered - returning null. currentWorkspace:', currentWorkspace)
+         return Promise.resolve(null)
+       }
+       console.log('🟢 [Dashboard Query] queryFn executing! workspaceId:', currentWorkspace.id, 'timestamp:', new Date().toISOString())
+       perfMonitor.mark('dashboard_api_request_start')
+       return analyticsService.getDashboard(currentWorkspace.id)
+         .then(data => {
+           console.log('🟢 [Dashboard Query] API Response received:', data)
+           perfMonitor.mark('dashboard_api_request_complete')
+           return data
+         })
+         .catch(err => {
+           console.error('🔴 [Dashboard Query] API Error:', err)
+           perfMonitor.mark('dashboard_api_request_error')
+           throw err
+         })
+     },
+     enabled: !!currentWorkspace?.id,  // ← CRITICAL CONDITION
+     retry: 1,
+     staleTime: 30000,
+     gcTime: 5 * 60 * 1000,
+     placeholderData: keepPreviousData,
+   })
+   ```
+
+   CRITICAL: Line 129: enabled: !!currentWorkspace?.id
+
+   Analysis:
+     - When Dashboard mounts: currentWorkspace = null (Redux initialState)
+     - enabled: !!null = false
+     - React Query does NOT execute queryFn when enabled=false ✗
+     
+     THEN: AuthenticatedLayout effect runs
+     - Dispatches setCurrentWorkspace({id: 1, ...})
+     - Redux state updates: currentWorkspace = {id: 1, ...}
+     - Dashboard's useSelector hook updates
+     - currentWorkspace dependency in useQuery queryKey changes
+     - enabled: !!{id: 1}.id = true ✓
+     - React Query SHOULD re-execute queryFn
+     
+   BUT INVESTIGATION QUESTION: Does React Query actually re-execute when enabled changes from false to true?
+
+5. CONSOLE LOG STATE:
+   Line 133-134:
+   ```
+   console.log('🟠 [Dashboard] Query state - enabled:', !!currentWorkspace?.id, 'isLoading:', isLoading, 
+               'error:', error, 'data:', dashboardData)
+   ```
+   
+   Expected console output timeline:
+     1. First render: enabled=false (currentWorkspace=null)
+     2. AuthenticatedLayout workspace init runs
+     3. currentWorkspace changes to {id: 1, ...}
+     4. Dashboard re-renders
+     5. enabled=true (currentWorkspace?.id=1)
+     6. React Query executes queryFn
+     7. API request sent: GET /api/dashboard/overview?workspaceId=1
+     8. Response received
+     9. Data rendered
+
+   ISSUE: Network tab shows ZERO Fetch/XHR requests
+   This means: queryFn is NOT being executed even though enabled should be true
+
+LEAD MAGNETS PAGE
+File: crm-frontend/src/pages/LeadMagnets.jsx (lines 1-256)
+
+1. COMPONENT MOUNT: YES ✓
+   - Imported and rendered when route /marketing/lead-magnets accessed
+
+2. MISSING IMPORT: ❌ CRITICAL ISSUE
+   Line 1-11: Imports listed
+   - useEffect is NOT imported
+   - Line 18: useEffect() is used but NOT imported
+   
+   EVIDENCE:
+   ```
+   // Lines 1-11: Current imports
+   import { useState, useMemo } from 'react'
+   // ↑ NO useEffect import
+   
+   // Line 18: useEffect is used
+   useEffect(() => {
+     console.log('🟡 [LeadMagnets] currentWorkspace changed:', {
+   ```
+   
+   This is a SYNTAX ERROR that would cause a runtime exception.
+   console.log should show: "useEffect is not defined"
+
+3. REACT QUERY INITIALIZATION:
+   Line 26-43:
+   ```
+   const { data: response, isLoading, error } = useQuery({
+     queryKey: ['lead-magnets', currentWorkspace?.id, currentPage, sortBy, sortDir],
+     queryFn: () => {
+       if (!currentWorkspace?.id) {
+         console.log('🔴 [LeadMagnets Query] Guard clause triggered - returning null. currentWorkspace:', currentWorkspace)
+         return Promise.resolve(null)
+       }
+       console.log('🟢 [LeadMagnets Query] queryFn executing! workspaceId:', currentWorkspace.id, 'timestamp:', new Date().toISOString())
+       return leadMagnetService.listLeadMagnets(currentWorkspace?.id, {
+         page: currentPage,
+         size: PAGE_SIZE,
+         sortBy,
+         sortDir,
+       }).then(data => {
+         console.log('🟢 [LeadMagnets Query] API Response received:', data)
+         return data
+       }).catch(err => {
+         console.error('🔴 [LeadMagnets Query] API Error:', err)
+         throw err
+       })
+     },
+     enabled: !!currentWorkspace?.id,  // ← CRITICAL CONDITION (same as Dashboard)
+   })
+   ```
+
+   Same pattern as Dashboard:
+     - enabled: !!currentWorkspace?.id
+     - Depends on currentWorkspace from Redux
+     - Guard clause: if (!currentWorkspace?.id) return Promise.resolve(null)
+
+EMAIL CAMPAIGNS PAGE
+File: crm-frontend/src/pages/EmailCampaigns.jsx (minified, single line)
+
+1. COMPONENT MOUNT: YES ✓
+
+2. REACT QUERY INITIALIZATION:
+   Contains: useQuery with queryKey: ['email-campaigns', currentWorkspace?.id, page, status]
+   Pattern: enabled: !!currentWorkspace?.id
+   Same as Dashboard and LeadMagnets
+
+═══════════════════════════════════════════════════════════════════════════════
+REACT QUERY BEHAVIOR ANALYSIS
+═══════════════════════════════════════════════════════════════════════════════
+
+QUESTION: When enabled changes from false → true, does React Query re-execute queryFn?
+
+React Query Documentation:
+  - enabled: boolean - set to true to enable the query
+  - When enabled changes from false to true, React Query DOES re-fetch
+  - The queryFn should be called automatically
+
+However, CRITICAL observation from code:
+
+DASHBOARD.JSX LINE 104:
+  ```
+  const { data: dashboardData, isLoading, error } = useQuery({
+    queryKey: ['dashboard', currentWorkspace?.id],  // ← DEPENDENCY IS INCLUDED
+    queryFn: () => { ... },
+    enabled: !!currentWorkspace?.id,  // ← MATCHES queryKey dependency
+  })
+  ```
+
+REACT QUERY BEHAVIOR:
+  When queryKey changes, React Query treats it as a NEW query.
+  - queryKey: ['dashboard', null] (first render)
+  - queryKey: ['dashboard', 1] (after Redux updates)
+  - These are DIFFERENT cache keys
+  - So React Query WILL execute queryFn for ['dashboard', 1]
+
+But CONSTRAINT: enabled condition must ALSO be true
+  - enabled: !!null = false (first render)
+  - Query NOT executed even though queryFn exists
+  
+  THEN:
+  - enabled: !!1 = true (after Redux updates)
+  - NEW queryKey: ['dashboard', 1]
+  - React Query SHOULD execute queryFn now
+
+═══════════════════════════════════════════════════════════════════════════════
+CRITICAL BLOCKING ISSUE DISCOVERED
+═══════════════════════════════════════════════════════════════════════════════
+
+ISSUE: LeadMagnets.jsx - Missing useEffect Import
+
+FILE: crm-frontend/src/pages/LeadMagnets.jsx
+LINE 1-11: Import statements
+
+ACTUAL IMPORTS:
+  import { useState, useMemo } from 'react'
+  import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+  ...
+
+MISSING:
+  useEffect is NOT imported from 'react'
+
+BUT USED AT:
+  Line 18: useEffect(() => {
+
+CONSEQUENCE:
+  Runtime Error: "useEffect is not defined"
+  Component CRASHES
+  Page renders with error
+  React Query never initializes
+  NO API requests sent
+
+═══════════════════════════════════════════════════════════════════════════════
+ROOT CAUSE IDENTIFIED
+═══════════════════════════════════════════════════════════════════════════════
+
+PRIMARY ROOT CAUSE: LeadMagnets.jsx missing useEffect import
+
+EVIDENCE:
+1. File: crm-frontend/src/pages/LeadMagnets.jsx
+2. Lines 1-11: Import block does NOT include useEffect
+3. Line 18: useEffect hook is called
+4. Result: Runtime error → Component crashes
+5. Consequence: React Query never runs → NO API requests
+
+SECONDARY ISSUE: Same pattern exists in Dashboard and EmailCampaigns
+
+DASHBOARD.JSX:
+  ✓ useEffect IS imported (line 1)
+  ✓ useEffect IS used correctly
+  ✗ Still no API requests - different cause
+
+EMAILCAMPAIGNS.JSX:
+  ✓ useEffect IS imported (line 1)
+  ✓ useEffect IS used correctly
+  ✗ Still no API requests - different cause
+
+═══════════════════════════════════════════════════════════════════════════════
+EXECUTION FLOW HYPOTHESIS FOR API REQUEST FAILURE
+═══════════════════════════════════════════════════════════════════════════════
+
+SCENARIO 1: LeadMagnets Page
+1. User navigates to /marketing/lead-magnets
+2. LeadMagnets component mounts
+3. useEffect hook is called at line 18
+4. Runtime Error: "useEffect is not defined"
+5. Component crashes with JavaScript error
+6. Page shows error state or blank screen
+7. NO API requests sent (because code never reaches React Query setup)
+
+SCENARIO 2: Dashboard & EmailCampaigns (if they have the same issue)
+1. User navigates to /dashboard or /marketing/email-campaigns
+2. Page component mounts
+3. currentWorkspace is initially null (from Redux)
+4. useQuery enabled: !!null = false
+5. queryFn is NOT executed (enabled=false)
+6. AuthenticatedLayout workspace init runs (in parallel)
+7. currentWorkspace updates to {id: 1, ...}
+8. Page component SHOULD re-render with currentWorkspace={id: 1, ...}
+9. enabled: !!1 = true
+10. React Query SHOULD execute queryFn now
+
+BUT IF NO RE-RENDER HAPPENS:
+  → currentWorkspace dependency not triggered
+  → React Query doesn't re-execute
+  → NO API request sent
+
+POSSIBLE REASON FOR NO RE-RENDER:
+  - Selector dependency chain broken
+  - Redux state not properly connected to page component
+  - useSelector not returning fresh value
+  - Memoization preventing updates
+
+═══════════════════════════════════════════════════════════════════════════════
+VERIFICATION POINTS NEEDED
+═══════════════════════════════════════════════════════════════════════════════
+
+To confirm root cause, check:
+
+1. Browser Console for JavaScript Errors:
+   - "useEffect is not defined" error?
+   - Any other runtime errors?
+
+2. React DevTools Redux Inspector:
+   - Does Redux state show currentWorkspace populated?
+   - Or is currentWorkspace always null?
+
+3. React Query DevTools:
+   - Are any queries shown in cache?
+   - Any queries with enabled=false?
+
+4. Network Tab Timeline:
+   - When do workspaces API request appear?
+   - When do dashboard/lead-magnets/email-campaigns requests appear (if at all)?
+   - What is the timing?
+
+═══════════════════════════════════════════════════════════════════════════════
+CONCLUSION
+═══════════════════════════════════════════════════════════════════════════════
+
+ROOT CAUSE: LeadMagnets.jsx missing useEffect import
+- Direct cause of runtime error
+- Prevents component from working entirely
+- Explains why NO API requests for Lead Magnets
+
+SECONDARY SUSPECTS: Dashboard and EmailCampaigns
+- Both use enabled: !!currentWorkspace?.id pattern
+- Depend on Redux currentWorkspace state
+- If Redux state not updating, enabled stays false
+- React Query won't execute queryFn
+- NO API requests sent
+
+MOST LIKELY SCENARIO:
+  1. LeadMagnets crashes due to missing import (confirmed)
+  2. Dashboard/EmailCampaigns have timing issue where currentWorkspace 
+     never updates in their specific context OR enabled condition 
+     stays false even after Redux update
+
+NEXT STEPS:
+  1. Fix LeadMagnets.jsx: Add useEffect to imports
+  2. Verify Dashboard/EmailCampaigns also have proper imports
+  3. Test if Redux state properly flows to page components
+  4. Confirm enabled condition transitions from false→true
+  5. Verify React Query executes queryFn after enabled changes
+
+═══════════════════════════════════════════════════════════════════════════════

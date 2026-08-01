@@ -563,10 +563,12 @@ const AuthenticatedLayout = () => {
 
   // Initialize workspace on first load
   useEffect(() => {
+    console.log('🟠 [AuthenticatedLayout] Workspace init effect - workspacesData:', workspacesData, 'currentWorkspace:', currentWorkspace, 'isLoadingWorkspaces:', isLoadingWorkspaces)
     if (workspacesData && !currentWorkspace) {
       perfMonitor.mark('workspace_initialization_start')
       const list = Array.isArray(workspacesData) ? workspacesData : workspacesData?.content ?? []
       if (list.length > 0) {
+        console.log('🟢 [AuthenticatedLayout] Dispatching setCurrentWorkspace with:', list[0])
         dispatch(setCurrentWorkspace(list[0]))
         perfMonitor.mark('workspace_initialization_complete')
       }

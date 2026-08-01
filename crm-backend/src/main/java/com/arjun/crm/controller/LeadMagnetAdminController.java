@@ -90,10 +90,13 @@ public class LeadMagnetAdminController {
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy) {
         
-        log.info("GET /api/workspaces/{}/lead-magnets - Listing campaigns", workspaceId);
+        log.info("🟢 [LeadMagnetAdminController] GET /api/workspaces/{}/lead-magnets called - workspaceId: {}, page: {}, size: {}, timestamp: {}", 
+                workspaceId, workspaceId, page, size, java.time.LocalDateTime.now());
         
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy).descending());
         Page<LeadMagnetResponse> campaigns = leadMagnetService.listMagnets(workspaceId, pageable);
+        
+        log.info("🟢 [LeadMagnetAdminController] Returning {} campaigns", campaigns.getTotalElements());
         
         return ResponseEntity.ok()
                 .body(ApiResponse.success("Campaigns retrieved successfully", campaigns));

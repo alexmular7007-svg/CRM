@@ -1,0 +1,50 @@
+﻿
+========================================================================
+           RUNTIME INVESTIGATION - API & LOG ANALYSIS
+========================================================================
+
+STEP 1: Testing API endpoints...
+Using workspace ID: 1
+
+========================================================================
+TEST 1: DASHBOARD API
+========================================================================
+
+Request: GET /api/dashboard/overview?workspaceId=1
+ERROR: The remote server returned an error: (403) Forbidden.
+
+========================================================================
+TEST 2: LEAD MAGNETS API
+========================================================================
+
+Request: GET /api/workspaces/1/lead-magnets
+ERROR: The remote server returned an error: (403) Forbidden.
+
+========================================================================
+TEST 3: EMAIL CAMPAIGNS API
+========================================================================
+
+Request: GET /api/workspaces/1/email-campaigns
+ERROR: The remote server returned an error: (403) Forbidden.
+
+========================================================================
+BACKEND LOGS - Recent entries
+========================================================================
+
+Retrieving logs from: c:\Users\arjun\OneDrive\Desktop\Task Manager and Chat Application\crm-backend\logs\crm-backend.log
+
+2026-08-01 15:52:28 [clientInboundChannel-199] DEBUG c.a.c.s.i.OnlinePresenceServiceImpl - Marking user 8 as online
+2026-08-01 15:53:27 [clientInboundChannel-202] DEBUG o.s.w.s.m.WebSocketAnnotationMethodMessageHandler - Invoking ChatWebSocketController#handleHeartbeat[1 args]
+2026-08-01 15:53:28 [clientInboundChannel-202] DEBUG c.a.c.s.i.OnlinePresenceServiceImpl - Marking user 8 as online
+2026-08-01 15:54:27 [clientInboundChannel-205] DEBUG o.s.w.s.m.WebSocketAnnotationMethodMessageHandler - Invoking ChatWebSocketController#handleHeartbeat[1 args]
+2026-08-01 15:54:28 [clientInboundChannel-205] DEBUG c.a.c.s.i.OnlinePresenceServiceImpl - Marking user 8 as online
+2026-08-01 15:55:27 [clientInboundChannel-208] DEBUG o.s.w.s.m.WebSocketAnnotationMethodMessageHandler - Invoking ChatWebSocketController#handleHeartbeat[1 args]
+2026-08-01 15:55:28 [clientInboundChannel-208] DEBUG c.a.c.s.i.OnlinePresenceServiceImpl - Marking user 8 as online
+2026-08-01 15:56:19 [http-nio-0.0.0.0-8081-exec-1] DEBUG o.s.security.web.FilterChainProxy - Securing GET /api/dashboard/overview?workspaceId=1
+2026-08-01 15:56:20 [http-nio-0.0.0.0-8081-exec-5] DEBUG o.s.security.web.FilterChainProxy - Securing GET /api/workspaces/1/lead-magnets
+2026-08-01 15:56:20 [http-nio-0.0.0.0-8081-exec-10] DEBUG o.s.security.web.FilterChainProxy - Securing GET /api/workspaces/1/email-campaigns
+
+========================================================================
+INVESTIGATION COMPLETE
+========================================================================
+

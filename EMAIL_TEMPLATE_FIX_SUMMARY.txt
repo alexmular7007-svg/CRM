@@ -1,0 +1,208 @@
+═══════════════════════════════════════════════════════════════════════════════
+EMAIL CAMPAIGNS TEMPLATE ISSUE - INVESTIGATION & FIX SUMMARY
+═══════════════════════════════════════════════════════════════════════════════
+
+ISSUE IDENTIFIED:
+The Email Campaigns modal showed an empty "Template" dropdown, preventing users
+from selecting templates when creating campaigns.
+
+Root Cause: The template dropdown calls emailCampaignService.listTemplates()
+which queries GET /api/workspaces/{id}/email-templates endpoint. The backend
+endpoint existed and was working, but NO EMAIL TEMPLATES were seeded in the database.
+
+═══════════════════════════════════════════════════════════════════════════════
+FRONTEND INVESTIGATION
+═══════════════════════════════════════════════════════════════════════════════
+
+File: crm-frontend/src/components/emailcampaign/EmailCampaignForm.jsx
+
+The form component correctly:
+✓ Imports emailCampaignService (line 6)
+✓ Calls useQuery to fetch templates (line 14-16):
+  - queryKey: ['email-templates', currentWorkspace?.id]
+  - queryFn: emailCampaignService.listTemplates(currentWorkspace.id)
+  - enabled: !!currentWorkspace?.id
+
+✓ Maps templates to dropdown options (line 49):
+  {templates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}
+
+Result: Frontend is correctly trying to load templates, but database has no templates.
+
+═══════════════════════════════════════════════════════════════════════════════
+BACKEND INVESTIGATION
+═══════════════════════════════════════════════════════════════════════════════
+
+Backend Status:
+✓ EmailTemplateController exists with endpoints:
+  - POST /api/workspaces/{workspaceId}/email-templates (CREATE)
+  - GET /api/workspaces/{workspaceId}/email-templates (LIST) ← Used by frontend
+  - GET /api/workspaces/{workspaceId}/email-templates/{templateId} (GET by ID)
+  - PUT /api/workspaces/{workspaceId}/email-templates/{templateId} (UPDATE)
+  - DELETE /api/workspaces/{workspaceId}/email-templates/{templateId} (DELETE)
+  - GET /api/workspaces/{workspaceId}/email-templates/category/{category} (LIST by category)
+
+✓ EmailTemplate entity properly defined with fields:
+  - id (Primary Key)
+  - workspace (Many-to-One relationship to Workspace)
+  - name, description, category
+  - subjectTemplate, htmlContent, plainTextContent
+  - variables (merge variables like {firstName}, {companyName})
+  - thumbnailUrl
+  - isPublic
+  - createdBy (User who created)
+  - createdAt, updatedAt (timestamps)
+  - campaigns (inverse relationship)
+
+✓ EmailTemplateRepository exists and extends JpaRepository<EmailTemplate, Long>
+
+✗ DataLoader does NOT seed email templates
+  - Current DataLoader seeds:
+    • Users (test1@example.com, test2@example.com, admin@example.com)
+    • Workspaces (Marketing Team, Development Team)
+    • Projects
+    • Tasks
+    • LeadMagnets
+    • EmailCampaigns
+  
+  - MISSING: EmailTemplates (no templates seeded = empty dropdown)
+
+═══════════════════════════════════════════════════════════════════════════════
+SOLUTION IMPLEMENTED
+═══════════════════════════════════════════════════════════════════════════════
+
+Updated: crm-backend/src/main/java/com/arjun/crm/config/DataLoader.java
+
+Changes Made:
+1. Added EmailTemplate import (line 9)
+2. Added EmailTemplateRepository injection to loadData() method (line 50)
+3. Added 4 professional email templates seeded for Marketing Team workspace:
+
+   Template 1: Welcome Email
+   - Category: WELCOME
+   - Subject: "Welcome to {companyName}!"
+   - Variables: {firstName}, {companyName}
+   - HTML content with professional welcome message
+   - Plain text version
+
+   Template 2: Promotional Campaign
+   - Category: PROMOTIONAL
+   - Subject: "Exclusive {discountPercent}% Off - Limited Time!"
+   - Variables: {firstName}, {discountPercent}, {expiryDate}
+   - HTML content with promotional offer
+   - Plain text version
+
+   Template 3: Newsletter Template
+   - Category: NEWSLETTER
+   - Subject: "{monthName} Newsletter - What's New!"
+   - Variables: {firstName}, {monthName}, {feature1}, {feature2}, {feature3}
+   - HTML content with highlighted features
+   - Plain text version
+
+   Template 4: Order Confirmation
+   - Category: TRANSACTIONAL
+   - Subject: "Order Confirmed - {orderNumber}"
+   - Variables: {firstName}, {orderNumber}, {orderTotal}, {deliveryDate}
+   - HTML content with order details
+   - Plain text version
+
+All templates:
+✓ Are marked as public (isPublic: true)
+✓ Are created by test1@example.com (testUser1)
+✓ Have both HTML and plain text versions
+✓ Include merge variables for personalization
+✓ Are added to Marketing Team workspace (workspace1)
+
+═══════════════════════════════════════════════════════════════════════════════
+GIT COMMITS
+═══════════════════════════════════════════════════════════════════════════════
+
+COMMIT 1 (Frontend Fix):
+Hash: b8e1eed
+Message: fix(pages): add missing useEffect import to LeadMagnets.jsx
+Changes: LeadMagnets.jsx line 1 - Added useEffect to imports
+Status: Pushed to origin/main ✓
+
+COMMIT 2 (Backend Fix):
+Hash: 01bcccd
+Message: feat(backend): add email template seed data to DataLoader
+Changes: DataLoader.java - Added 4 email templates + EmailTemplateRepository injection
+Status: Pushed to origin/main ✓
+
+═══════════════════════════════════════════════════════════════════════════════
+VERIFICATION STEPS
+═══════════════════════════════════════════════════════════════════════════════
+
+To verify the fix works:
+
+1. Restart the backend application
+   - The DataLoader will run on startup
+   - 4 email templates will be seeded to the database
+   - Check logs for: "✓ Created 4 demo email templates"
+
+2. Open the application and navigate to:
+   Marketing → Email Campaigns → Create New Campaign (or click "New Campaign")
+
+3. In the modal, check the "Template" dropdown:
+   ✓ Should now show:
+     - Welcome Email
+     - Promotional Campaign
+     - Newsletter Template
+     - Order Confirmation
+
+4. Verify in Browser Network tab:
+   ✓ GET /api/workspaces/1/email-templates should return:
+     - HTTP 200
+     - Response: {totalElements: 4, content: [{id: 1, name: "Welcome Email", ...}, ...]}
+
+═══════════════════════════════════════════════════════════════════════════════
+FILES MODIFIED
+═══════════════════════════════════════════════════════════════════════════════
+
+Frontend:
+1. crm-frontend/src/pages/LeadMagnets.jsx
+   - Line 1: Added useEffect to imports
+   - Reason: useEffect hook was called but not imported (runtime error fix)
+
+Backend:
+2. crm-backend/src/main/java/com/arjun/crm/config/DataLoader.java
+   - Line 9: Added EmailTemplate import
+   - Line 21: Added EmailTemplateRepository import
+   - Line 50: Added EmailTemplateRepository parameter to loadData()
+   - Lines 234-294: Added email template seeding logic for 4 templates
+
+═══════════════════════════════════════════════════════════════════════════════
+RELATED ENDPOINTS
+═══════════════════════════════════════════════════════════════════════════════
+
+Frontend Service:
+File: crm-frontend/src/services/emailCampaignService.js
+
+Methods:
+- listTemplates(workspaceId) → GET /api/workspaces/{id}/email-templates
+- listSegments(workspaceId) → GET /api/workspaces/{id}/email-segments
+- listCampaigns(workspaceId) → GET /api/workspaces/{id}/email-campaigns
+- createCampaign(workspaceId, payload) → POST /api/workspaces/{id}/email-campaigns
+
+Backend Controller:
+File: crm-backend/src/main/java/com/arjun/crm/controller/EmailTemplateController.java
+
+Endpoints Available:
+- GET /api/workspaces/{workspaceId}/email-templates
+- GET /api/workspaces/{workspaceId}/email-templates/{templateId}
+- GET /api/workspaces/{workspaceId}/email-templates/category/{category}
+- POST /api/workspaces/{workspaceId}/email-templates
+- PUT /api/workspaces/{workspaceId}/email-templates/{templateId}
+- DELETE /api/workspaces/{workspaceId}/email-templates/{templateId}
+
+═══════════════════════════════════════════════════════════════════════════════
+STATUS: COMPLETE ✓
+═══════════════════════════════════════════════════════════════════════════════
+
+Both issues have been fixed and pushed to repository:
+1. ✓ LeadMagnets.jsx missing useEffect import (frontend fix)
+2. ✓ Email templates not seeded (backend fix)
+
+The Email Campaigns template dropdown will now display 4 professional templates
+when creating a new campaign.
+
+═══════════════════════════════════════════════════════════════════════════════

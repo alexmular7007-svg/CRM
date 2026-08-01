@@ -39,6 +39,8 @@ public class DashboardController {
             log.warn("❌ getDashboardOverview called with null workspaceId");
         }
         
+        log.info("🟢 [DashboardController] GET /api/dashboard/overview called - workspaceId: {}, timestamp: {}", workspaceId, java.time.LocalDateTime.now());
+        
         DashboardOverviewResponse response = dashboardService.getDashboardOverview(workspaceId);
         return ResponseEntity.ok(ApiResponse.success("Dashboard overview retrieved successfully", response));
     }

@@ -96,13 +96,21 @@ public class EmailCampaignServiceImpl implements EmailCampaignService {
     
     @Override
     public Page<EmailCampaignResponse> listCampaigns(Long workspaceId, Pageable pageable) {
-        log.info("Listing campaigns in workspace: {}", workspaceId);
+        log.info("[TRACE-EmailCampaign-Service-START] workspaceId={}, page={}, size={}", 
+                workspaceId, pageable.getPageNumber(), pageable.getPageSize());
         
         // Validate access
         workspaceAuthService.validateWorkspaceAccess(workspaceId);
         
-        return campaignRepository.findByWorkspaceIdOrderByCreatedAtDesc(workspaceId, pageable)
-                .map(this::mapToResponse);
+        log.info("[TRACE-EmailCampaign-Repository-CALLING] workspace_id={}", workspaceId);
+        Page<EmailCampaign> campaigns = campaignRepository.findByWorkspaceIdOrderByCreatedAtDesc(workspaceId, pageable);
+        log.info("[TRACE-EmailCampaign-Repository-RESULT] total_elements={}, page_size={}, pages={}", 
+                campaigns.getTotalElements(), campaigns.getSize(), campaigns.getTotalPages());
+        
+        Page<EmailCampaignResponse> response = campaigns.map(this::mapToResponse);
+        log.info("[TRACE-EmailCampaign-Service-RESPONSE] mapped_elements={}", response.getTotalElements());
+        
+        return response;
     }
     
     @Override

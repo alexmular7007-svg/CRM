@@ -1,0 +1,62 @@
+﻿
+==================================================================
+COMPREHENSIVE TRACE INVESTIGATION - AUTHENTICATED API CALLS
+==================================================================
+
+[STEP 1] Getting JWT Token...
+Email: test1@example.com
+Password: password123
+
+SUCCESS: JWT Token obtained
+Token (first 50 chars): eyJhbGciOiJIUzM4NCJ9.eyJ1c2VySWQiOjEsInN1YiI6InRlc...
+Workspace ID to use: 1
+
+==================================================================
+[TEST 1] DASHBOARD API - GET /api/dashboard/overview?workspaceId=1
+==================================================================
+
+SUCCESS: HTTP 200
+Response data:
+  - Total Tasks: 0
+  - Completed Tasks: 0
+  - In Progress: 0
+  - Overdue: 0
+
+==================================================================
+[TEST 2] LEAD MAGNETS API - GET /api/workspaces/1/lead-magnets
+==================================================================
+
+SUCCESS: HTTP 200
+Response data:
+  - Total Elements: 0
+  - Page Size: 20
+  - Total Pages: 0
+
+==================================================================
+[TEST 3] EMAIL CAMPAIGNS API - GET /api/workspaces/1/email-campaigns
+==================================================================
+
+SUCCESS: HTTP 200
+Response data:
+  - Total Elements: 0
+  - Page Size: 20
+  - Total Pages: 0
+
+==================================================================
+[BACKEND LOGS] - Recent 300 lines (filtered for TRACE)
+==================================================================
+
+2026-08-01 16:11:39 [http-nio-0.0.0.0-8081-exec-9] INFO  c.a.c.s.impl.DashboardServiceImpl - [TRACE-Dashboard-Service-RESPONSE] taskStats=0, projectStats=0, notifStats=2, activityStats=0
+2026-08-01 16:11:39 [http-nio-0.0.0.0-8081-exec-10] INFO  c.a.c.s.impl.LeadMagnetServiceImpl - [TRACE-LeadMagnet-Service-START] workspaceId=1, page=0, size=20
+2026-08-01 16:11:39 [http-nio-0.0.0.0-8081-exec-10] INFO  c.a.c.s.impl.LeadMagnetServiceImpl - [TRACE-LeadMagnet-Repository-CALLING] workspace_id=1
+2026-08-01 16:11:40 [http-nio-0.0.0.0-8081-exec-10] INFO  c.a.c.s.impl.LeadMagnetServiceImpl - [TRACE-LeadMagnet-Repository-RESULT] total_elements=0, page_size=20, pages=0
+2026-08-01 16:11:40 [http-nio-0.0.0.0-8081-exec-10] INFO  c.a.c.s.impl.LeadMagnetServiceImpl - [TRACE-LeadMagnet-Service-RESPONSE] mapped_elements=0
+2026-08-01 16:11:40 [http-nio-0.0.0.0-8081-exec-1] INFO  c.a.c.s.i.EmailCampaignServiceImpl - [TRACE-EmailCampaign-Service-START] workspaceId=1, page=0, size=20
+2026-08-01 16:11:40 [http-nio-0.0.0.0-8081-exec-1] INFO  c.a.c.s.i.EmailCampaignServiceImpl - [TRACE-EmailCampaign-Repository-CALLING] workspace_id=1
+2026-08-01 16:11:40 [http-nio-0.0.0.0-8081-exec-1] INFO  c.a.c.s.i.EmailCampaignServiceImpl - [TRACE-EmailCampaign-Repository-RESULT] total_elements=0, page_size=20, pages=0
+2026-08-01 16:11:40 [http-nio-0.0.0.0-8081-exec-1] INFO  c.a.c.s.i.EmailCampaignServiceImpl - [TRACE-EmailCampaign-Service-RESPONSE] mapped_elements=0
+
+==================================================================
+INVESTIGATION COMPLETE
+==================================================================
+
