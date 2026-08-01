@@ -35,6 +35,8 @@ const Settings = lazy(() => import('./pages/Settings'))
 const WorkspaceSettings = lazy(() => import('./pages/WorkspaceSettings'))
 const LeadMagnets = lazy(() => import('./pages/LeadMagnets'))
 const LeadMagnetDetails = lazy(() => import('./pages/LeadMagnetDetails'))
+const EmailCampaigns = lazy(() => import('./pages/EmailCampaigns'))
+const EmailCampaignDetails = lazy(() => import('./pages/EmailCampaignDetails'))
 const PublicFormPage = lazy(() => import('./pages/PublicFormPage'))
 
 const PageLoader = () => (
@@ -123,6 +125,8 @@ function AppContent() {
           <Route path="/ai-insights" element={<Suspense fallback={<PageLoader />}><AIInsights /></Suspense>} />
           <Route path="/marketing/lead-magnets" element={<Suspense fallback={<PageLoader />}><LeadMagnets /></Suspense>} />
           <Route path="/marketing/lead-magnets/:id" element={<Suspense fallback={<PageLoader />}><LeadMagnetDetails /></Suspense>} />
+          <Route path="/marketing/email-campaigns" element={<Suspense fallback={<PageLoader />}><EmailCampaigns /></Suspense>} />
+          <Route path="/marketing/email-campaigns/:id" element={<Suspense fallback={<PageLoader />}><EmailCampaignDetails /></Suspense>} />
           <Route path="/profile" element={<Suspense fallback={<PageLoader />}><Profile /></Suspense>} />
           <Route path="/settings" element={<Suspense fallback={<PageLoader />}><Settings /></Suspense>} />
           <Route path="/workspaces/:workspaceId/settings" element={<Suspense fallback={<PageLoader />}><WorkspaceSettings /></Suspense>} />

@@ -64,6 +64,8 @@ export function useWorkspaceRole(workspaceId = null) {
     canManageLeadMagnets: role === 'OWNER' || role === 'ADMIN',
     canCreateLeadMagnets: role === 'OWNER' || role === 'ADMIN',
     canViewLeadMagnets: true,  // All members can view
+    canManageEmailCampaigns: role === 'OWNER' || role === 'ADMIN',
+    canViewEmailCampaigns: true,
   }), [role, reduxRole, isLoading])
   
   return permissions
