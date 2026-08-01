@@ -38,6 +38,7 @@ const MOBILE_NAV_ITEMS = [
     icon: Megaphone,
     children: [
       { path: '/marketing/lead-magnets', label: 'Lead Magnets' },
+      { path: '/marketing/email-campaigns', label: 'Email Campaigns' },
     ],
   },
 ]

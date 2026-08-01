@@ -28,6 +28,7 @@ const NAV = [
     icon: Megaphone,
     children: [
       { path: '/marketing/lead-magnets', label: 'Lead Magnets' },
+      { path: '/marketing/email-campaigns', label: 'Email Campaigns' },
     ]
   },
   { path: '/settings', icon: Settings, label: 'Settings' },
