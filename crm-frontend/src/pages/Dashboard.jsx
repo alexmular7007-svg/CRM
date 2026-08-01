@@ -104,10 +104,17 @@ const Dashboard = memo(() => {
     perfMonitor.mark('dashboard_component_mounted')
   }, [])
 
+  // Log currentWorkspace changes
+  useEffect(() => {
+    // currentWorkspace updated, queries will re-run automatically via queryKey dependency
+  }, [currentWorkspace])
+
   const { data: dashboardData, isLoading, error } = useQuery({
     queryKey: ['dashboard', currentWorkspace?.id],
     queryFn: () => {
-      if (!currentWorkspace?.id) return Promise.resolve(null)
+      if (!currentWorkspace?.id) {
+        return Promise.resolve(null)
+      }
       perfMonitor.mark('dashboard_api_request_start')
       return analyticsService.getDashboard(currentWorkspace.id)
         .then(data => {
@@ -115,7 +122,6 @@ const Dashboard = memo(() => {
           return data
         })
         .catch(err => {
-          console.error('Dashboard API error:', err)
           perfMonitor.mark('dashboard_api_request_error')
           throw err
         })
@@ -124,7 +130,7 @@ const Dashboard = memo(() => {
     retry: 1,
     staleTime: 30000,
     gcTime: 5 * 60 * 1000,
-    placeholderData: keepPreviousData,  // ✅ Show previous data while refetching
+    placeholderData: keepPreviousData,
   })
 
   // Load recent activities - parallel with dashboard

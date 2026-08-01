@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSelector } from 'react-redux'
 import { Filter, Plus, Search } from 'lucide-react'
@@ -13,8 +13,28 @@ export default function EmailCampaigns() {
   const { currentWorkspace } = useSelector((state) => state.workspace)
   const { isAdminOrOwner } = useWorkspaceRole(currentWorkspace?.id)
   const queryClient = useQueryClient()
+  
+  // Log currentWorkspace changes
+  useEffect(() => {
+    // currentWorkspace updated, queries will re-run automatically via queryKey dependency
+  }, [currentWorkspace])
+  
   const [page, setPage] = useState(0), [search, setSearch] = useState(''), [status, setStatus] = useState(''), [modal, setModal] = useState(null)
-  const { data: response, isLoading, isError, refetch } = useQuery({ queryKey: ['email-campaigns', currentWorkspace?.id, page, status], queryFn: () => emailCampaignService.listCampaigns(currentWorkspace.id, { page, size: PAGE_SIZE, status: status || undefined }), enabled: !!currentWorkspace?.id })
+  const { data: response, isLoading, isError, refetch } = useQuery({ 
+    queryKey: ['email-campaigns', currentWorkspace?.id, page, status], 
+    queryFn: () => {
+      if (!currentWorkspace?.id) {
+        return Promise.resolve(null)
+      }
+      return emailCampaignService.listCampaigns(currentWorkspace.id, { page, size: PAGE_SIZE, status: status || undefined }).then(data => {
+        return data
+      }).catch(err => {
+        throw err
+      })
+    }, 
+    enabled: !!currentWorkspace?.id 
+  })
+  
   const remove = useMutation({ mutationFn: (id) => emailCampaignService.deleteCampaign(currentWorkspace.id, id), onSuccess: () => { toast.success('Campaign deleted successfully'); queryClient.invalidateQueries({ queryKey: ['email-campaigns'] }) }, onError: (error) => toast.error(error?.message || 'Unable to delete campaign') })
   const send = useMutation({ mutationFn: (id) => emailCampaignService.sendCampaign(currentWorkspace.id, id), onSuccess: () => { toast.success('Campaign send started'); queryClient.invalidateQueries({ queryKey: ['email-campaigns'] }) }, onError: (error) => toast.error(error?.message || 'Unable to send campaign') })
   const campaigns = useMemo(() => (response?.content || []).filter((campaign) => `${campaign.name} ${campaign.subject}`.toLowerCase().includes(search.toLowerCase())), [response, search])

@@ -15,11 +15,7 @@ const LeadMagnets = () => {
   
   // Log currentWorkspace changes
   useEffect(() => {
-    console.log('🟡 [LeadMagnets] currentWorkspace changed:', {
-      value: currentWorkspace,
-      id: currentWorkspace?.id,
-      timestamp: new Date().toISOString()
-    })
+    // currentWorkspace updated, queries will re-run automatically via queryKey dependency
   }, [currentWorkspace])
   
   const [showModal, setShowModal] = useState(false)
@@ -37,20 +33,16 @@ const LeadMagnets = () => {
     queryKey: ['lead-magnets', currentWorkspace?.id, currentPage, sortBy, sortDir],
     queryFn: () => {
       if (!currentWorkspace?.id) {
-        console.log('🔴 [LeadMagnets Query] Guard clause triggered - returning null. currentWorkspace:', currentWorkspace)
         return Promise.resolve(null)
       }
-      console.log('🟢 [LeadMagnets Query] queryFn executing! workspaceId:', currentWorkspace.id, 'timestamp:', new Date().toISOString())
       return leadMagnetService.listLeadMagnets(currentWorkspace?.id, {
         page: currentPage,
         size: PAGE_SIZE,
         sortBy,
         sortDir,
       }).then(data => {
-        console.log('🟢 [LeadMagnets Query] API Response received:', data)
         return data
       }).catch(err => {
-        console.error('🔴 [LeadMagnets Query] API Error:', err)
         throw err
       })
     },
