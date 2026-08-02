@@ -52,7 +52,7 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
   const [errors, setErrors] = useState({})
   
   // Fetch templates
-  const { data: templatesResponse, isLoading: templatesLoading } = useQuery({
+  const { data: templatesResponse, isLoading: templatesLoading, refetch: refetchTemplates } = useQuery({
     queryKey: ['email-templates', currentWorkspace?.id],
     queryFn: () => emailCampaignService.listTemplates(currentWorkspace.id),
     enabled: !!currentWorkspace?.id,
@@ -67,6 +67,40 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
   })
   const segments = segmentsResponse?.content || []
   
+  // Helper to switch to existing template mode
+  const handleSwitchToExisting = async (targetName) => {
+    const res = await refetchTemplates()
+    const latestTemplates = res.data?.content || templates
+    const nameToMatch = (targetName || form.templateName || '').trim().toLowerCase()
+    const match = latestTemplates.find((t) => t.name.trim().toLowerCase() === nameToMatch) || latestTemplates[0]
+    
+    setForm((prev) => ({
+      ...prev,
+      contentMode: 'existing',
+      existingTemplateId: match ? String(match.id) : prev.existingTemplateId,
+    }))
+    setErrors((prev) => ({ ...prev, templateName: null, existingTemplateId: null }))
+    if (match) {
+      toast.success(`Switched to existing template: "${match.name}"`)
+    }
+  }
+
+  // Handle radio toggle for contentMode
+  const handleContentModeChange = async (mode) => {
+    setForm((prev) => ({ ...prev, contentMode: mode }))
+    if (mode === 'existing') {
+      const res = await refetchTemplates()
+      const latestTemplates = res.data?.content || templates
+      const nameToMatch = (form.templateName || '').trim().toLowerCase()
+      if (nameToMatch) {
+        const match = latestTemplates.find((t) => t.name.trim().toLowerCase() === nameToMatch)
+        if (match) {
+          setForm((prev) => ({ ...prev, existingTemplateId: String(match.id) }))
+        }
+      }
+    }
+  }
+  
   // Create/Send campaign mutation
   const mutation = useMutation({
     mutationFn: async (data) => {
@@ -76,10 +110,10 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
       if (data.contentMode === 'create') {
         // Create new template first
         const templatePayload = {
-          name: data.templateName,
-          description: `Auto-created from campaign: ${data.campaignName}`,
+          name: data.templateName.trim(),
+          description: data.description ? `Campaign: ${data.campaignName.trim()} - ${data.description.trim()}` : `Auto-created from campaign: ${data.campaignName.trim()}`,
           category: 'CAMPAIGN',
-          subjectTemplate: data.emailSubject,
+          subjectTemplate: data.emailSubject.trim(),
           htmlContent: data.emailBody,
           plainTextContent: data.emailBody.replace(/<[^>]*>/g, ''),
           variables: [],  // Empty array instead of string
@@ -93,19 +127,36 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
           }
         } catch (error) {
           console.error('Template creation error:', error)
-          throw new Error(`Failed to create email template: ${error?.message || 'Unknown error'}`)
+          const status = error?.status || error?.response?.status
+          const message = error?.message || error?.response?.data?.message || ''
+          const isConflict = status === 409 || message.toLowerCase().includes('already exists')
+          
+          if (isConflict) {
+            // Invalidate templates list so existing templates refresh immediately
+            queryClient.invalidateQueries({ queryKey: ['email-templates', currentWorkspace?.id] })
+            
+            const conflictErr = new Error('TEMPLATE_CONFLICT')
+            conflictErr.isConflict = true
+            conflictErr.duplicateName = data.templateName
+            throw conflictErr
+          }
+          
+          throw new Error(message || 'Failed to create email template')
         }
       } else {
         templateId = Number(data.existingTemplateId)
+        if (!templateId) {
+          throw new Error('Please select a valid email template')
+        }
       }
       
-      // Create campaign
+      // Create campaign - ONLY reached if template creation succeeded or existing template chosen
       const campaignPayload = {
-        name: data.campaignName,
-        subject: data.emailSubject,
-        description: data.description || null,
+        name: data.campaignName.trim(),
+        subject: data.emailSubject.trim(),
+        description: data.description ? data.description.trim() : null,
         templateId,
-        contentType: data.contentMode === 'create' ? 'CUSTOM' : 'TEMPLATE',
+        contentType: 'TEMPLATE',
         recipientMode: data.audienceMode.toUpperCase(),
         recipientData: JSON.stringify(getRecipientData(data)),
         status: data.deliveryMode === 'draft' ? 'DRAFT' : 'DRAFT',
@@ -123,10 +174,12 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
             .map((email) => ({ email: email.trim() }))
             .filter(({ email }) => email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
           
-          await emailCampaignService.addRecipients(currentWorkspace.id, campaignId, {
-            recipients: emails,
-            replaceExisting: true,
-          })
+          if (emails.length > 0) {
+            await emailCampaignService.addRecipients(currentWorkspace.id, campaignId, {
+              recipients: emails,
+              replaceExisting: true,
+            })
+          }
         } else if (data.audienceMode === 'segment') {
           await emailCampaignService.addRecipients(currentWorkspace.id, campaignId, {
             segmentId: Number(data.segmentId),
@@ -156,7 +209,18 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
       queryClient.invalidateQueries({ queryKey: ['email-campaigns'] })
       onSuccess()
     },
-    onError: (error) => toast.error(error?.message || 'Failed to save campaign'),
+    onError: (error) => {
+      if (error?.isConflict || error?.message === 'TEMPLATE_CONFLICT') {
+        const dupName = error.duplicateName || form.templateName
+        setErrors((prev) => ({
+          ...prev,
+          templateName: `Template name "${dupName}" already exists in this workspace.`
+        }))
+        toast.error(`Template "${dupName}" already exists in this workspace.`, { id: 'template-conflict' })
+      } else {
+        toast.error(error?.message || 'Failed to save campaign')
+      }
+    },
   })
   
   // Helper function to get recipient data
@@ -190,6 +254,9 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
   
   const handleSubmit = (e) => {
     e.preventDefault()
+    
+    // Prevent submission if mutation is already running
+    if (mutation.isPending) return;
     
     // Validation
     const newErrors = {}
@@ -290,10 +357,10 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
               name="contentMode"
               value="create"
               checked={form.contentMode === 'create'}
-              onChange={handleChange}
+              onChange={() => handleContentModeChange('create')}
               className="w-4 h-4 text-violet-600"
             />
-            <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Create New Email</span>
+            <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Create New Template</span>
           </label>
           <label className="flex items-center cursor-pointer">
             <input
@@ -301,7 +368,7 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
               name="contentMode"
               value="existing"
               checked={form.contentMode === 'existing'}
-              onChange={handleChange}
+              onChange={() => handleContentModeChange('existing')}
               className="w-4 h-4 text-violet-600"
             />
             <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Use Existing Template</span>
@@ -319,9 +386,32 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
                 onChange={handleChange}
                 placeholder="e.g., Summer Sale Template"
                 maxLength="255"
-                className={fieldClass}
+                className={`${fieldClass} ${errors.templateName ? 'border-red-500 ring-1 ring-red-500' : ''}`}
               />
-              {errors.templateName && <p className="mt-1 text-xs text-red-500">{errors.templateName}</p>}
+              {errors.templateName && (
+                <div className="mt-2 rounded-md border border-red-200 bg-red-50 p-3 dark:border-red-900/50 dark:bg-red-900/20">
+                  <p className="text-xs font-semibold text-red-700 dark:text-red-300">{errors.templateName}</p>
+                  <div className="mt-2.5 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleSwitchToExisting(form.templateName)}
+                      className="rounded-md bg-violet-600 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-violet-700"
+                    >
+                      Use Existing Template
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setErrors((prev) => ({ ...prev, templateName: null }))
+                        document.getElementById('templateName')?.focus()
+                      }}
+                      className="rounded-md border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-[#30363D] dark:bg-[#0D1117] dark:text-gray-300"
+                    >
+                      Rename Template
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
             
             <div>

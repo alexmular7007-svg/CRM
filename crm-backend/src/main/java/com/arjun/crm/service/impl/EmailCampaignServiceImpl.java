@@ -72,6 +72,8 @@ public class EmailCampaignServiceImpl implements EmailCampaignService {
         if (request.getTemplateId() != null) {
             template = templateRepository.findByIdAndWorkspaceId(request.getTemplateId(), workspaceId)
                     .orElseThrow(() -> new ResourceNotFoundException("Template not found"));
+        } else if ("TEMPLATE".equalsIgnoreCase(request.getContentType())) {
+            throw new IllegalArgumentException("Template ID is required when content type is TEMPLATE");
         }
         
         // Parse recipientData from String to Map<String, Object>
