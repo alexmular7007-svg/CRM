@@ -83,8 +83,8 @@ public class EmailCampaignServiceImpl implements EmailCampaignService {
                 .status(request.getStatus() != null ? request.getStatus() : "DRAFT")
                 .isActive(request.getIsActive() != null ? request.getIsActive() : true)
                 .createdBy(authenticatedUser)
-                .recipientMode(request.getRecipientMode())
-                .recipientData(request.getRecipientData())
+                .recipientMode(request.getRecipientMode() != null ? request.getRecipientMode() : "MANUAL")
+                .recipientData(request.getRecipientData() != null ? request.getRecipientData() : "{}")
                 .totalRecipients(0L)
                 .retryCount(0)
                 .build();
