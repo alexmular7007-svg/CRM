@@ -82,11 +82,19 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
           subjectTemplate: data.emailSubject,
           htmlContent: data.emailBody,
           plainTextContent: data.emailBody.replace(/<[^>]*>/g, ''),
-          variables: '{}',
+          variables: [],  // Empty array instead of string
           isPublic: false,
         }
-        const template = await emailCampaignService.createTemplate(currentWorkspace.id, templatePayload)
-        templateId = template?.id
+        try {
+          const template = await emailCampaignService.createTemplate(currentWorkspace.id, templatePayload)
+          templateId = template?.id
+          if (!templateId) {
+            throw new Error('Failed to create template: no ID returned')
+          }
+        } catch (error) {
+          console.error('Template creation error:', error)
+          throw new Error(`Failed to create email template: ${error?.message || 'Unknown error'}`)
+        }
       } else {
         templateId = Number(data.existingTemplateId)
       }
