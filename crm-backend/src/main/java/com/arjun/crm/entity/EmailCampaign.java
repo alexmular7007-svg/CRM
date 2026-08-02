@@ -6,11 +6,15 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
+import com.fasterxml.jackson.databind.JsonNode;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * EmailCampaign Entity - FEATURE #3
@@ -97,14 +101,16 @@ public class EmailCampaign {
     @Column
     private Long totalRecipients;
     
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
-    private String segmentFilter;  // JSON filter criteria
+    private Map<String, Object> segmentFilter;  // JSON filter criteria
     
     @Column(length = 50)
     private String recipientMode;  // MANUAL, SEGMENT, CRM_FILTER
     
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
-    private String recipientData;  // JSON data for recipients (emails, segmentId, or filters)
+    private Map<String, Object> recipientData;  // JSON data for recipients (emails, segmentId, or filters)
     
     @Column
     private Integer retryCount;

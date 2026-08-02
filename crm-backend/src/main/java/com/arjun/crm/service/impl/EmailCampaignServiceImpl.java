@@ -14,6 +14,7 @@ import com.arjun.crm.repository.EmailTemplateRepository;
 import com.arjun.crm.repository.WorkspaceRepository;
 import com.arjun.crm.security.WorkspaceAuthorizationService;
 import com.arjun.crm.service.EmailCampaignService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -22,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 /**
  * EmailCampaignServiceImpl - FEATURE #3
@@ -43,6 +45,7 @@ public class EmailCampaignServiceImpl implements EmailCampaignService {
     private final EmailTemplateRepository templateRepository;
     private final WorkspaceRepository workspaceRepository;
     private final WorkspaceAuthorizationService workspaceAuthService;
+    private final ObjectMapper objectMapper;
     
     @Override
     public EmailCampaignResponse createCampaign(Long workspaceId, CreateEmailCampaignRequest request) {
@@ -71,6 +74,9 @@ public class EmailCampaignServiceImpl implements EmailCampaignService {
                     .orElseThrow(() -> new ResourceNotFoundException("Template not found"));
         }
         
+        // Parse recipientData from String to Map<String, Object>
+        Map<String, Object> recipientDataMap = parseRecipientData(request.getRecipientData());
+        
         // Create campaign
         EmailCampaign campaign = EmailCampaign.builder()
                 .workspace(workspace)
@@ -84,7 +90,7 @@ public class EmailCampaignServiceImpl implements EmailCampaignService {
                 .isActive(request.getIsActive() != null ? request.getIsActive() : true)
                 .createdBy(authenticatedUser)
                 .recipientMode(request.getRecipientMode() != null ? request.getRecipientMode() : "MANUAL")
-                .recipientData(request.getRecipientData() != null ? request.getRecipientData() : "{}")
+                .recipientData(recipientDataMap)
                 .totalRecipients(0L)
                 .retryCount(0)
                 .build();
@@ -296,6 +302,24 @@ public class EmailCampaignServiceImpl implements EmailCampaignService {
     // Helper methods
     // ─────────────────────────────────────────────────────────────────────
     
+    /**
+     * Parse recipientData from String JSON to Map<String, Object>.
+     * If input is null or invalid, returns empty map.
+     * This ensures proper JSONB type mapping to PostgreSQL.
+     */
+    private Map<String, Object> parseRecipientData(String recipientDataJson) {
+        if (recipientDataJson == null || recipientDataJson.isBlank()) {
+            return Map.of();
+        }
+        
+        try {
+            return objectMapper.readValue(recipientDataJson, Map.class);
+        } catch (Exception e) {
+            log.warn("Failed to parse recipientData JSON, using empty map: {}", e.getMessage());
+            return Map.of();
+        }
+    }
+    
     private EmailCampaignResponse mapToResponse(EmailCampaign campaign) {
         return EmailCampaignResponse.builder()
                 .id(campaign.getId())
@@ -315,11 +339,28 @@ public class EmailCampaignServiceImpl implements EmailCampaignService {
                 .sendCompletedAt(campaign.getSendCompletedAt())
                 .totalRecipients(campaign.getTotalRecipients())
                 .recipientMode(campaign.getRecipientMode())
-                .recipientData(campaign.getRecipientData())
+                .recipientData(serializeRecipientData(campaign.getRecipientData()))
                 .createdAt(campaign.getCreatedAt())
                 .updatedAt(campaign.getUpdatedAt())
                 .deletedAt(campaign.getDeletedAt())
                 .build();
+    }
+    
+    /**
+     * Serialize recipientData from Map<String, Object> to JSON String.
+     * Used for API responses to maintain backward compatibility.
+     */
+    private String serializeRecipientData(Map<String, Object> recipientDataMap) {
+        if (recipientDataMap == null || recipientDataMap.isEmpty()) {
+            return "{}";
+        }
+        
+        try {
+            return objectMapper.writeValueAsString(recipientDataMap);
+        } catch (Exception e) {
+            log.warn("Failed to serialize recipientData map: {}", e.getMessage());
+            return "{}";
+        }
     }
     
     private void validateStatusTransition(String currentStatus, String newStatus) {
