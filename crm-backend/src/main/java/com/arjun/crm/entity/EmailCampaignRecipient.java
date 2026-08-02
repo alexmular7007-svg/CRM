@@ -6,7 +6,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
@@ -54,6 +56,7 @@ public class EmailCampaignRecipient {
     @Column(length = 255)
     private String recipientCompany;
     
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private String recipientVariables;  // {firstName, company, etc.}
     
@@ -93,6 +96,7 @@ public class EmailCampaignRecipient {
     @Column(columnDefinition = "TEXT")
     private String errorMessage;
     
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private String metadata;  // Provider-specific data
     
