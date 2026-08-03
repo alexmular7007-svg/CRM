@@ -21,6 +21,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -46,6 +47,9 @@ public class EmailCampaignServiceImpl implements EmailCampaignService {
     private final WorkspaceRepository workspaceRepository;
     private final WorkspaceAuthorizationService workspaceAuthService;
     private final ObjectMapper objectMapper;
+    
+    @Autowired
+    private EmailCampaignSendingService emailCampaignSendingService;
     
     @Override
     public EmailCampaignResponse createCampaign(Long workspaceId, CreateEmailCampaignRequest request) {
@@ -252,6 +256,10 @@ public class EmailCampaignServiceImpl implements EmailCampaignService {
         campaign = campaignRepository.save(campaign);
         log.info("Campaign send initiated: {} (ID: {})", campaign.getName(), campaign.getId());
         
+        // Start async email sending in background (non-blocking)
+        log.info("Triggering async email sending for campaign: {}", campaignId);
+        emailCampaignSendingService.sendCampaignAsync(campaignId);
+        
         return mapToResponse(campaign);
     }
     
@@ -340,6 +348,8 @@ public class EmailCampaignServiceImpl implements EmailCampaignService {
                 .sendStartedAt(campaign.getSendStartedAt())
                 .sendCompletedAt(campaign.getSendCompletedAt())
                 .totalRecipients(campaign.getTotalRecipients())
+                .sentCount(campaign.getSentCount())
+                .failedCount(campaign.getFailedCount())
                 .recipientMode(campaign.getRecipientMode())
                 .recipientData(serializeRecipientData(campaign.getRecipientData()))
                 .createdAt(campaign.getCreatedAt())
