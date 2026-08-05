@@ -1,0 +1,359 @@
+═════════════════════════════════════════════════════════════════════════════════
+EMAIL ANALYTICS - EXACT LOCATIONS IN PROJECT
+═════════════════════════════════════════════════════════════════════════════════
+
+I AM SHOWING YOU EXACTLY WHERE EMAIL ANALYTICS ARE IMPLEMENTED:
+
+═════════════════════════════════════════════════════════════════════════════════
+🎨 FRONTEND - REACT COMPONENT
+═════════════════════════════════════════════════════════════════════════════════
+
+📍 FILE: crm-frontend/src/pages/EmailCampaignDetails.jsx
+
+LINE 27-31: Analytics data fetching with React Query
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const analytics = useQuery({
+    queryKey: ['email-campaign-analytics', currentWorkspace?.id, id],
+    queryFn: () => emailCampaignService.getAnalytics(currentWorkspace.id, id),
+    enabled: !!currentWorkspace?.id && !!id
+  })
+
+LINE 48-50: Rate calculations
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const deliveryRate = metrics[0].value > 0 ? ((metrics[1].value / metrics[0].value) * 100).toFixed(1) : 0
+  const openRate = metrics[1].value > 0 ? ((metrics[2].value / metrics[1].value) * 100).toFixed(1) : 0
+  const clickRate = metrics[1].value > 0 ? ((metrics[3].value / metrics[1].value) * 100).toFixed(1) : 0
+
+LINE 65-90: Display analytics rates (Delivery Rate, Open Rate, Click Rate)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  {metrics[1].value > 0 && (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="rounded-lg...">
+        <p className="text-xs text-gray-600">Delivery Rate</p>
+        <p className="mt-2 text-2xl font-bold">{deliveryRate}%</p>
+      </div>
+      <div className="rounded-lg...">
+        <p className="text-xs text-gray-600">Open Rate</p>
+        <p className="mt-2 text-2xl font-bold">{openRate}%</p>
+      </div>
+      <div className="rounded-lg...">
+        <p className="text-xs text-gray-600">Click Rate (CTR)</p>
+        <p className="mt-2 text-2xl font-bold">{clickRate}%</p>
+      </div>
+    </div>
+  )}
+
+LINE 93+: Recipients table with analytics columns
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  <table className="w-full">
+    <thead>
+      <tr>
+        <th>Recipient</th>
+        <th>Status</th>
+        <th>Delivered</th>
+        <th>Opened</th>
+        <th>Clicks</th>
+      </tr>
+    </thead>
+    <tbody>
+      {recipientItems.map((recipient) => (
+        <tr key={recipient.id}>
+          <td>{recipient.recipientEmail}</td>
+          <td>{recipient.status}</td>
+          <td>{recipient.deliveredAt ? new Date(recipient.deliveredAt).toLocaleDateString() : '-'}</td>
+          <td>{recipient.openedAt ? new Date(recipient.openedAt).toLocaleDateString() : '-'}</td>
+          <td>{recipient.clickCount || 0}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+
+═════════════════════════════════════════════════════════════════════════════════
+📞 FRONTEND SERVICE - API CLIENT
+═════════════════════════════════════════════════════════════════════════════════
+
+📍 FILE: crm-frontend/src/services/emailCampaignService.js
+
+METHOD: getAnalytics()
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  async getAnalytics(workspaceId, campaignId) {
+    return unwrap(await api.get(`${campaignPath(workspaceId, campaignId)}/analytics`))
+  }
+
+API CALL: GET /api/workspaces/{workspaceId}/email-campaigns/{campaignId}/analytics
+
+═════════════════════════════════════════════════════════════════════════════════
+🔌 BACKEND - WEBHOOK CONTROLLER
+═════════════════════════════════════════════════════════════════════════════════
+
+📍 FILE: crm-backend/src/main/java/com/arjun/crm/controller/BrevoWebhookController.java
+
+CLASS: BrevoWebhookController
+ENDPOINT: POST /api/webhooks/brevo
+NO AUTHENTICATION REQUIRED
+
+METHOD: handleBrevoWebhook() 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  @PostMapping
+  public ResponseEntity<Void> handleBrevoWebhook(@RequestBody BrevoWebhookRequest request) {
+    emailAnalyticsService.processWebhookEvent(request);
+    return ResponseEntity.ok().build();
+  }
+
+RECEIVES EVENTS:
+  ✓ DELIVERED - Email successfully delivered
+  ✓ OPENED - User opened the email
+  ✓ CLICKED - User clicked a link
+  ✓ HARD_BOUNCE - Permanent delivery failure
+  ✓ SOFT_BOUNCE - Temporary delivery failure
+  ✓ SPAM - User marked as spam
+  ✓ UNSUBSCRIBE - User unsubscribed
+  ✓ REPLY - User replied
+
+═════════════════════════════════════════════════════════════════════════════════
+🔌 BACKEND - ANALYTICS ENDPOINT
+═════════════════════════════════════════════════════════════════════════════════
+
+📍 FILE: crm-backend/src/main/java/com/arjun/crm/controller/EmailCampaignController.java
+
+ENDPOINT: GET /api/workspaces/{workspaceId}/email-campaigns/{campaignId}/analytics
+AUTHENTICATION: Required (Bearer token)
+PERMISSION: Any workspace member
+
+METHOD: getCampaignAnalytics()
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  @GetMapping("/{campaignId}/analytics")
+  public ResponseEntity<ApiResponse<Object>> getCampaignAnalytics(
+    @PathVariable Long workspaceId,
+    @PathVariable Long campaignId) {
+    EmailCampaignResponse campaign = emailCampaignService.getCampaign(workspaceId, campaignId);
+    return ResponseEntity.ok(ApiResponse.success("Campaign analytics retrieved successfully", campaign));
+  }
+
+RETURNS:
+  {
+    "success": true,
+    "message": "Campaign analytics retrieved successfully",
+    "data": {
+      "campaignId": 123,
+      "name": "Campaign Name",
+      "totalRecipients": 100,
+      "sentCount": 100,
+      "deliveredCount": 95,
+      "openedCount": 45,
+      "clickedCount": 12,
+      "bouncedCount": 5,
+      "failedCount": 0
+    }
+  }
+
+═════════════════════════════════════════════════════════════════════════════════
+⚙️ BACKEND - SERVICE INTERFACE
+═════════════════════════════════════════════════════════════════════════════════
+
+📍 FILE: crm-backend/src/main/java/com/arjun/crm/service/EmailAnalyticsService.java
+
+INTERFACE: EmailAnalyticsService
+
+METHOD 1: processWebhookEvent(BrevoWebhookRequest)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  void processWebhookEvent(BrevoWebhookRequest request);
+  PURPOSE: Process incoming webhook from Brevo
+
+METHOD 2: getCampaignAnalytics(Long campaignId)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  EmailCampaignAnalyticsResponse getCampaignAnalytics(Long campaignId);
+  PURPOSE: Get analytics summary for a campaign
+
+METHOD 3: updateAnalyticsSnapshot(Long campaignId)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  void updateAnalyticsSnapshot(Long campaignId);
+  PURPOSE: Manually update pre-computed metrics
+
+═════════════════════════════════════════════════════════════════════════════════
+⚙️ BACKEND - SERVICE IMPLEMENTATION
+═════════════════════════════════════════════════════════════════════════════════
+
+📍 FILE: crm-backend/src/main/java/com/arjun/crm/service/impl/EmailAnalyticsServiceImpl.java
+
+CLASS: EmailAnalyticsServiceImpl (implements EmailAnalyticsService)
+
+KEY METHOD: processWebhookEvent()
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 1: Validate webhook payload
+STEP 2: Check for duplicate events using providerEventId
+STEP 3: Extract campaign_id and recipient_id from metadata
+STEP 4: Load campaign and recipient from database
+STEP 5: Update recipient status and timestamps based on event:
+        - DELIVERED → deliveredAt = now
+        - OPENED → openedAt = now
+        - CLICKED → clickCount++, lastClickedAt = now
+        - BOUNCED → bounceType = HARD_BOUNCE or SOFT_BOUNCE
+        - UNSUBSCRIBED → unsubscribedAt = now
+STEP 6: Save recipient with new status
+STEP 7: Create EmailCampaignHistory record (audit trail)
+STEP 8: Update campaign metrics:
+        - sentCount++
+        - deliveredCount++
+        - openedCount++
+        - clickedCount++
+        - bouncedCount++
+STEP 9: Save campaign with updated metrics
+
+═════════════════════════════════════════════════════════════════════════════════
+💾 DATABASE ENTITIES
+═════════════════════════════════════════════════════════════════════════════════
+
+📍 EmailCampaign.java - Main campaign entity
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ANALYTICS FIELDS:
+  private Integer sentCount;           // Emails sent
+  private Integer deliveredCount;      // Emails delivered
+  private Integer openedCount;         // Emails opened
+  private Integer clickedCount;        // Emails with clicks
+  private Integer bouncedCount;        // Emails bounced
+  private Integer failedCount;         // Emails failed
+  
+RELATIONS:
+  @OneToMany → EmailCampaignHistory     // Audit trail
+  @OneToMany → EmailCampaignAnalyticsSnapshot // Metrics cache
+
+📍 EmailCampaignRecipient.java - Recipient entity
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STATUS TRACKING FIELDS:
+  private String status;                    // PENDING, SENT, DELIVERED, OPENED, CLICKED, BOUNCED
+  private LocalDateTime sentAt;             // When email was sent
+  private LocalDateTime deliveredAt;        // When email was delivered
+  private LocalDateTime openedAt;           // When email was first opened
+  private LocalDateTime firstClickedAt;     // When first link was clicked
+  private LocalDateTime lastClickedAt;      // When last link was clicked
+  private Integer clickCount;               // Total number of clicks
+  private LocalDateTime unsubscribedAt;     // When user unsubscribed
+  private String bounceType;                // HARD_BOUNCE or SOFT_BOUNCE
+
+📍 EmailCampaignHistory.java (NEW) - Audit trail
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  private Long campaignId;           // FK to campaign
+  private Long recipientId;          // FK to recipient
+  private String eventType;          // DELIVERED, OPENED, CLICKED, BOUNCED, etc.
+  private Map<String, Object> metadata;  // Event-specific data (JSONB)
+  private String providerEventId;    // Brevo unique event ID (prevents duplicates)
+  private LocalDateTime processedAt; // When we processed the event
+
+📍 EmailCampaignAnalyticsSnapshot.java (NEW) - Metrics cache
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  private Long campaignId;
+  private Integer sentCount;
+  private Integer deliveredCount;
+  private Integer openedCount;
+  private Integer clickedCount;
+  private Integer bouncedCount;
+  private LocalDateTime snapshotAt;  // When metrics were computed
+
+═════════════════════════════════════════════════════════════════════════════════
+📊 DATABASE MIGRATION
+═════════════════════════════════════════════════════════════════════════════════
+
+📍 FILE: crm-backend/db/migrations/V16__add_email_campaign_analytics_tracking.sql
+
+CREATES 2 NEW TABLES:
+  1. email_campaign_history - Audit trail of all events
+  2. email_campaign_analytics_snapshot - Pre-computed metrics
+
+ADDS COLUMNS TO EXISTING TABLES:
+  email_campaign: sent_count, delivered_count, opened_count, clicked_count, bounced_count, failed_count
+  email_campaign_recipient: delivered_at, opened_at, first_clicked_at, last_clicked_at, click_count, unsubscribed_at, bounce_type
+
+═════════════════════════════════════════════════════════════════════════════════
+📋 REPOSITORY - DATA ACCESS
+═════════════════════════════════════════════════════════════════════════════════
+
+📍 EmailCampaignHistoryRepository.java
+  - Query audit trail by campaign ID
+  - Check for duplicate events using providerEventId
+  - Find recipient event history
+
+📍 EmailCampaignAnalyticsSnapshotRepository.java
+  - Get latest metrics snapshot
+  - List metrics history (paginated)
+  - Find snapshots in time range
+
+═════════════════════════════════════════════════════════════════════════════════
+🔗 DATA FLOW DIAGRAM
+═════════════════════════════════════════════════════════════════════════════════
+
+USER SENDS CAMPAIGN
+    ↓
+EmailCampaignController.sendCampaign()
+    ↓
+Campaign status = SENDING
+Recipients status = SENT
+    ↓
+BREVO PROCESSES EMAILS
+    ↓
+BREVO SENDS WEBHOOK EVENT
+    ↓
+POST /api/webhooks/brevo
+    ↓
+BrevoWebhookController.handleBrevoWebhook()
+    ↓
+EmailAnalyticsService.processWebhookEvent()
+    ↓
+Update EmailCampaignRecipient (status, timestamps)
+Update EmailCampaign (metrics counters)
+Create EmailCampaignHistory (audit record)
+    ↓
+FRONTEND REQUESTS ANALYTICS
+    ↓
+GET /api/workspaces/{id}/email-campaigns/{id}/analytics
+    ↓
+EmailCampaignController.getCampaignAnalytics()
+    ↓
+RETURNS: Campaign with metrics
+    ↓
+FRONTEND DISPLAYS
+    ↓
+React component calculates rates
+    ↓
+Shows: Delivery Rate, Open Rate, Click Rate
+Recipients table with timestamps
+
+═════════════════════════════════════════════════════════════════════════════════
+✅ SUMMARY - EMAIL ANALYTICS LOCATION
+═════════════════════════════════════════════════════════════════════════════════
+
+FRONTEND (React):
+  📄 crm-frontend/src/pages/EmailCampaignDetails.jsx (Display + Calculations)
+  📄 crm-frontend/src/services/emailCampaignService.js (API calls)
+
+BACKEND Controllers (REST API):
+  📄 crm-backend/.../controller/BrevoWebhookController.java (POST /api/webhooks/brevo)
+  📄 crm-backend/.../controller/EmailCampaignController.java (GET .../analytics)
+
+BACKEND Services (Business Logic):
+  📄 crm-backend/.../service/EmailAnalyticsService.java (Interface)
+  📄 crm-backend/.../service/impl/EmailAnalyticsServiceImpl.java (Implementation)
+
+BACKEND Entities (Data Models):
+  📄 crm-backend/.../entity/EmailCampaign.java (Campaign metrics)
+  📄 crm-backend/.../entity/EmailCampaignRecipient.java (Recipient tracking)
+  📄 crm-backend/.../entity/EmailCampaignHistory.java (Audit trail)
+  📄 crm-backend/.../entity/EmailCampaignAnalyticsSnapshot.java (Metrics cache)
+
+BACKEND Repositories (Data Access):
+  📄 crm-backend/.../repository/EmailCampaignHistoryRepository.java
+  📄 crm-backend/.../repository/EmailCampaignAnalyticsSnapshotRepository.java
+
+DATABASE:
+  📄 crm-backend/db/migrations/V16__add_email_campaign_analytics_tracking.sql
+
+═════════════════════════════════════════════════════════════════════════════════
+⚡ QUICK REFERENCE
+═════════════════════════════════════════════════════════════════════════════════
+
+WEBHOOK RECEIVES: POST /api/webhooks/brevo
+ANALYTICS RETURNS: GET /api/workspaces/{wid}/email-campaigns/{cid}/analytics
+COMPONENT DISPLAYS: crm-frontend/src/pages/EmailCampaignDetails.jsx
+SERVICE PROCESSES: crm-backend/.../service/impl/EmailAnalyticsServiceImpl.java
+
+═════════════════════════════════════════════════════════════════════════════════
