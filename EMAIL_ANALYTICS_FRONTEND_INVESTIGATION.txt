@@ -1,0 +1,576 @@
+═══════════════════════════════════════════════════════════════════════════════
+EMAIL CAMPAIGN ANALYTICS - FRONTEND INVESTIGATION REPORT
+═══════════════════════════════════════════════════════════════════════════════
+
+INVESTIGATION SCOPE: COMPLETE ✅
+
+Analyzed Files:
+  • EmailCampaigns.jsx (main campaign list page)
+  • EmailCampaignDetails.jsx (campaign detail page)
+  • emailCampaignService.js (API service)
+  • EmailCampaignTable.jsx (campaign list table)
+  • EmailCampaignModal.jsx (create/edit campaign modal)
+  • CampaignStatusBadge.jsx (status badge component)
+  • App.jsx (routing)
+  • package.json (dependencies)
+  • Analytics.jsx (reference for design patterns)
+
+═══════════════════════════════════════════════════════════════════════════════
+CURRENT COMPONENT TREE
+═══════════════════════════════════════════════════════════════════════════════
+
+App.jsx (Router)
+  ↓
+  Route: /marketing/email-campaigns
+    ↓
+    EmailCampaigns.jsx (Page)
+      ↓
+      EmailCampaignTable.jsx
+        • Displays list of campaigns with:
+          - Campaign name
+          - Subject
+          - Status badge (CampaignStatusBadge)
+          - Recipients count
+          - Scheduled date
+          - Created date
+          - Actions menu (Edit, Send, Delete)
+  
+  Route: /marketing/email-campaigns/:id
+    ↓
+    EmailCampaignDetails.jsx (Page)
+      • Campaign name with status badge
+      • Subject display
+      • Metrics cards (Recipients, Delivered, Opened, Clicked)
+      • Recipients table with:
+        - Email
+        - Status
+        - Click count
+
+═══════════════════════════════════════════════════════════════════════════════
+CURRENT API CALLS (emailCampaignService.js)
+═════════════════════════════════════════════════════════════════════════════════
+
+✅ Existing Methods:
+  • listCampaigns(workspaceId, {page, size, status})
+    GET /workspaces/{workspaceId}/email-campaigns
+  
+  • getCampaign(workspaceId, campaignId)
+    GET /workspaces/{workspaceId}/email-campaigns/{campaignId}
+  
+  • listRecipients(workspaceId, campaignId, {page, size})
+    GET /workspaces/{workspaceId}/email-campaigns/{campaignId}/recipients
+  
+  • sendCampaign(workspaceId, campaignId)
+    POST /workspaces/{workspaceId}/email-campaigns/{campaignId}/send
+  
+  • deleteCampaign(workspaceId, campaignId)
+    DELETE /workspaces/{workspaceId}/email-campaigns/{campaignId}
+
+❌ Missing Methods (Need to add):
+  • getAnalytics(workspaceId, campaignId)
+    GET /workspaces/{workspaceId}/email-campaigns/{campaignId}/analytics
+
+═══════════════════════════════════════════════════════════════════════════════
+CURRENT ROUTING
+════════════════════════════════════════════════════════════════════════════════
+
+Structure:
+  /marketing/email-campaigns
+    → EmailCampaigns.jsx (LIST view with table)
+    → Route: /marketing/email-campaigns/:id
+      → EmailCampaignDetails.jsx (DETAIL view)
+
+Auth Requirements:
+  ✓ All routes protected (ProtectedRoute wrapper)
+  ✓ All require workspace context
+  ✓ Workspace ID from Redux state: state.workspace.currentWorkspace.id
+  ✓ Campaign ID from URL params: useParams().id
+
+═══════════════════════════════════════════════════════════════════════════════
+CURRENT STATE MANAGEMENT
+════════════════════════════════════════════════════════════════════════════════
+
+React Query:
+  • Query Key: ['email-campaign', workspaceId, campaignId]
+  • Query Key: ['email-campaign-recipients', workspaceId, campaignId]
+  • Query Key: ['email-campaigns', workspaceId, page, status]
+  • Mutation: deleteCampaign (invalidates ['email-campaigns'])
+  • Mutation: sendCampaign (invalidates ['email-campaigns'])
+  • Strategy: Query-based (no Redux for campaign state)
+
+Redux:
+  • workspace.currentWorkspace (has id and metadata)
+  • auth.isAuthenticated (used for protected routes)
+  • analyticsSlice (exists but for main analytics page, not campaigns)
+
+Pattern:
+  1. Component mounts → useQuery() fires
+  2. Hook dependency on [workspaceId, campaignId]
+  3. useQueryClient() for manual invalidations after mutations
+  4. All state in React Query cache
+
+═══════════════════════════════════════════════════════════════════════════════
+CURRENT REACT QUERY STRUCTURE
+════════════════════════════════════════════════════════════════════════════════
+
+EmailCampaigns.jsx:
+  const campaign = useQuery({
+    queryKey: ['email-campaign', workspaceId, id],
+    queryFn: () => emailCampaignService.getCampaign(workspaceId, id),
+    enabled: !!workspaceId && !!id
+  })
+  
+  const recipients = useQuery({
+    queryKey: ['email-campaign-recipients', workspaceId, id],
+    queryFn: () => emailCampaignService.listRecipients(workspaceId, id),
+    enabled: !!workspaceId && !!id
+  })
+
+Pattern:
+  ✓ Enabled flag for conditional fetching
+  ✓ Query depends on workspace/campaign context
+  ✓ Separate queries for different data
+  ✓ Manual invalidation after mutations
+  ✓ Loading/error/success states in UI
+
+Implementation for Analytics:
+  • Add new query: useQuery({ queryKey: ['email-campaign-analytics', ...] })
+  • Depends on: ['email-campaign', workspaceId, id] for consistency
+  • Can be triggered on-demand or auto-fetch with campaign data
+  • Auto-refetch when campaign sent (invalidate key)
+
+═════════════════════════════════════════════════════════════════════════════════
+CURRENT EMAIL CAMPAIGN WORKFLOW (Frontend)
+═════════════════════════════════════════════════════════════════════════════════
+
+1. LIST VIEW (EmailCampaigns.jsx)
+   • GET /workspaces/{id}/email-campaigns (with filters/search)
+   • Display table of campaigns
+   • Actions: View Details, Edit, Send, Delete
+   • Status badges: DRAFT, SCHEDULED, SENDING, COMPLETED, PAUSED, CANCELLED
+
+2. DETAIL VIEW (EmailCampaignDetails.jsx)
+   • GET /workspaces/{id}/email-campaigns/{id}
+   • GET /workspaces/{id}/email-campaigns/{id}/recipients
+   • Display campaign metadata
+   • Display metrics: Recipients, Delivered, Opened, Clicked (calculated from recipients)
+   • Display recipients table with status and click count
+   • Back link to list view
+
+3. MODAL ACTIONS
+   • Create: EmailCampaignModal → EmailCampaignForm
+   • Edit: (only in DRAFT status)
+   • Delete: Confirmation → DELETE API call
+   • Send: Confirmation → POST /send API call
+
+Data Flow:
+  Click Campaign → GET /campaign/{id} → Display details with metrics
+  Click Send → Confirmation → POST /send → Status changes → AUTO-REFETCH
+  Click Delete → Confirmation → DELETE → Navigate back to list
+
+═════════════════════════════════════════════════════════════════════════════════
+CURRENT METRICS CALCULATION
+════════════════════════════════════════════════════════════════════════════════
+
+EmailCampaignDetails.jsx (Lines 15-19):
+  const delivered = recipientItems.filter((recipient) => 
+    ['DELIVERED', 'OPENED', 'CLICKED'].includes(recipient.status)
+  ).length
+  
+  const opened = recipientItems.filter((recipient) => 
+    recipient.openedAt
+  ).length
+  
+  const clicked = recipientItems.filter((recipient) => 
+    recipient.clickCount > 0
+  ).length
+
+⚠️ ISSUE: Metrics calculated from recipients array on frontend
+   This will be REPLACED by backend metrics when analytics implemented
+
+═════════════════════════════════════════════════════════════════════════════════
+AVAILABLE LIBRARIES & TOOLS
+════════════════════════════════════════════════════════════════════════════════
+
+✅ Chart Library: recharts (already installed)
+   • Used in Analytics.jsx
+   • Components: LineChart, AreaChart, BarChart, PieChart, ResponsiveContainer
+   • Providers: CartesianGrid, XAxis, YAxis, Tooltip, Legend, Cell
+
+✅ Icons: lucide-react (already installed)
+   • Already used in all email campaign components
+   • For metrics: Mail, Users, TrendingUp, TrendingDown, AlertCircle, etc.
+
+✅ Date Formatting: date-fns (already installed)
+   • Used throughout: format, parseISO, subDays, etc.
+
+✅ State Management: @tanstack/react-query (already installed)
+   • All campaign data already in React Query
+   • Mutations already used for send/delete
+
+✅ Styling: Tailwind CSS + dark mode support (already in use)
+   • Existing pattern: conditional dark mode classes
+   • Example: bg-white dark:bg-[#161B22]
+
+✅ Design System: Existing components
+   • CampaignStatusBadge (existing badge component)
+   • EmailCampaignTable (existing table structure)
+   • Consistent spacing, colors, typography
+
+═════════════════════════════════════════════════════════════════════════════════
+EXISTING DESIGN PATTERNS TO FOLLOW
+═════════════════════════════════════════════════════════════════════════════════
+
+1. METRIC CARDS
+   • Used in EmailCampaignDetails.jsx
+   • Structure: Icon + value + label
+   • Styling: border-gray-200 dark:border-[#30363D]
+   • Example:
+     <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-[#30363D] dark:bg-[#161B22]">
+       <Icon size={18} className="text-violet-600" />
+       <p className="mt-3 text-2xl font-bold text-gray-900 dark:text-white">{value}</p>
+       <p className="text-sm text-gray-600 dark:text-gray-400">{label}</p>
+     </div>
+
+2. SECTION HEADERS
+   • Container with border and padding
+   • Header with title
+   • Example:
+     <div className="rounded-lg border border-gray-200 bg-white dark:border-[#30363D] dark:bg-[#161B22]">
+       <div className="border-b border-gray-200 px-5 py-4 dark:border-[#30363D]">
+         <h2 className="font-semibold text-gray-900 dark:text-white">Recipients</h2>
+       </div>
+       {/* Content */}
+     </div>
+
+3. TABLES
+   • Structure used in EmailCampaignTable
+   • Headers: text-xs font-semibold text-gray-700
+   • Rows: border-b border-gray-100 hover:bg-gray-50
+   • Example:
+     <table className="w-full">
+       <thead>
+         <tr className="border-b border-gray-200 dark:border-[#30363D]">
+           <th className="px-4 py-3 text-left text-xs font-semibold">Header</th>
+         </tr>
+       </thead>
+       <tbody>
+         <tr className="border-b border-gray-100 hover:bg-gray-50 dark:border-[#21262D]">
+           <td className="px-4 py-3 text-sm">Data</td>
+         </tr>
+       </tbody>
+     </table>
+
+4. LOADING STATES
+   • Skeleton animations: animate-pulse
+   • Placeholder: h-8 w-64 rounded bg-gray-200 dark:bg-[#21262D]
+   • Used in EmailCampaigns.jsx and EmailCampaignDetails.jsx
+
+5. ERROR STATES
+   • Bordered box with red background
+   • Example:
+     <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-900/20 dark:text-red-200">
+       Error message
+     </div>
+
+6. EMPTY STATES
+   • Dashed border container
+   • Centered text
+   • Example:
+     <div className="rounded-lg border border-dashed border-gray-300 py-12 text-center dark:border-[#30363D]">
+       <p className="font-medium text-gray-900 dark:text-white">No data</p>
+       <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Help text</p>
+     </div>
+
+7. BUTTONS & ACTIONS
+   • Primary button: bg-violet-600 hover:bg-violet-700
+   • Danger button: text-red-700 hover:bg-red-50 dark:text-red-400
+   • Disabled: disabled:opacity-50
+   • Example (from EmailCampaignTable):
+     <button className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-700 hover:bg-red-50">
+       <Trash2 size={14} />Delete
+     </button>
+
+8. TABS/NAVIGATION
+   • Not currently used in email campaigns
+   • But Analytics page has examples
+   • Can be implemented for Analytics tab on detail page
+
+═════════════════════════════════════════════════════════════════════════════════
+BEST INTEGRATION POINT: EmailCampaignDetails.jsx
+════════════════════════════════════════════════════════════════════════════════
+
+Current Structure:
+  • Back link
+  • Campaign title + status badge
+  • Subject card
+  • Metrics cards (Recipients, Delivered, Opened, Clicked)
+  • Recipients table
+
+Proposed Integration Point:
+  ADD: Analytics section BETWEEN metrics cards and recipients table
+
+  Current Flow:
+    Title + Status
+    ↓
+    Subject
+    ↓
+    Metrics Cards (4 cards in grid)
+    ↓
+    Recipients Table
+  
+  Proposed Flow:
+    Title + Status
+    ↓
+    Subject
+    ↓
+    Metrics Cards (now pulled from API instead of calculated)
+    ↓
+    ✅ NEW: Analytics Dashboard Tab/Section
+       • Top metrics row (Delivery Rate, Open Rate, Click Rate)
+       • Charts (Timeline, Distribution)
+       • Filters (Status, date range)
+    ↓
+    Recipients Table (with filters)
+
+Advantages:
+  ✓ Minimal changes to existing structure
+  ✓ Natural flow from metrics to details
+  ✓ Reuses existing patterns
+  ✓ All data already loaded in component
+  ✓ No routing changes needed
+  ✓ No layout disruption
+
+═════════════════════════════════════════════════════════════════════════════════
+IMPLEMENTATION PLAN
+════════════════════════════════════════════════════════════════════════════════
+
+PHASE 1: Prepare Service Layer (5 min)
+  ✓ Add getAnalytics() method to emailCampaignService.js
+    GET /workspaces/{id}/email-campaigns/{id}/analytics
+
+PHASE 2: Update EmailCampaignDetails.jsx (30 min)
+  • Replace frontend metrics calculation with API call
+  • Migrate to React Query pattern
+  • Add analytics section with:
+    - Skeleton loading for analytics
+    - Error handling
+    - Empty state (no data yet)
+    - Tabs or dropdown for analytics view
+
+PHASE 3: Create Analytics Components (45 min)
+  • Create: EmailCampaignAnalytics.jsx (main analytics component)
+  • Create: AnalyticsMetricsRow.jsx (rate metrics)
+  • Create: AnalyticsCharts.jsx (charts wrapper)
+  • Create: RecipientsFilter.jsx (table filters)
+  • Create: useEmailCampaignAnalytics.js (custom hook)
+
+PHASE 4: Implement Charts (30 min)
+  • Timeline charts using recharts
+  • Distribution charts (pie/bar)
+  • Recipient status breakdown
+  • Event occurrence timeline
+
+PHASE 5: Update Recipients Table (20 min)
+  • Add filters: status, email search
+  • Add sorting by timestamp columns
+  • Display: timestamp columns (delivered_at, opened_at, etc)
+
+PHASE 6: Testing & Polish (20 min)
+  • Test all loading states
+  • Test error scenarios
+  • Dark mode validation
+  • Mobile responsive check
+
+═════════════════════════════════════════════════════════════════════════════════
+FILES TO CREATE (New)
+════════════════════════════════════════════════════════════════════════════════
+
+1. src/services/emailCampaignService.js (update with analytics method)
+   • Add: getAnalytics(workspaceId, campaignId)
+   • Add: listRecipientsByStatus(workspaceId, campaignId, status)
+
+2. src/hooks/useEmailCampaignAnalytics.js (custom React Query hook)
+   • Wrapper around analytics query
+   • Handles loading/error states
+   • Auto-refetch logic
+
+3. src/components/emailcampaign/EmailCampaignAnalytics.jsx (main analytics)
+   • Tab-like structure or full analytics section
+   • Composes: metrics, charts, recipient filters
+
+4. src/components/emailcampaign/AnalyticsMetricsRow.jsx
+   • Displays: Delivery Rate, Open Rate, Click Rate
+   • Format: percentage with trend indicator
+
+5. src/components/emailcampaign/AnalyticsCharts.jsx
+   • Renders all chart components
+   • Uses recharts
+
+6. src/components/emailcampaign/RecipientsFilter.jsx
+   • Status filter dropdown
+   • Email search input
+   • Apply/Clear buttons
+
+═════════════════════════════════════════════════════════════════════════════════
+FILES TO MODIFY (Existing)
+═════════════════════════════════════════════════════════════════════════════════
+
+1. src/services/emailCampaignService.js
+   • Add: getAnalytics(workspaceId, campaignId)
+   • Add: listRecipientsByStatus(workspaceId, campaignId, status) [optional]
+
+2. src/pages/EmailCampaignDetails.jsx
+   • Replace metrics calculation with API call
+   • Add analytics section
+   • Update recipients query to support filtering
+
+3. src/components/emailcampaign/EmailCampaignTable.jsx
+   • No changes (displays list, detail is separate page)
+
+═════════════════════════════════════════════════════════════════════════════════
+BACKWARD COMPATIBILITY
+════════════════════════════════════════════════════════════════════════════════
+
+✅ Fully Backward Compatible:
+  • No routing changes
+  • No breaking changes to existing components
+  • Existing EmailCampaignDetails still works if analytics unavailable
+  • Graceful fallback: show "Loading" or "No data available yet"
+  • Can hide analytics section if API returns error
+
+═════════════════════════════════════════════════════════════════════════════════
+PERFORMANCE CONSIDERATIONS
+════════════════════════════════════════════════════════════════════════════════
+
+✅ Optimizations Already Built-In:
+  • React Query caching: subsequent visits are instant
+  • Query deduplication: multiple components don't cause duplicate API calls
+  • Stale-time: can be set to cache analytics for 5-10 minutes
+  • Manual invalidation on send campaign (auto-refetch)
+
+✅ Additional Optimizations Possible:
+  • Lazy-load analytics tab (don't fetch until user clicks)
+  • Pagination for large recipient lists (already has pagination)
+  • Pre-fetch when user hovers over campaign (optional)
+  • WebSocket updates for real-time metrics (Phase 2+)
+
+═════════════════════════════════════════════════════════════════════════════════
+DESIGN CONSISTENCY
+════════════════════════════════════════════════════════════════════════════════
+
+✅ Will Use Existing:
+  • Tailwind classes (same spacing, colors, dark mode)
+  • lucide-react icons (consistent with all other pages)
+  • recharts (used in Analytics.jsx already)
+  • date-fns (date formatting consistent)
+  • React Query patterns (same as campaign list/detail)
+  • Loading skeletons (same as existing pages)
+  • Error boundaries (same as existing pages)
+
+✅ Color Scheme:
+  • Primary action: violet-600 (matches existing buttons)
+  • Status colors: green (delivered), blue (opened), orange (failed)
+  • Neutral text: gray-900 dark:text-white (consistent)
+  • Borders: gray-200 dark:border-[#30363D] (consistent)
+
+═════════════════════════════════════════════════════════════════════════════════
+TESTING SCENARIOS IDENTIFIED
+════════════════════════════════════════════════════════════════════════════════
+
+User Flow 1: View Campaign Analytics
+  • Navigate to Email Campaigns list
+  • Click on campaign
+  • View detail page
+  • See metrics immediately (from API)
+  • See analytics section with charts
+  • Expected: All data loads, no errors
+
+User Flow 2: Campaign Just Sent
+  • Click "Send" on a DRAFT campaign
+  • Wait for confirmation
+  • Auto-refetch campaign data
+  • Metrics should update to show SENDING status
+  • Recipients show SENT status
+  • Expected: Real-time update (React Query invalidation)
+
+User Flow 3: Track Email Opens/Clicks
+  • Send campaign
+  • Click "View Details"
+  • Watch analytics
+  • (In real scenario: recipient opens email externally)
+  • Analytics should update when:
+    • Email opens (webhook from backend)
+    • Link clicked (webhook from backend)
+  • Expected: Manual refresh or real-time update
+
+User Flow 4: Filter Recipients
+  • View campaign details
+  • See recipients table
+  • Filter by status (DELIVERED, OPENED, CLICKED, etc.)
+  • Search by email
+  • Expected: Table updates with filtered results
+
+User Flow 5: No Analytics Yet
+  • Campaign just created, not sent yet
+  • View detail page
+  • Metrics show: Recipients: N, Delivered: 0, Opened: 0, Clicked: 0
+  • Analytics section shows "No analytics available yet"
+  • Expected: Graceful empty state
+
+═════════════════════════════════════════════════════════════════════════════════
+SUMMARY OF FINDINGS
+════════════════════════════════════════════════════════════════════════════════
+
+Current State:
+  ✓ Email campaign module fully functional
+  ✓ List and detail views working
+  ✓ Table and modal components clean
+  ✓ React Query patterns consistent
+  ✓ Design system mature and reusable
+
+Analytics Integration Point:
+  ✓ EmailCampaignDetails.jsx is perfect insertion point
+  ✓ Current metrics calculation can be replaced with API
+  ✓ Space available for analytics section
+  ✓ Existing styling patterns can be reused
+
+Backend Ready:
+  ✓ GET /api/workspaces/{id}/email-campaigns/{id}/analytics endpoint exists
+  ✓ Returns: sentCount, deliveredCount, openedCount, clickedCount, bouncedCount
+  ✓ Webhook processing already handles metric updates
+  ✓ Database has all fields needed
+
+Frontend Ready:
+  ✓ recharts installed and in use
+  ✓ lucide-react icons available
+  ✓ React Query established pattern
+  ✓ Tailwind CSS + dark mode working
+  ✓ Date formatting with date-fns
+
+No Blockers:
+  ✓ All dependencies installed
+  ✓ No conflicting libraries
+  ✓ No architectural issues
+  ✓ Can implement immediately
+
+═════════════════════════════════════════════════════════════════════════════════
+RECOMMENDATION
+════════════════════════════════════════════════════════════════════════════════
+
+✅ PROCEED WITH IMPLEMENTATION
+
+Approach:
+  1. Add analytics API method to emailCampaignService.js
+  2. Create custom hook: useEmailCampaignAnalytics.js
+  3. Update EmailCampaignDetails.jsx to fetch analytics
+  4. Create EmailCampaignAnalytics.jsx component
+  5. Add analytics section to detail page
+  6. Create supporting components for metrics, charts, filters
+  7. Test all scenarios and edge cases
+
+Timeline Estimate: 2-3 hours
+Complexity: Medium (straightforward integration, no architectural changes)
+Risk Level: Low (all patterns established, backward compatible)
+
+═══════════════════════════════════════════════════════════════════════════════
