@@ -211,4 +211,24 @@ public class EmailCampaignController {
         return ResponseEntity.ok()
                 .body(ApiResponse.success("Campaign deleted successfully", null));
     }
+    
+    /**
+     * GET ANALYTICS: GET /api/workspaces/{workspaceId}/email-campaigns/{campaignId}/analytics
+     * 
+     * Get campaign analytics and metrics
+     * Permission: Any workspace member
+     */
+    @GetMapping("/{campaignId}/analytics")
+    public ResponseEntity<ApiResponse<Object>> getCampaignAnalytics(
+            @PathVariable Long workspaceId,
+            @PathVariable Long campaignId) {
+        
+        log.info("GET /api/workspaces/{}/email-campaigns/{}/analytics - Getting analytics", workspaceId, campaignId);
+        
+        // For now, return campaign with metrics
+        EmailCampaignResponse campaign = emailCampaignService.getCampaign(workspaceId, campaignId);
+        
+        return ResponseEntity.ok()
+                .body(ApiResponse.success("Campaign analytics retrieved successfully", campaign));
+    }
 }

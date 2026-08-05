@@ -55,6 +55,14 @@ public class EmailCampaignResponse {
     
     private Long failedCount;
     
+    private Long deliveredCount;
+    
+    private Long openedCount;
+    
+    private Long clickedCount;
+    
+    private Long bouncedCount;
+    
     private String recipientMode;
     
     private String recipientData;

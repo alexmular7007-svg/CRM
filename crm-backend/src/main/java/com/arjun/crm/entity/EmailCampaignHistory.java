@@ -6,14 +6,28 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 /**
- * EmailCampaignHistory Entity - FEATURE #3
- * 
- * Immutable audit log of delivery events.
- * Append-only: only INSERT operations, no UPDATEs.
+ * EmailCampaignHistory Entity - FEATURE #3 ANALYTICS
+ *
+ * Append-only audit log for email campaign events.
+ * Records all delivery, engagement, and bounce events.
+ *
+ * Event Types:
+ * - SENT: Email sent to Brevo
+ * - DELIVERED: Email successfully delivered
+ * - OPENED: Recipient opened the email
+ * - CLICKED: Recipient clicked a link
+ * - HARD_BOUNCE: Permanent delivery failure
+ * - SOFT_BOUNCE: Temporary delivery failure
+ * - SPAM: Email marked as spam
+ * - UNSUBSCRIBE: Recipient unsubscribed
+ * - REPLY: Recipient replied
  */
 @Entity
 @Table(
@@ -31,40 +45,62 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class EmailCampaignHistory {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "campaign_id", nullable = false)
     private EmailCampaign campaign;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "recipient_id")
     private EmailCampaignRecipient recipient;
-    
-    @Column(length = 255)
+
+    @Column(nullable = false, length = 255)
     private String recipientEmail;
-    
+
+    /**
+     * Event type: SENT, DELIVERED, OPENED, CLICKED, HARD_BOUNCE, SOFT_BOUNCE, SPAM, UNSUBSCRIBE, REPLY
+     */
     @Column(nullable = false, length = 50)
-    private String eventType;  // SENT, DELIVERED, OPENED, CLICKED, BOUNCED, FAILED, UNSUBSCRIBED, COMPLAINED, REPLY
-    
+    private String eventType;
+
+    /**
+     * URL that was clicked (for CLICKED events)
+     */
     @Column(columnDefinition = "TEXT")
     private String linkUrl;
-    
+
+    /**
+     * Bounce reason (for HARD_BOUNCE and SOFT_BOUNCE events)
+     */
     @Column(length = 255)
     private String bounceReason;
-    
-    @Column(length = 255)
+
+    /**
+     * Brevo provider event ID (for deduplication)
+     */
+    @Column(length = 255, unique = true)
     private String providerEventId;
-    
+
+    /**
+     * When the event occurred (in UTC)
+     */
     @Column(nullable = false)
     private LocalDateTime occurredAt;
-    
+
+    /**
+     * Additional metadata (user agent, IP address, etc.)
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
-    private String metadata;
-    
+    private Map<String, Object> metadata;
+
+    /**
+     * Record creation timestamp
+     */
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

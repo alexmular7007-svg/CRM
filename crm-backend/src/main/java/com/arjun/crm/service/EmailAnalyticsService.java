@@ -1,0 +1,35 @@
+package com.arjun.crm.service;
+
+import com.arjun.crm.dto.request.BrevoWebhookRequest;
+
+/**
+ * EmailAnalyticsService Interface - FEATURE #3 ANALYTICS
+ *
+ * Processes webhook events from Brevo and updates campaign analytics.
+ * Handles recipient status updates, metrics aggregation, and history tracking.
+ */
+public interface EmailAnalyticsService {
+
+    /**
+     * Process webhook event from Brevo
+     *
+     * @param request Webhook payload from Brevo
+     * @throws IllegalArgumentException if webhook data is invalid
+     */
+    void processWebhookEvent(BrevoWebhookRequest request);
+
+    /**
+     * Get analytics for a campaign
+     *
+     * @param campaignId Campaign ID
+     * @return Campaign analytics summary
+     */
+    EmailCampaignAnalyticsResponse getCampaignAnalytics(Long campaignId);
+
+    /**
+     * Manually trigger analytics snapshot update (admin operation)
+     *
+     * @param campaignId Campaign ID
+     */
+    void updateAnalyticsSnapshot(Long campaignId);
+}

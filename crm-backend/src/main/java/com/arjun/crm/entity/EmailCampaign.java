@@ -109,6 +109,22 @@ public class EmailCampaign {
     @Builder.Default
     private Long failedCount = 0L;
     
+    @Column
+    @Builder.Default
+    private Long deliveredCount = 0L;
+    
+    @Column
+    @Builder.Default
+    private Long openedCount = 0L;
+    
+    @Column
+    @Builder.Default
+    private Long clickedCount = 0L;
+    
+    @Column
+    @Builder.Default
+    private Long bouncedCount = 0L;
+    
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private Map<String, Object> segmentFilter;  // JSON filter criteria
