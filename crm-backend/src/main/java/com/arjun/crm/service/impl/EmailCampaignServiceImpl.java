@@ -117,7 +117,7 @@ public class EmailCampaignServiceImpl implements EmailCampaignService {
         workspaceAuthService.validateWorkspaceAccess(workspaceId);
         
         log.info("[TRACE-EmailCampaign-Repository-CALLING] workspace_id={}", workspaceId);
-        Page<EmailCampaign> campaigns = campaignRepository.findByWorkspaceIdOrderByCreatedAtDesc(workspaceId, pageable);
+        Page<EmailCampaign> campaigns = campaignRepository.findActiveCampaigns(workspaceId, pageable);
         log.info("[TRACE-EmailCampaign-Repository-RESULT] total_elements={}, page_size={}, pages={}", 
                 campaigns.getTotalElements(), campaigns.getSize(), campaigns.getTotalPages());
         
@@ -146,7 +146,7 @@ public class EmailCampaignServiceImpl implements EmailCampaignService {
         
         workspaceAuthService.validateWorkspaceAccess(workspaceId);
         
-        return campaignRepository.findByWorkspaceIdAndStatusOrderByCreatedAtDesc(workspaceId, status, pageable)
+        return campaignRepository.findActiveCampaignsByStatus(workspaceId, status, pageable)
                 .map(this::mapToResponse);
     }
     
