@@ -1,0 +1,344 @@
+═══════════════════════════════════════════════════════════════════════════════
+BREVO WEBHOOK CONFIGURATION GUIDE
+═══════════════════════════════════════════════════════════════════════════════
+
+OVERVIEW
+════════════════════════════════════════════════════════════════════════════════
+This guide explains how to configure Brevo to send webhook events to your
+Spring Boot application for email analytics tracking.
+
+WHAT ARE WEBHOOKS?
+─────────────────
+Webhooks allow Brevo to notify your application when email events occur:
+  - Email delivered to recipient
+  - Email opened by recipient
+  - Link clicked in email
+  - Email bounced (hard or soft)
+  - Email marked as spam
+  - Recipient unsubscribed
+
+WITHOUT WEBHOOKS:
+  - Application sends email via Brevo
+  - No way to know if email was delivered/opened/clicked
+  - No engagement tracking
+  - Analytics incomplete
+
+WITH WEBHOOKS:
+  - Application sends email via Brevo
+  - Brevo notifies app of delivery events
+  - App updates recipient status
+  - App tracks engagement metrics
+  - Analytics complete
+
+STEP 1: CONFIGURE WEBHOOK IN BREVO DASHBOARD
+════════════════════════════════════════════════════════════════════════════════
+
+1. Log in to Brevo account (https://www.brevo.com/login)
+
+2. Go to Settings → Webhooks or Account → Webhooks
+   (Location varies in Brevo UI, look for "Webhooks" in settings)
+
+3. Click "Add webhook" or "Create webhook"
+
+4. Enter webhook URL:
+   Production: https://yourdomain.com/api/webhooks/brevo
+   Development: https://yourdomain.local:8080/api/webhooks/brevo
+   
+   Note: Use HTTPS (not HTTP)
+   Note: For testing, use ngrok or similar tunnel service
+
+5. Select events to track (check all):
+   ☐ Delivered
+   ☐ Opened
+   ☐ Clicked
+   ☐ Hard Bounce
+   ☐ Soft Bounce
+   ☐ Spam Report
+   ☐ Unsubscribe
+   ☐ Reply (optional)
+
+6. Click "Save" or "Create"
+
+7. Brevo will show webhook details including:
+   - Webhook ID
+   - Secret key (for signature validation - optional)
+   - Retry policy
+
+STEP 2: ADD METADATA TO EMAILS
+════════════════════════════════════════════════════════════════════════════════
+
+When sending emails via BrevoEmailService, include campaign metadata:
+
+Current Implementation (BrevoEmailService.java):
+  - MISSING: Metadata is not included in Brevo API call
+  - TODO: Add metadata parameter to email sending
+
+Required Update:
+  1. Modify BrevoEmailService.sendEmail() to accept campaignId and recipientId
+  2. Pass metadata to Brevo API in email payload:
+     {
+       "metadata": {
+         "campaign_id": 1,
+         "recipient_id": 42
+       }
+     }
+
+Example Updated Code:
+  public void sendEmail(String to, String subject, String html, 
+                        Long campaignId, Long recipientId) {
+    // ... existing code ...
+    
+    Map<String, Object> metadata = Map.of(
+      "campaign_id", campaignId,
+      "recipient_id", recipientId
+    );
+    
+    body = Map.of(
+      // ... existing fields ...
+      "metadata", metadata
+    );
+    
+    // ... send via Brevo ...
+  }
+
+STEP 3: TESTING WEBHOOK INTEGRATION
+════════════════════════════════════════════════════════════════════════════════
+
+Test 1: Verify Endpoint Accessibility
+──────────────────────────────────────
+Command:
+  curl -X POST https://yourdomain.com/api/webhooks/brevo \
+    -H "Content-Type: application/json" \
+    -d '{
+      "event": "DELIVERED",
+      "email": "test@example.com",
+      "message_id": "test_123",
+      "ts": 1691000000,
+      "metadata": {"campaign_id": 1, "recipient_id": 1}
+    }'
+
+Expected Response:
+  HTTP 200 OK (no body)
+
+Test 2: Send Real Campaign
+──────────────────────────
+1. Create campaign in app
+2. Add recipient with your test email
+3. Send campaign
+4. Wait 10-30 seconds for Brevo to process
+5. Check Brevo webhook logs for SENT event
+6. Monitor application logs for webhook processing
+7. Verify recipient status updated to SENT
+8. Wait for DELIVERED event
+
+Test 3: Verify Webhook Events
+──────────────────────────────
+1. Go to Brevo Dashboard → Webhooks
+2. Click on your webhook URL
+3. View "Recent Events" or "Event Log"
+4. Should see:
+   - SENT events (from application)
+   - DELIVERED events (from Brevo servers)
+   - OPENED events (when you open the email)
+   - CLICKED events (if you click links)
+
+Test 4: Verify Application Processing
+──────────────────────────────────────
+1. Check application logs: tail -f logs/crm-backend.log
+2. Look for logs from BrevoWebhookController:
+   - "🟢 [BrevoWebhookController] Received webhook event"
+3. Look for logs from EmailAnalyticsServiceImpl:
+   - "🟢 Processing webhook - Event: DELIVERED"
+   - "✓ Recipient updated - Event: DELIVERED, Status: DELIVERED"
+   - "✓ History record created"
+   - "✓ Campaign metrics updated"
+
+Test 5: Verify Database Updates
+────────────────────────────────
+1. Connect to PostgreSQL database
+2. Query recipient:
+   SELECT id, status, delivered_at, opened_at FROM email_campaign_recipients 
+   WHERE recipient_email = 'test@example.com' LIMIT 1;
+   
+   Expected: status = "DELIVERED", delivered_at = current timestamp
+
+3. Query campaign metrics:
+   SELECT id, name, sent_count, delivered_count, opened_count, clicked_count 
+   FROM email_campaigns WHERE id = 1;
+   
+   Expected: delivered_count = 1 (after DELIVERED webhook)
+
+4. Query history:
+   SELECT event_type, recipient_email, occurred_at 
+   FROM email_campaign_history 
+   WHERE campaign_id = 1 
+   ORDER BY occurred_at DESC 
+   LIMIT 10;
+   
+   Expected: SENT, DELIVERED events in order
+
+STEP 4: CONFIGURE BREVO EMAIL METADATA
+════════════════════════════════════════════════════════════════════════════════
+
+The sendEmail() method in EmailCampaignSendingService calls BrevoEmailService.
+
+Current Flow:
+  EmailCampaignSendingService.sendCampaignAsync()
+    → for each recipient:
+      → BrevoEmailService.sendEmail(email, subject, html)
+        → (no metadata sent)
+
+Required Update:
+  EmailCampaignSendingService.sendCampaignAsync()
+    → for each recipient:
+      → BrevoEmailService.sendEmail(
+          email, 
+          subject, 
+          html,
+          campaign.getId(),      // campaignId
+          recipient.getId()      // recipientId
+        )
+        → Brevo API call includes metadata
+
+Then Brevo webhooks will include:
+  {
+    "metadata": {
+      "campaign_id": 1,
+      "recipient_id": 42
+    }
+  }
+
+This allows EmailAnalyticsService to find the correct recipient.
+
+STEP 5: DEPLOY TO PRODUCTION
+════════════════════════════════════════════════════════════════════════════════
+
+1. Update BrevoEmailService.sendEmail() to include metadata
+2. Update EmailCampaignSendingService to pass campaign/recipient IDs
+3. Update webhook URL in Brevo from test URL to production URL
+4. Deploy backend JAR
+5. Run database migration (V16 already included)
+6. Deploy frontend
+7. Test end-to-end:
+   - Send campaign
+   - Open email (if using real email address)
+   - Verify metrics update in app
+   - Verify analytics API returns updated metrics
+
+TROUBLESHOOTING
+════════════════════════════════════════════════════════════════════════════════
+
+Problem: Webhook not received (no logs in application)
+─────────────────────────────────────────────────────
+Solution:
+  1. Verify webhook URL is accessible from internet
+  2. Verify HTTPS (not HTTP)
+  3. Check firewall/load balancer not blocking POST requests
+  4. Verify no authentication required on /api/webhooks/brevo
+  5. Check Brevo webhook configuration (correct URL entered)
+  6. Check Brevo webhook logs for failed attempts
+  7. Test endpoint manually with curl
+
+Problem: Recipient not found error in logs
+──────────────────────────────────────────
+Cause: metadata in webhook doesn't include recipient ID
+Solution:
+  1. Verify BrevoEmailService.sendEmail() includes metadata
+  2. Verify metadata has "campaign_id" and "recipient_id"
+  3. Verify EmailCampaignSendingService passes IDs to sendEmail()
+  4. Check Brevo webhook payload in their dashboard
+
+Problem: Duplicate events processed
+───────────────────────────────────
+This is normal. Brevo may retry webhooks.
+Solution: Already handled by providerEventId unique constraint
+  - Duplicates are silently ignored
+  - Check logs for "Duplicate webhook event" messages
+
+Problem: Webhook processing slow
+────────────────────────────────
+Solution:
+  1. Webhook processing is synchronous (not async)
+  2. Add async processing if needed
+  3. Move @Transactional logic to separate async method
+  4. Monitor database query performance
+
+═══════════════════════════════════════════════════════════════════════════════
+WEBHOOK PAYLOAD EXAMPLES
+═══════════════════════════════════════════════════════════════════════════════
+
+DELIVERED Event:
+{
+  "event": "DELIVERED",
+  "email": "user@example.com",
+  "message_id": "2e280e7ad04ac2b5a83f9b1d8",
+  "ts": 1691000000,
+  "metadata": {
+    "campaign_id": 1,
+    "recipient_id": 42
+  }
+}
+
+OPENED Event:
+{
+  "event": "OPENED",
+  "email": "user@example.com",
+  "message_id": "2e280e7ad04ac2b5a83f9b1d8",
+  "ts": 1691000030,
+  "metadata": {
+    "campaign_id": 1,
+    "recipient_id": 42
+  },
+  "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+  "ip": "192.168.1.100"
+}
+
+CLICKED Event:
+{
+  "event": "CLICKED",
+  "email": "user@example.com",
+  "message_id": "2e280e7ad04ac2b5a83f9b1d8",
+  "ts": 1691000045,
+  "metadata": {
+    "campaign_id": 1,
+    "recipient_id": 42
+  },
+  "link": "https://example.com/campaign/landing",
+  "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0)",
+  "ip": "203.0.113.45"
+}
+
+HARD_BOUNCE Event:
+{
+  "event": "HARD_BOUNCE",
+  "email": "invalid@example.com",
+  "message_id": "2e280e7ad04ac2b5a83f9b1d8",
+  "ts": 1691000010,
+  "metadata": {
+    "campaign_id": 1,
+    "recipient_id": 43
+  },
+  "reason": "Invalid email address"
+}
+
+═══════════════════════════════════════════════════════════════════════════════
+MONITORING
+════════════════════════════════════════════════════════════════════════════════
+
+Monitor These Logs:
+  - BrevoWebhookController: "🟢 [BrevoWebhookController] Received webhook"
+  - EmailAnalyticsServiceImpl: "🟢 Processing webhook"
+  - EmailAnalyticsServiceImpl: "⚠️ Duplicate webhook event"
+  - EmailAnalyticsServiceImpl: "⚠️ Campaign ID not found"
+  - EmailAnalyticsServiceImpl: "⚠️ Recipient not found"
+  - EmailAnalyticsServiceImpl: "✓ Recipient updated"
+  - EmailAnalyticsServiceImpl: "✓ Campaign metrics updated"
+
+Monitor These Metrics:
+  - Number of webhook requests received
+  - Number of duplicate events ignored
+  - Number of processing errors
+  - Average webhook processing time
+  - Campaign metrics update frequency
+
+═══════════════════════════════════════════════════════════════════════════════
