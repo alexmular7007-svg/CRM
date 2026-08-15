@@ -129,7 +129,11 @@ public class EmailCampaignSendingService {
                         brevoEmailService.sendEmail(
                                 recipient.getRecipientEmail(),
                                 renderedSubject,
-                                renderedHtml
+                                renderedHtml,
+                                Map.of(
+                                        "campaign_id", campaign.getId(),
+                                        "recipient_id", recipient.getId()
+                                )
                         );
                         
                         // Update recipient status to SENT on success

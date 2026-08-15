@@ -77,4 +77,14 @@ public interface EmailCampaignRecipientRepository extends JpaRepository<EmailCam
      * Count clicked emails
      */
     long countByCampaignIdAndFirstClickedAtNotNull(Long campaignId);
+
+    /**
+     * Count sent emails (sentAt is set)
+     */
+    long countByCampaignIdAndSentAtNotNull(Long campaignId);
+
+    /**
+     * Count delivered emails (deliveredAt is set)
+     */
+    long countByCampaignIdAndDeliveredAtNotNull(Long campaignId);
 }

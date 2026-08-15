@@ -217,29 +217,34 @@ public class EmailAnalyticsServiceImpl implements EmailAnalyticsService {
     }
 
     /**
-     * Update campaign metrics from recipient counts
+     * Update campaign metrics from recipient counts.
+     *
+     * IMPORTANT: Counts are based on timestamps (deliveredAt/openedAt/firstClickedAt),
+     * NOT on the current status field. A recipient's status transitions
+     * DELIVERED → OPENED → CLICKED (final state wins), so counting by status
+     * would undercount delivered/opened recipients who later engaged.
      */
     private void updateCampaignMetrics(EmailCampaign campaign) {
         Long campaignId = campaign.getId();
 
-        // Count recipients by status
-        long deliveredCount = recipientRepository.countByCampaignIdAndStatus(campaignId, "DELIVERED");
-        long openedCount = recipientRepository.countByCampaignIdAndStatus(campaignId, "OPENED");
-        long clickedCount = recipientRepository.countByCampaignIdAndStatus(campaignId, "CLICKED");
+        // Count recipients by timestamp (accurate regardless of status transitions)
+        long sentCount = recipientRepository.countByCampaignIdAndSentAtNotNull(campaignId);
+        long deliveredCount = recipientRepository.countByCampaignIdAndDeliveredAtNotNull(campaignId);
+        long openedCount = recipientRepository.countByCampaignIdAndOpenedAtNotNull(campaignId);
+        long clickedCount = recipientRepository.countByCampaignIdAndFirstClickedAtNotNull(campaignId);
         long bouncedCount = recipientRepository.countByCampaignIdAndStatus(campaignId, "BOUNCED");
         long failedCount = recipientRepository.countByCampaignIdAndStatus(campaignId, "FAILED");
-        long sentCount = recipientRepository.countByCampaignIdAndStatus(campaignId, "SENT");
 
         // Update campaign
+        campaign.setSentCount(sentCount);
         campaign.setDeliveredCount(deliveredCount);
         campaign.setOpenedCount(openedCount);
         campaign.setClickedCount(clickedCount);
         campaign.setBouncedCount(bouncedCount);
         campaign.setFailedCount(failedCount);
-        campaign.setSentCount(sentCount);
 
-        log.debug("Campaign metrics updated - Delivered: {}, Opened: {}, Clicked: {}, Bounced: {}",
-                deliveredCount, openedCount, clickedCount, bouncedCount);
+        log.debug("Campaign metrics updated - Sent: {}, Delivered: {}, Opened: {}, Clicked: {}, Bounced: {}",
+                sentCount, deliveredCount, openedCount, clickedCount, bouncedCount);
     }
 
     /**
@@ -274,10 +279,36 @@ public class EmailAnalyticsServiceImpl implements EmailAnalyticsService {
 
     @Override
     public EmailCampaignAnalyticsResponse getCampaignAnalytics(Long campaignId) {
-        // Implementation for future use
-        return EmailCampaignAnalyticsResponse.builder()
-                .campaignId(campaignId)
+        EmailCampaign campaign = campaignRepository.findById(campaignId).orElse(null);
+        if (campaign == null) {
+            return EmailCampaignAnalyticsResponse.builder()
+                    .campaignId(campaignId)
+                    .build();
+        }
+
+        Long totalSent = campaign.getSentCount() != null ? campaign.getSentCount() : 0L;
+        Long totalDelivered = campaign.getDeliveredCount() != null ? campaign.getDeliveredCount() : 0L;
+        Long totalOpened = campaign.getOpenedCount() != null ? campaign.getOpenedCount() : 0L;
+        Long totalClicked = campaign.getClickedCount() != null ? campaign.getClickedCount() : 0L;
+        Long totalBounced = campaign.getBouncedCount() != null ? campaign.getBouncedCount() : 0L;
+        Long totalFailed = campaign.getFailedCount() != null ? campaign.getFailedCount() : 0L;
+
+        EmailCampaignAnalyticsResponse response = EmailCampaignAnalyticsResponse.builder()
+                .campaignId(campaign.getId())
+                .campaignName(campaign.getName())
+                .campaignStatus(campaign.getStatus())
+                .sentAt(campaign.getSendStartedAt())
+                .totalSent(totalSent)
+                .totalDelivered(totalDelivered)
+                .totalOpened(totalOpened)
+                .totalClicked(totalClicked)
+                .totalBounced(totalBounced)
+                .totalFailed(totalFailed)
+                .uniqueOpens(totalOpened)
+                .uniqueClicks(totalClicked)
                 .build();
+        response.calculateAllRates();
+        return response;
     }
 
     @Override

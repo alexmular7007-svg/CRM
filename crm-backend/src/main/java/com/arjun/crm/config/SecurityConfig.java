@@ -95,6 +95,8 @@ public class SecurityConfig {
                 .requestMatchers("/ws/info").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                // Brevo webhook endpoint must be publicly accessible (Brevo does not send a JWT)
+                .requestMatchers("/api/webhooks/**").permitAll()
                 .anyRequest().authenticated()
             )
             .authenticationProvider(authenticationProvider())
