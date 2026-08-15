@@ -1,0 +1,11 @@
+{
+  "build": {
+    "builder": "DOCKERFILE",
+    "buildCommand": "cd crm-backend && docker build -t app .",
+    "rootDirectory": "crm-backend"
+  },
+  "deploy": {
+    "startCommand": "java -jar app.jar",
+    "restartPolicyMaxRetries": 5
+  }
+}

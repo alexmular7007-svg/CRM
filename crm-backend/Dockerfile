@@ -11,14 +11,14 @@ FROM public.ecr.aws/docker/library/maven:3.9-eclipse-temurin-21-alpine AS build
 WORKDIR /app
 
 # Copy pom.xml first (better layer caching)
-COPY pom.xml .
+COPY ./pom.xml .
 
 # Download dependencies BEFORE copying source code
 # This layer is cached unless pom.xml changes
 RUN mvn dependency:resolve dependency:resolve-plugins -q || true
 
-# Copy source code
-COPY src ./src
+# Copy source code (Railway fix: use explicit paths)
+COPY ./src ./src
 
 # Build application (skip tests for faster builds)
 RUN mvn clean package -DskipTests -q
