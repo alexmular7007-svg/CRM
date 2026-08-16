@@ -126,15 +126,27 @@ public class EmailCampaignSendingService {
                         
                         // Call Brevo API
                         log.info("[STEP 4] Calling BrevoEmailService.sendEmail()...");
-                        brevoEmailService.sendEmail(
-                                recipient.getRecipientEmail(),
-                                renderedSubject,
-                                renderedHtml,
-                                Map.of(
-                                        "campaign_id", campaign.getId(),
-                                        "recipient_id", recipient.getId()
-                                )
-                        );
+                        log.info("[DEBUG] Metadata for Brevo: campaign_id={}, recipient_id={}", campaign.getId(), recipient.getId());
+                        try {
+                            brevoEmailService.sendEmail(
+                                    recipient.getRecipientEmail(),
+                                    renderedSubject,
+                                    renderedHtml,
+                                    Map.of(
+                                            "campaign_id", campaign.getId(),
+                                            "recipient_id", recipient.getId()
+                                    )
+                            );
+                        } catch (Exception metadataEx) {
+                            log.warn("[DEBUG] Retrying without metadata after failure: {}", metadataEx.getMessage());
+                            // Retry without metadata
+                            brevoEmailService.sendEmail(
+                                    recipient.getRecipientEmail(),
+                                    renderedSubject,
+                                    renderedHtml,
+                                    null
+                            );
+                        }
                         
                         // Update recipient status to SENT on success
                         recipient.setStatus("SENT");
