@@ -1,0 +1,178 @@
+🔐 OAUTH FLOW - WHERE EACH URL GOES
+===================================
+
+
+❌ RAILWAY URL DOES NOT GO IN GOOGLE/GITHUB
+════════════════════════════════════════════
+
+Railway Backend: https://crm-production-932d.up.railway.app/
+
+This URL:
+  ❌ Does NOT go in Google Console
+  ❌ Does NOT go in GitHub OAuth settings
+  ❌ Google/GitHub never see this URL
+  ✓ It's hidden (internal backend only)
+
+
+✅ ONLY VERCEL URL GOES IN GOOGLE/GITHUB
+═════════════════════════════════════════
+
+Vercel Frontend: https://ai-crmsite.vercel.app/
+
+This URL + /oauth2/callback:
+  ✓ GOES in Google "Authorized redirect URIs"
+  ✓ GOES in GitHub "Authorization callback URL"
+  ✓ Google/GitHub ONLY see this
+
+
+═══════════════════════════════════════════════════════════════════
+
+HOW IT WORKS - STEP BY STEP:
+═════════════════════════════
+
+Step 1: User clicks "Sign in with Google"
+┌─────────────────────────────────────────────────────────┐
+│ Frontend: https://ai-crmsite.vercel.app/login           │
+│ User clicks button                                      │
+└─────────────────────────────────────────────────────────┘
+                      ↓
+
+Step 2: Frontend tells Google where to send user back
+┌─────────────────────────────────────────────────────────┐
+│ Frontend redirects to Google with:                      │
+│ redirect_uri=https://ai-crmsite.vercel.app/oauth2/callback
+│ ↑ This URL must match Google Console setting!          │
+└─────────────────────────────────────────────────────────┘
+                      ↓
+
+Step 3: Google checks if redirect_uri is allowed
+┌─────────────────────────────────────────────────────────┐
+│ Google Console checks:                                  │
+│ Is "https://ai-crmsite.vercel.app/oauth2/callback"    │
+│ in the authorized list?                                │
+│ ✓ YES → Continue                                        │
+│ ❌ NO → Reject login                                     │
+└─────────────────────────────────────────────────────────┘
+                      ↓
+
+Step 4: User logs in at Google
+┌─────────────────────────────────────────────────────────┐
+│ https://accounts.google.com                            │
+│ User enters credentials                                │
+│ User approves permissions                              │
+└─────────────────────────────────────────────────────────┘
+                      ↓
+
+Step 5: Google sends authorization CODE back to Vercel
+┌─────────────────────────────────────────────────────────┐
+│ Google redirects to:                                    │
+│ https://ai-crmsite.vercel.app/oauth2/callback?code=ABC123
+│ ↑ This is VERCEL frontend URL                          │
+│ ↑ Railway backend is NOT involved here                 │
+└─────────────────────────────────────────────────────────┘
+                      ↓
+
+Step 6: Frontend receives code and calls BACKEND
+┌─────────────────────────────────────────────────────────┐
+│ Frontend (Vercel) calls Backend (Railway):             │
+│ POST https://crm-production-932d.up.railway.app/      │
+│     login/oauth2/code/google?code=ABC123              │
+│ ↑ Now Railway URL is used (but NOT for OAuth redirect) │
+└─────────────────────────────────────────────────────────┘
+                      ↓
+
+Step 7: Backend exchanges code for access token
+┌─────────────────────────────────────────────────────────┐
+│ Backend (Railway) calls Google:                        │
+│ Google, here's my code: ABC123                         │
+│ Google: ✓ Code valid, here's access token             │
+└─────────────────────────────────────────────────────────┘
+                      ↓
+
+Step 8: Backend gets user info and creates JWT
+┌─────────────────────────────────────────────────────────┐
+│ Backend creates JWT token for user                     │
+│ Saves user to database                                │
+└─────────────────────────────────────────────────────────┘
+                      ↓
+
+Step 9: Backend redirects to VERCEL with JWT token
+┌─────────────────────────────────────────────────────────┐
+│ Backend sends redirect:                                │
+│ https://ai-crmsite.vercel.app/oauth2/callback?        │
+│   token=eyJhbGciOiJIUzI1NiIs...                       │
+│ ↑ Backend sends JWT back to Vercel frontend           │
+└─────────────────────────────────────────────────────────┘
+                      ↓
+
+Step 10: Frontend receives JWT and loads dashboard
+┌─────────────────────────────────────────────────────────┐
+│ Frontend: OAuth2Callback.jsx                           │
+│ Gets JWT from URL                                      │
+│ Stores JWT in Redux                                    │
+│ Calls GET /api/users/me with JWT                       │
+│ Gets user profile                                      │
+│ Redirects to /dashboard                                │
+│ ✅ User is logged in!                                  │
+└─────────────────────────────────────────────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════
+
+WHERE EACH URL BELONGS:
+═══════════════════════
+
+GOOGLE/GITHUB SEE:
+  ✓ https://ai-crmsite.vercel.app/oauth2/callback
+  (This is where they send the user)
+
+GOOGLE/GITHUB DON'T SEE:
+  ❌ https://crm-production-932d.up.railway.app/login/oauth2/code/google
+  (This is backend internal - hidden from OAuth providers)
+
+FRONTEND USES:
+  ✓ Backend URL: https://crm-production-932d.up.railway.app
+  (For API calls)
+
+BACKEND USES:
+  ✓ Frontend callback: https://ai-crmsite.vercel.app/oauth2/callback
+  (To redirect user back after login)
+
+
+═══════════════════════════════════════════════════════════════════
+
+ANSWER TO YOUR QUESTION:
+════════════════════════
+
+Q: Do we add Railway URL to Google/GitHub OAuth?
+A: NO ❌
+
+Q: Do we add Railway URL to Frontend JavaScript?
+A: YES ✓ (but not to Google/GitHub settings)
+
+Q: Where does Railway URL go then?
+A: In Railway environment variables:
+   - OAUTH2_REDIRECT_URI_GOOGLE
+   - OAUTH2_REDIRECT_URI_GITHUB
+   (These are for backend processing, not OAuth providers)
+
+Q: What goes in Google/GitHub console?
+A: ONLY the Vercel frontend URL:
+   https://ai-crmsite.vercel.app/oauth2/callback
+
+Q: Does Google/GitHub see the backend?
+A: NO ❌ (Backend is hidden/internal)
+
+
+═══════════════════════════════════════════════════════════════════
+
+SUMMARY:
+════════
+
+GOOGLE CONSOLE:  https://ai-crmsite.vercel.app/oauth2/callback
+GITHUB OAUTH:    https://ai-crmsite.vercel.app/oauth2/callback
+RAILWAY ENV:     https://crm-production-932d.up.railway.app/login/oauth2/code/google
+RAILWAY ENV:     https://crm-production-932d.up.railway.app/login/oauth2/code/github
+
+Each URL goes to the right place!
+Backend stays hidden from OAuth providers ✓

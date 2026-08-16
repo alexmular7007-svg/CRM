@@ -58,12 +58,13 @@ public class EmailAnalyticsServiceImpl implements EmailAnalyticsService {
                     request.getEvent(), request.getEmail(), request.getProviderEventId());
 
             // Step 2: Check for duplicate events
-            if (request.getProviderEventId() != null) {
+            String effectiveEventId = request.getEffectiveProviderEventId();
+            if (effectiveEventId != null) {
                 Optional<EmailCampaignHistory> existing = historyRepository.findByProviderEventId(
-                        request.getProviderEventId());
+                        effectiveEventId);
                 if (existing.isPresent()) {
                     log.warn("⚠️ Duplicate webhook event (providerEventId: {}). Ignoring.", 
-                            request.getProviderEventId());
+                            effectiveEventId);
                     return;
                 }
             }
@@ -210,7 +211,7 @@ public class EmailAnalyticsServiceImpl implements EmailAnalyticsService {
                 .eventType(request.getEvent().toUpperCase())
                 .linkUrl(request.getLink())
                 .bounceReason(request.getReason())
-                .providerEventId(request.getProviderEventId())
+                .providerEventId(request.getEffectiveProviderEventId())
                 .occurredAt(convertTimestamp(request.getTs()))
                 .metadata(metadata)
                 .build();

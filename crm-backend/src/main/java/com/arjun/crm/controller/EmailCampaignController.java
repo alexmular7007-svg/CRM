@@ -3,6 +3,8 @@ package com.arjun.crm.controller;
 import com.arjun.crm.dto.request.*;
 import com.arjun.crm.dto.response.ApiResponse;
 import com.arjun.crm.dto.response.EmailCampaignResponse;
+import com.arjun.crm.service.EmailAnalyticsService;
+import com.arjun.crm.service.EmailCampaignAnalyticsResponse;
 import com.arjun.crm.service.EmailCampaignService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +35,7 @@ import org.springframework.web.bind.annotation.*;
 public class EmailCampaignController {
     
     private final EmailCampaignService emailCampaignService;
+    private final EmailAnalyticsService emailAnalyticsService;
     
     /**
      * CREATE: POST /api/workspaces/{workspaceId}/email-campaigns
@@ -219,16 +222,18 @@ public class EmailCampaignController {
      * Permission: Any workspace member
      */
     @GetMapping("/{campaignId}/analytics")
-    public ResponseEntity<ApiResponse<Object>> getCampaignAnalytics(
+    public ResponseEntity<ApiResponse<EmailCampaignAnalyticsResponse>> getCampaignAnalytics(
             @PathVariable Long workspaceId,
             @PathVariable Long campaignId) {
         
         log.info("GET /api/workspaces/{}/email-campaigns/{}/analytics - Getting analytics", workspaceId, campaignId);
         
-        // For now, return campaign with metrics
-        EmailCampaignResponse campaign = emailCampaignService.getCampaign(workspaceId, campaignId);
+        // Validate workspace access
+        emailCampaignService.getCampaign(workspaceId, campaignId);
+        
+        EmailCampaignAnalyticsResponse analytics = emailAnalyticsService.getCampaignAnalytics(campaignId);
         
         return ResponseEntity.ok()
-                .body(ApiResponse.success("Campaign analytics retrieved successfully", campaign));
+                .body(ApiResponse.success("Campaign analytics retrieved successfully", analytics));
     }
 }

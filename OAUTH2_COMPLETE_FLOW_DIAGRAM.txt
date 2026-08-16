@@ -1,0 +1,172 @@
+🔐 OAUTH2 COMPLETE FLOW DIAGRAM
+================================
+
+YOUR SETUP:
+===========
+Frontend (Vercel):  https://ai-crmsite.vercel.app
+Backend (Railway):  https://crm-production-932d.up.railway.app
+Google:             Google OAuth Console
+GitHub:             GitHub OAuth App
+
+
+STEP-BY-STEP FLOW FOR GOOGLE LOGIN:
+====================================
+
+USER CLICKS "SIGN IN WITH GOOGLE" BUTTON:
+┌─────────────────────────────────────────────────────────────┐
+│ 1. FRONTEND REDIRECTS USER                                  │
+│    Location: https://ai-crmsite.vercel.app/login            │
+│    User clicks: "Sign in with Google"                       │
+│    Frontend generates:                                      │
+│    https://accounts.google.com/o/oauth2/v2/auth?           │
+│      client_id=868446398693-tpstebo709mvs71sgl2dn53...      │
+│      redirect_uri=https://ai-crmsite.vercel.app/oauth2/callback
+│      response_type=code                                    │
+│      scope=openid profile email                            │
+└─────────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 2. USER LOGS IN AT GOOGLE                                   │
+│    User visits: https://accounts.google.com                 │
+│    Enters credentials                                       │
+│    Approves permissions                                     │
+└─────────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 3. GOOGLE REDIRECTS WITH CODE                               │
+│    Google checks: redirect_uri must match console settings  │
+│    Google verifies: https://ai-crmsite.vercel.app/oauth2/callback ✓
+│    Google sends: Authorization CODE to redirect_uri         │
+│    Browser redirects to:                                    │
+│    https://ai-crmsite.vercel.app/oauth2/callback?          │
+│      code=4/0AY0e-g7z3KL2x8pQ...                           │
+│      state=xyz123                                          │
+│    ⚠️ IMPORTANT: Must match Google Console settings!        │
+└─────────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 4. FRONTEND LOADS OAUTH2 CALLBACK PAGE                      │
+│    React component: OAuth2Callback.jsx                      │
+│    Extracts code from URL params                            │
+│    Frontend calls backend:                                  │
+│    POST https://crm-production-932d.up.railway.app/        │
+│        login/oauth2/code/google?code=4/0AY0e-g7z3KL...     │
+└─────────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 5. BACKEND PROCESSES OAUTH CODE                             │
+│    URL: https://crm-production-932d.up.railway.app/        │
+│         login/oauth2/code/google                           │
+│    Backend:                                                │
+│    1. Receives authorization code                          │
+│    2. Exchanges code for Google access token               │
+│    3. Gets user info from Google                           │
+│    4. Creates/updates user in database                     │
+│    5. Generates JWT token                                  │
+│    6. Redirects with JWT:                                  │
+│       https://ai-crmsite.vercel.app/oauth2/callback?       │
+│       token=eyJhbGciOiJIUzI1NiIs...                       │
+│    ✓ Backend OAuth endpoint doesn't need to match          │
+│      Google Console (backend is hidden)                    │
+└─────────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 6. FRONTEND RECEIVES JWT TOKEN                              │
+│    Location: https://ai-crmsite.vercel.app/oauth2/callback │
+│    Gets JWT from URL: ?token=eyJhbGc...                    │
+│    Frontend:                                                │
+│    1. Calls GET /api/users/me with JWT                     │
+│    2. Receives user profile                                │
+│    3. Stores JWT in Redux                                  │
+│    4. Redirects to /dashboard                              │
+│    ✓ User is now logged in!                                │
+└─────────────────────────────────────────────────────────────┘
+
+
+CONFIGURATION REQUIREMENTS:
+===========================
+
+GOOGLE CONSOLE SETTINGS:
+┌──────────────────────────────────────────────────────────┐
+│ Authorized Redirect URIs must include:                   │
+│ ✓ https://ai-crmsite.vercel.app/oauth2/callback         │
+│   (This is where Google sends the user)                  │
+│                                                          │
+│ Also add for development:                               │
+│ ✓ http://localhost:3000/oauth2/callback                │
+│                                                          │
+│ Keep existing (old Vercel):                             │
+│ ✓ https://crm-taskflow.vercel.app/oauth2/callback       │
+│   (Can be removed if no longer needed)                   │
+└──────────────────────────────────────────────────────────┘
+
+BACKEND OAUTH ENDPOINTS (Hidden from Google):
+┌──────────────────────────────────────────────────────────┐
+│ These don't need to match Google Console               │
+│ Backend handles OAuth code exchange internally          │
+│                                                          │
+│ GET /login/oauth2/code/google                           │
+│ GET /login/oauth2/code/github                           │
+│                                                          │
+│ (These are called by frontend during redirect)          │
+└──────────────────────────────────────────────────────────┘
+
+FRONTEND CALLBACK:
+┌──────────────────────────────────────────────────────────┐
+│ Frontend redirect_uri:                                   │
+│ ✓ window.location.origin + "/oauth2/callback"           │
+│                                                          │
+│ Auto-resolves to:                                        │
+│ - Local: http://localhost:3000/oauth2/callback          │
+│ - Vercel: https://ai-crmsite.vercel.app/oauth2/callback│
+│ - Custom: https://yourdomain.com/oauth2/callback       │
+│                                                          │
+│ No configuration needed - automatic!                    │
+└──────────────────────────────────────────────────────────┘
+
+
+WHY THINGS GO WRONG:
+====================
+
+❌ CORS Error from Google:
+   Cause: redirect_uri doesn't match Google Console
+   Fix: Update Google Console with new Vercel domain
+   
+❌ Backend receives wrong redirect_uri:
+   Cause: Frontend is using old Vercel URL
+   Fix: Update .env.production with new Vercel URL
+   
+❌ Backend can't reach database:
+   Cause: Supabase circuit breaker still active
+   Fix: Wait 10-15 minutes for reset
+   
+❌ Token not returned to frontend:
+   Cause: CORS blocked between backend and frontend
+   Fix: Update CORS_ALLOWED_ORIGINS in Railway
+
+
+THE KEY INSIGHT:
+================
+
+Google/GitHub sees:     https://ai-crmsite.vercel.app/oauth2/callback
+                                    ↑
+                        This MUST match Google Console
+
+Backend processes:      /login/oauth2/code/google
+                        (Hidden from Google/GitHub)
+
+Frontend receives JWT:  https://ai-crmsite.vercel.app/oauth2/callback?token=JWT
+                        (Automatic redirect from backend)
+
+
+GITHUB LOGIN IS IDENTICAL:
+==========================
+Same flow, but:
+1. Redirect to: https://github.com/login/oauth/authorize
+2. Backend endpoint: /login/oauth2/code/github
+3. GitHub Console callback: https://ai-crmsite.vercel.app/oauth2/callback

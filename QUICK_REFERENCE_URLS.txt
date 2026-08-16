@@ -1,0 +1,223 @@
+📌 QUICK REFERENCE - URLS & VALUES
+==================================
+
+YOUR APPLICATION:
+=================
+Frontend (Vercel):     https://ai-crmsite.vercel.app/
+Backend (Railway):     https://crm-production-932d.up.railway.app/
+
+
+AUTHENTICATION ENDPOINTS:
+==========================
+Login Page:             https://ai-crmsite.vercel.app/login
+OAuth2 Callback:        https://ai-crmsite.vercel.app/oauth2/callback
+Dashboard:              https://ai-crmsite.vercel.app/dashboard
+
+
+ADMIN PANELS & DASHBOARDS:
+============================
+Google Cloud Console:   https://console.cloud.google.com/apis/credentials
+GitHub Developers:      https://github.com/settings/developers
+Railway Dashboard:      https://railway.app/dashboard
+Vercel Dashboard:       https://vercel.com/dashboard
+
+
+BACKEND HEALTH & MONITORING:
+=============================
+Health Check:           https://crm-production-932d.up.railway.app/actuator/health
+Railway Logs:           https://railway.app/dashboard → CRM Backend → Logs
+Vercel Logs:            https://vercel.com/dashboard → ai-crmsite → Deployments → Logs
+
+
+OAUTH CLIENT CREDENTIALS:
+==========================
+Google:
+  Client ID:     868446398693-tpstebo709mvs71sgl2dn53bkvmktdlo.apps.googleusercontent.com
+  Secret:        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
+
+GitHub:
+  Client ID:     Ov23limUdSzMDoTdWkX5
+  Secret:        b7c859a0569e1391f7e598f6da9e9326f0d7669f
+
+
+CRITICAL ENVIRONMENT VARIABLES:
+================================
+Database (Railway):
+  URL:           jdbc:postgresql://aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres?sslmode=require
+  Username:      postgres.xkzpzcvwzqjavftrnxjl
+  Password:      TASKFLOWCRM@#12345 ⚠️ KEEP COMPLETE & SECURE
+
+CORS (Railway):
+  CORS_ALLOWED_ORIGINS=https://ai-crmsite.vercel.app
+
+OAuth (Railway):
+  OAUTH2_REDIRECT_URI_GOOGLE=https://crm-production-932d.up.railway.app/login/oauth2/code/google
+  OAUTH2_REDIRECT_URI_GITHUB=https://crm-production-932d.up.railway.app/login/oauth2/code/github
+  OAUTH2_REDIRECT_URI=https://ai-crmsite.vercel.app/oauth2/callback
+  OAUTH2_FRONTEND_FAILURE_URL=https://ai-crmsite.vercel.app/login?error=oauth2_failed
+
+Frontend (Vercel):
+  VITE_API_URL=https://crm-production-932d.up.railway.app
+  VITE_WS_URL=wss://crm-production-932d.up.railway.app/ws
+  VITE_GOOGLE_CLIENT_ID=868446398693-tpstebo709mvs71sgl2dn53bkvmktdlo.apps.googleusercontent.com
+  VITE_GITHUB_CLIENT_ID=Ov23limUdSzMDoTdWkX5
+
+
+REDIRECT URI MAPPING:
+====================
+
+Frontend Callback (User-Facing):
+  ├─ OAuth2 Login → https://ai-crmsite.vercel.app/oauth2/callback
+  └─ WebSocket → wss://ai-crmsite.vercel.app/ws
+
+Backend OAuth Endpoints (Hidden):
+  ├─ Google Code Exchange → https://crm-production-932d.up.railway.app/login/oauth2/code/google
+  └─ GitHub Code Exchange → https://crm-production-932d.up.railway.app/login/oauth2/code/github
+
+OAuth Providers See:
+  ├─ Google Console → https://ai-crmsite.vercel.app/oauth2/callback
+  └─ GitHub App → https://ai-crmsite.vercel.app/oauth2/callback
+
+
+WHAT CHANGED FROM OLD DEPLOYMENT:
+==================================
+Old Frontend:           crm-taskflow.vercel.app  ❌ Deprecated
+New Frontend:           ai-crmsite.vercel.app    ✅ Current
+
+Old Backend:            crm-production-17c2...   ❌ Old
+New Backend:            crm-production-932d...   ✅ Current
+
+
+COMMANDS FOR MANUAL TASKS:
+===========================
+
+Check backend health:
+  curl https://crm-production-932d.up.railway.app/actuator/health
+
+View Railway logs:
+  (Use web dashboard, no CLI command)
+
+View Vercel logs:
+  (Use web dashboard or vercel CLI)
+
+Git push to update code:
+  git push github-new main
+
+Rebuild frontend:
+  npm ci && npm run build
+
+
+API ENDPOINTS (Examples):
+==========================
+Get current user:       GET /api/users/me
+List workspaces:        GET /api/workspaces
+Get tasks:              GET /api/tasks
+Send message:           POST /api/chat/messages
+Create email campaign:  POST /api/email-campaigns
+Get analytics:          GET /api/email-campaigns/{id}/analytics
+
+
+WEBHOOK ENDPOINTS:
+==================
+Brevo Email Events:     POST /api/webhooks/brevo
+                        (For email analytics)
+
+
+WEBSOCKET ENDPOINT:
+===================
+Chat & Notifications:   wss://crm-production-932d.up.railway.app/ws
+                        Connects to: https://ai-crmsite.vercel.app
+
+
+ERROR RESPONSE CODES:
+=====================
+401 - Unauthorized (need login or JWT)
+403 - Forbidden (not permitted)
+404 - Not found
+422 - Validation error
+500 - Server error
+502 - Bad gateway (backend down)
+503 - Service unavailable (maintenance)
+
+
+QUICK TEST URLS:
+================
+Test frontend loads:    https://ai-crmsite.vercel.app/
+Test login page:        https://ai-crmsite.vercel.app/login
+Test backend health:    https://crm-production-932d.up.railway.app/actuator/health
+Test OAuth callback:    https://ai-crmsite.vercel.app/oauth2/callback
+
+
+STEP-BY-STEP GOOGLE OAUTH TEST:
+================================
+1. Click: https://ai-crmsite.vercel.app/login → "Sign in with Google"
+2. Redirect to: https://accounts.google.com/o/oauth2/v2/auth?client_id=...
+3. Enter Google credentials
+4. Approve permissions
+5. Redirect to: https://accounts.google.com/... (internal redirect)
+6. Finally redirect to: https://ai-crmsite.vercel.app/oauth2/callback?code=...
+7. Frontend exchanges code with backend
+8. Backend generates JWT
+9. Redirect to: https://ai-crmsite.vercel.app/oauth2/callback?token=...
+10. Frontend loads profile
+11. Redirect to: https://ai-crmsite.vercel.app/dashboard ✅
+
+
+STEP-BY-STEP GITHUB OAUTH TEST:
+================================
+1. Click: https://ai-crmsite.vercel.app/login → "Sign in with GitHub"
+2. Redirect to: https://github.com/login/oauth/authorize?client_id=...
+3. Enter GitHub credentials (if not logged in)
+4. Approve permissions
+5. Redirect to: https://ai-crmsite.vercel.app/oauth2/callback?code=...
+6. Frontend exchanges code with backend
+7. Backend generates JWT
+8. Redirect to: https://ai-crmsite.vercel.app/oauth2/callback?token=...
+9. Frontend loads profile
+10. Redirect to: https://ai-crmsite.vercel.app/dashboard ✅
+
+
+BROWSER DEVELOPER TOOLS CHECKS:
+===============================
+Open: https://ai-crmsite.vercel.app/login
+
+Press F12 → Console tab:
+  ✓ No red error messages
+  ✓ No CORS errors
+  ✓ No 403/401/404 errors
+
+Press F12 → Network tab:
+  ✓ All requests showing 200/301 status
+  ✓ No failed network requests
+  ✓ No pending requests hanging
+
+Press F12 → Application tab:
+  ✓ localStorage has JWT token after login
+  ✓ Redux state shows user data
+
+
+USEFUL DOCUMENTS:
+=================
+Read these in order:
+1. NEXT_STEPS_ACTION_PLAN.txt (Start here!)
+2. DEPLOYMENT_CHECKLIST_NEW_VERCEL.txt (Follow this)
+3. NEW_VERCEL_CONFIGURATION_SUMMARY.txt (Reference values)
+4. OAUTH2_COMPLETE_FLOW_DIAGRAM.txt (Understand flow)
+5. QUICK_REFERENCE_URLS.txt (This file!)
+
+
+CONTACT & SUPPORT:
+==================
+Google Help:   https://support.google.com/cloud/
+GitHub Help:   https://docs.github.com/
+Railway Help:  https://docs.railway.app/
+Vercel Help:   https://vercel.com/docs/
+
+
+REMEMBER:
+=========
+⚠️ Never commit .env files with secrets to Git
+⚠️ Keep DATABASE_PASSWORD COMPLETE: TASKFLOWCRM@#12345
+⚠️ Use HTTPS everywhere (http only for localhost)
+⚠️ OAuth redirect URIs must match exactly
+⚠️ Backend CORS must allow frontend domain

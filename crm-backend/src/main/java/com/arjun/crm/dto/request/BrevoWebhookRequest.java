@@ -43,9 +43,18 @@ public class BrevoWebhookRequest {
 
     /**
      * Unique message ID from Brevo (use for deduplication)
+     * Brevo sends this as "message-id" (with hyphen) in webhook events.
+     * We accept both "message_id" and "message-id" for compatibility.
      */
     @JsonProperty("message_id")
     private String providerEventId;
+
+    /**
+     * Brevo webhook sends "message-id" (with hyphen), not "message_id".
+     * This field captures the hyphenated variant.
+     */
+    @JsonProperty("message-id")
+    private String providerEventIdHyphenated;
 
     /**
      * Timestamp when event occurred (ISO 8601 format)
@@ -103,6 +112,17 @@ public class BrevoWebhookRequest {
     private String subject;
 
     /**
+     * Get the effective provider event ID, handling both field name variants.
+     * Brevo sends "message-id" (with hyphen) in webhook events.
+     */
+    public String getEffectiveProviderEventId() {
+        if (providerEventId != null && !providerEventId.trim().isEmpty()) {
+            return providerEventId;
+        }
+        return providerEventIdHyphenated;
+    }
+
+    /**
      * Validate that required fields are present for the event type
      */
     public void validate() {
@@ -114,7 +134,8 @@ public class BrevoWebhookRequest {
             throw new IllegalArgumentException("Email is required");
         }
 
-        if (providerEventId == null || providerEventId.trim().isEmpty()) {
+        String effectiveId = getEffectiveProviderEventId();
+        if (effectiveId == null || effectiveId.trim().isEmpty()) {
             throw new IllegalArgumentException("Message ID is required");
         }
 

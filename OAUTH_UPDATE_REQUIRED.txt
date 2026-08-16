@@ -1,0 +1,112 @@
+🔐 OAUTH2 CONFIGURATION UPDATE REQUIRED
+========================================
+
+New Vercel Frontend URL: https://ai-crmsite.vercel.app/
+
+ACTION ITEMS - COMPLETE IN ORDER:
+=================================
+
+1. GOOGLE CLOUD CONSOLE
+   ─────────────────────
+   URL: https://console.cloud.google.com/apis/credentials
+   
+   Task: Add new authorized redirect URI
+   ✓ Go to OAuth 2.0 Client ID for "TaskFlow CRM"
+   ✓ Click "Add URI" under "Authorized redirect URIs"
+   ✓ Add: https://ai-crmsite.vercel.app/oauth2/callback
+   ✓ Save
+   
+   Keep existing:
+   - https://crm-production-932d.up.railway.app/login/oauth2/code/google
+   - http://localhost:3000/oauth2/callback
+
+
+2. GITHUB OAUTH SETTINGS
+   ──────────────────────
+   URL: https://github.com/settings/developers/applications
+   
+   Task: Update Authorization callback URL
+   ✓ Click your "TaskFlow CRM" OAuth App
+   ✓ Find "Authorization callback URL"
+   ✓ Change from: https://crm-production-932d.up.railway.app/login/oauth2/code/github
+   ✓ Change to: https://ai-crmsite.vercel.app/oauth2/callback
+   ✓ Save
+   
+   Alternatively, add as additional callback URL:
+   - https://ai-crmsite.vercel.app/oauth2/callback
+
+
+3. RAILWAY BACKEND - UPDATE ENVIRONMENT VARIABLES
+   ───────────────────────────────────────────────
+   Service: Backend
+   
+   Update these 4 variables:
+   
+   OAUTH2_REDIRECT_URI_GOOGLE=https://crm-production-932d.up.railway.app/login/oauth2/code/google
+   OAUTH2_REDIRECT_URI_GITHUB=https://crm-production-932d.up.railway.app/login/oauth2/code/github
+   CORS_ALLOWED_ORIGINS=https://ai-crmsite.vercel.app
+   OAUTH2_FRONTEND_FAILURE_URL=https://ai-crmsite.vercel.app/login?error=oauth2_failed
+   
+   Also ensure these are set:
+   OAUTH2_REDIRECT_URI=https://ai-crmsite.vercel.app/oauth2/callback
+
+
+4. VERCEL ENVIRONMENT VARIABLES (ALREADY SET)
+   ───────────────────────────────────────────
+   These are automatically configured:
+   ✓ VITE_API_URL=https://crm-production-932d.up.railway.app
+   ✓ VITE_WS_URL=wss://crm-production-932d.up.railway.app/ws
+   ✓ VITE_GOOGLE_CLIENT_ID=868446398693-tpstebo709mvs71sgl2dn53bkvmktdlo.apps.googleusercontent.com
+   ✓ VITE_GITHUB_CLIENT_ID=Ov23limUdSzMDoTdWkX5
+
+
+5. TESTING THE FLOW
+   ─────────────────
+   Once all OAuth providers are updated:
+   
+   1. Go to: https://ai-crmsite.vercel.app/login
+   2. Click "Sign in with Google"
+   3. Log in at accounts.google.com (approve permissions)
+   4. Should redirect back to: https://ai-crmsite.vercel.app/oauth2/callback
+   5. Frontend should load profile and redirect to dashboard
+   
+   Repeat for "Sign in with GitHub"
+
+
+REDIRECT URI MAPPING:
+====================
+
+Frontend (User-facing):
+  └─ https://ai-crmsite.vercel.app/oauth2/callback
+     (Frontend receives JWT token here from backend)
+
+Backend (OAuth Processing):
+  ├─ OAUTH2_REDIRECT_URI_GOOGLE = https://crm-production-932d.up.railway.app/login/oauth2/code/google
+  │  (Google redirects OAuth code here)
+  │
+  └─ OAUTH2_REDIRECT_URI_GITHUB = https://crm-production-932d.up.railway.app/login/oauth2/code/github
+     (GitHub redirects OAuth code here)
+
+
+CORS CONFIGURATION:
+==================
+Backend must allow requests from: https://ai-crmsite.vercel.app
+Set in Railway: CORS_ALLOWED_ORIGINS=https://ai-crmsite.vercel.app
+
+
+BACKEND OAUTH FLOW:
+===================
+1. Frontend redirects to: https://accounts.google.com/o/oauth2/v2/auth?client_id=...&redirect_uri=https://ai-crmsite.vercel.app/oauth2/callback
+2. Google/GitHub sends OAuth code to Backend: /login/oauth2/code/google (or github)
+3. Backend processes, generates JWT token
+4. Backend redirects to: https://ai-crmsite.vercel.app/oauth2/callback?token=JWT_TOKEN
+5. Frontend loads user profile using JWT
+6. Frontend redirects to dashboard
+
+
+IMPORTANT NOTES:
+================
+✓ Frontend redirect_uri is auto-detected: window.location.origin + /oauth2/callback
+✓ Backend OAuth redirect URIs are hardcoded in application properties
+✓ Google/GitHub only see backend redirect URIs in their console
+✓ User-facing URL (https://ai-crmsite.vercel.app) is what matters for UX

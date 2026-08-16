@@ -1,0 +1,191 @@
+🎯 NEW VERCEL DEPLOYMENT - COMPLETE GUIDE
+==========================================
+
+Your New Vercel URL: https://ai-crmsite.vercel.app/
+Backend: https://crm-production-932d.up.railway.app/
+
+
+📋 5-STEP ACTION PLAN (30 minutes total):
+==========================================
+
+STEP 1: Google Cloud Console (5 min)
+──────────────────────────────────
+✓ Go to: https://console.cloud.google.com/apis/credentials
+✓ Find OAuth 2.0 Client ID: 868446398693-...
+✓ Add redirect URI: https://ai-crmsite.vercel.app/oauth2/callback
+✓ Save
+
+STEP 2: GitHub OAuth App (5 min)
+─────────────────────────────────
+✓ Go to: https://github.com/settings/developers
+✓ Open "TaskFlow CRM" OAuth App
+✓ Set callback URL: https://ai-crmsite.vercel.app/oauth2/callback
+✓ Save
+
+STEP 3: Update Railway Variables (5 min + 2-5 min deploy)
+──────────────────────────────────────────────────────
+✓ Go to: https://railway.app/dashboard
+✓ Open Backend Service → Settings → Variables
+✓ Update 4 variables:
+  - CORS_ALLOWED_ORIGINS → https://ai-crmsite.vercel.app
+  - OAUTH2_FRONTEND_FAILURE_URL → https://ai-crmsite.vercel.app/login?error=oauth2_failed
+  - OAUTH2_REDIRECT_URI → https://ai-crmsite.vercel.app/oauth2/callback
+  - WEBSOCKET_ALLOWED_ORIGINS → https://ai-crmsite.vercel.app
+✓ Save (Railway auto-redeploys)
+
+STEP 4: Verify Frontend is Running (Already Done!)
+──────────────────────────────────────────────────
+✓ Frontend auto-deployed to: https://ai-crmsite.vercel.app/
+✓ .env.production already updated with backend URL
+✓ Changes committed to GitHub
+
+STEP 5: Test OAuth Flow (10 min)
+─────────────────────────────────
+✓ Visit: https://ai-crmsite.vercel.app/
+✓ Test "Sign in with Google" → Should work
+✓ Test "Sign in with GitHub" → Should work
+✓ Check browser console for no errors
+✓ Verify user can access dashboard
+
+
+🎯 WHAT TO UPDATE WHERE:
+=======================
+
+GOOGLE CLOUD CONSOLE:
+  Authorized Redirect URIs:
+  ✓ https://ai-crmsite.vercel.app/oauth2/callback ← ADD THIS
+  ✓ http://localhost:3000/oauth2/callback (keep)
+  ✓ https://crm-production-932d.up.railway.app/login/oauth2/code/google (keep)
+
+GITHUB OAUTH APP:
+  Authorization Callback URL:
+  ✓ https://ai-crmsite.vercel.app/oauth2/callback ← CHANGE TO THIS
+
+RAILWAY BACKEND VARIABLES:
+  ✓ CORS_ALLOWED_ORIGINS=https://ai-crmsite.vercel.app
+  ✓ OAUTH2_FRONTEND_FAILURE_URL=https://ai-crmsite.vercel.app/login?error=oauth2_failed
+  ✓ OAUTH2_REDIRECT_URI=https://ai-crmsite.vercel.app/oauth2/callback
+  ✓ WEBSOCKET_ALLOWED_ORIGINS=https://ai-crmsite.vercel.app
+
+FRONTEND (.env.production):
+  ✓ VITE_API_URL=https://crm-production-932d.up.railway.app
+  ✓ VITE_WS_URL=wss://crm-production-932d.up.railway.app/ws
+  ✓ VITE_GOOGLE_CLIENT_ID=868446398693-...
+  ✓ VITE_GITHUB_CLIENT_ID=Ov23limUdSzMDoTdWkX5
+  (Already updated and pushed to GitHub ✓)
+
+
+🔐 OAuth Flow Explained:
+=======================
+
+User clicks "Sign in with Google":
+  1. Frontend redirects to: accounts.google.com/oauth2/auth?...
+  2. User logs in at Google
+  3. Google redirects to: https://ai-crmsite.vercel.app/oauth2/callback?code=...
+  4. Frontend calls backend: /login/oauth2/code/google?code=...
+  5. Backend exchanges code for access token
+  6. Backend gets user info and creates JWT
+  7. Backend redirects: https://ai-crmsite.vercel.app/oauth2/callback?token=JWT
+  8. Frontend loads user profile with JWT
+  9. User redirected to dashboard ✅
+
+Same flow for GitHub, just different OAuth provider.
+
+
+💡 Key Points:
+==============
+
+✓ Frontend redirect URI: Must match what's in Google/GitHub console
+✓ Backend OAuth endpoints: Hidden from OAuth providers (internal)
+✓ CORS: Must allow your frontend domain at backend
+✓ WebSocket: Also needs CORS update
+✓ Auto-redirect: Frontend auto-detects window.location.origin
+
+
+📊 Current Status:
+==================
+
+✅ COMPLETED:
+  • Frontend environment updated
+  • Changes pushed to GitHub
+  • Vercel deployment created
+  • All documentation prepared
+
+⏳ PENDING (Your Action):
+  • Google Console update (5 min)
+  • GitHub OAuth update (5 min)
+  • Railway variables update (5 min)
+  • Test OAuth flow (10 min)
+
+
+📚 Documentation Files:
+=======================
+
+For step-by-step instructions:
+→ NEXT_STEPS_ACTION_PLAN.txt
+
+For detailed troubleshooting:
+→ DEPLOYMENT_CHECKLIST_NEW_VERCEL.txt
+
+For OAuth flow explanation:
+→ OAUTH2_COMPLETE_FLOW_DIAGRAM.txt
+
+For complete reference:
+→ NEW_VERCEL_CONFIGURATION_SUMMARY.txt
+
+For quick lookup:
+→ QUICK_REFERENCE_URLS.txt
+
+For Railway variables only:
+→ RAILWAY_OAUTH_VARIABLES_UPDATE.txt
+
+
+⚡ TL;DR (Super Quick):
+=======================
+
+1. Google: Add https://ai-crmsite.vercel.app/oauth2/callback to redirect URIs
+2. GitHub: Set callback URL to https://ai-crmsite.vercel.app/oauth2/callback
+3. Railway: Update CORS_ALLOWED_ORIGINS and other 3 variables
+4. Test: Visit https://ai-crmsite.vercel.app/login and test OAuth buttons
+5. Done! 🎉
+
+
+🚨 If Something Goes Wrong:
+===========================
+
+CORS Error?
+→ Check Railway CORS_ALLOWED_ORIGINS is set correctly
+→ Wait 2-5 minutes for Railway to redeploy
+→ Hard refresh browser (Ctrl+Shift+R)
+
+OAuth provider error?
+→ Check Google Console has exact redirect URI
+→ Check GitHub OAuth has exact callback URL
+→ Verify .env.production has correct client IDs
+
+Backend not responding?
+→ Check Railway service is running
+→ Check Railway logs for errors
+→ Verify DATABASE_PASSWORD is complete
+
+Frontend not loading?
+→ Hard refresh browser
+→ Check Vercel deployment status
+→ Check .env.production is committed
+
+
+🎬 GET STARTED NOW!
+===================
+
+1. Open: https://console.cloud.google.com/apis/credentials
+2. Add: https://ai-crmsite.vercel.app/oauth2/callback
+3. Open: https://github.com/settings/developers
+4. Update: Callback URL to https://ai-crmsite.vercel.app/oauth2/callback
+5. Open: https://railway.app/dashboard
+6. Update: 4 environment variables
+7. Wait: 2-5 minutes for Railway to redeploy
+8. Visit: https://ai-crmsite.vercel.app/login
+9. Test: Click "Sign in with Google" and "Sign in with GitHub"
+10. Done! ✅
+
+Estimated time: 30 minutes total

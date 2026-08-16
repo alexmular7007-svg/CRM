@@ -1,0 +1,170 @@
+✅ DEPLOYMENT CHECKLIST - NEW VERCEL DOMAIN
+=============================================
+
+New Vercel Frontend: https://ai-crmsite.vercel.app/
+Backend (Railway):   https://crm-production-932d.up.railway.app/
+
+=== PHASE 1: GOOGLE OAUTH UPDATE ===
+[ ] 1. Open: https://console.cloud.google.com/apis/credentials
+[ ] 2. Find your "TaskFlow CRM" OAuth 2.0 Client ID
+[ ] 3. Under "Authorized redirect URIs" section:
+[ ] 4. Click "ADD URI"
+[ ] 5. Enter: https://ai-crmsite.vercel.app/oauth2/callback
+[ ] 6. Save the changes
+[ ] 7. Verify you see all these URIs:
+       ✓ https://ai-crmsite.vercel.app/oauth2/callback (NEW)
+       ✓ https://crm-production-932d.up.railway.app/login/oauth2/code/google
+       ✓ http://localhost:3000/oauth2/callback
+
+=== PHASE 2: GITHUB OAUTH UPDATE ===
+[ ] 1. Open: https://github.com/settings/developers
+[ ] 2. Click your "TaskFlow CRM" OAuth App
+[ ] 3. Find "Authorization callback URL"
+[ ] 4. Update from: https://crm-production-932d.up.railway.app/login/oauth2/code/github
+[ ] 5. Update to: https://ai-crmsite.vercel.app/oauth2/callback
+[ ] 6. Save
+[ ] 7. Alternative: Add as additional URL instead of replacing
+
+=== PHASE 3: RAILWAY BACKEND UPDATE ===
+[ ] 1. Go to: https://railway.app/dashboard
+[ ] 2. Select your CRM Backend Service
+[ ] 3. Go to: Settings → Variables
+[ ] 4. Find and update these variables:
+
+    CORS_ALLOWED_ORIGINS
+    From: https://crm-taskflow.vercel.app
+    To:   https://ai-crmsite.vercel.app
+    [ ] Updated
+
+    OAUTH2_FRONTEND_FAILURE_URL
+    From: https://crm-taskflow.vercel.app/login?error=oauth2_failed
+    To:   https://ai-crmsite.vercel.app/login?error=oauth2_failed
+    [ ] Updated
+
+    OAUTH2_REDIRECT_URI (if exists)
+    To:   https://ai-crmsite.vercel.app/oauth2/callback
+    [ ] Updated
+
+    WEBSOCKET_ALLOWED_ORIGINS (if exists)
+    To:   https://ai-crmsite.vercel.app
+    [ ] Updated
+
+[ ] 5. Save all changes
+[ ] 6. Railway auto-redeploys (takes 2-5 minutes)
+[ ] 7. Check deployment logs for success
+[ ] 8. Verify backend is running at:
+       https://crm-production-932d.up.railway.app/actuator/health
+
+=== PHASE 4: VERIFY FRONTEND ENVIRONMENT ===
+[ ] 1. Check .env.production file contents:
+       VITE_API_URL=https://crm-production-932d.up.railway.app
+       VITE_WS_URL=wss://crm-production-932d.up.railway.app/ws
+       VITE_GOOGLE_CLIENT_ID=868446398693-tpstebo709mvs71sgl2dn53bkvmktdlo.apps.googleusercontent.com
+       VITE_GITHUB_CLIENT_ID=Ov23limUdSzMDoTdWkX5
+[ ] 2. Commit changes to GitHub (if not already)
+[ ] 3. Vercel auto-redeploys (should be done already)
+[ ] 4. Check Vercel deployment logs for success
+
+=== PHASE 5: TESTING ===
+[ ] 1. Visit: https://ai-crmsite.vercel.app/
+[ ] 2. Click "Go to App" or find login link
+[ ] 3. Test "Sign in with Google":
+       [ ] Redirects to accounts.google.com
+       [ ] Login successful
+       [ ] Redirects back to your app
+       [ ] Shows dashboard
+       [ ] No CORS errors in console
+[ ] 4. Sign out
+[ ] 5. Test "Sign in with GitHub":
+       [ ] Redirects to github.com
+       [ ] Login successful
+       [ ] Redirects back to your app
+       [ ] Shows dashboard
+       [ ] No CORS errors in console
+[ ] 6. Check browser console (F12) - no errors
+[ ] 7. Check Network tab - no failed requests
+
+=== PHASE 6: TROUBLESHOOTING (If Issues) ===
+
+If Google login fails:
+[ ] Check Google Console - URI must match exactly
+[ ] Check Railway CORS setting
+[ ] Check .env.production has correct client ID
+[ ] Check browser console for errors
+
+If GitHub login fails:
+[ ] Check GitHub OAuth App - URI must match
+[ ] Check Railway CORS setting
+[ ] Check .env.production has correct client ID
+[ ] Check browser console for errors
+
+If "CORS error" appears:
+[ ] Railway must have: CORS_ALLOWED_ORIGINS=https://ai-crmsite.vercel.app
+[ ] Wait 2-5 minutes after updating Railway variables
+[ ] Hard refresh browser (Ctrl+Shift+R)
+
+If backend not responding:
+[ ] Check Railway dashboard for deployment status
+[ ] Check if backend service is running
+[ ] Check deployment logs for errors
+[ ] Verify DATABASE_PASSWORD is complete: TASKFLOWCRM@#12345
+
+If Supabase connection error:
+[ ] Circuit breaker may still be active
+[ ] Wait 10-15 minutes before retrying
+[ ] Check Railway logs for "ECIRCUITBREAKER" errors
+
+=== FINAL VERIFICATION ===
+[ ] Backend health check: GET https://crm-production-932d.up.railway.app/actuator/health
+[ ] Frontend loads: https://ai-crmsite.vercel.app/
+[ ] Google login works end-to-end
+[ ] GitHub login works end-to-end
+[ ] User can access dashboard
+[ ] No console errors in browser DevTools
+
+
+ROLLBACK INSTRUCTIONS (if needed):
+==================================
+To revert to old Vercel domain (crm-taskflow.vercel.app):
+
+1. Google Console:
+   - Keep https://ai-crmsite.vercel.app/oauth2/callback
+   - Or add back: https://crm-taskflow.vercel.app/oauth2/callback
+
+2. GitHub:
+   - Keep https://ai-crmsite.vercel.app/oauth2/callback
+   - Or add back: https://crm-taskflow.vercel.app/oauth2/callback
+
+3. Railway:
+   - CORS_ALLOWED_ORIGINS=https://crm-taskflow.vercel.app
+   - OAUTH2_FRONTEND_FAILURE_URL=https://crm-taskflow.vercel.app/login?error=oauth2_failed
+
+4. Local frontend .env.production:
+   - No changes needed (auto-resolves to current domain)
+
+
+TIMELINE ESTIMATE:
+==================
+Google OAuth update:    ~5 minutes
+GitHub OAuth update:    ~5 minutes
+Railway variables:      ~5 minutes (+ 2-5 min auto-redeploy)
+Testing:                ~5 minutes
+Total:                  ~30 minutes
+
+
+ESTIMATED COMPLETION:
+====================
+Start: [Current time]
+Complete by: [Current time + 30 minutes]
+Ready for production use: [Current time + 35 minutes]
+
+
+SUPPORT CONTACTS:
+=================
+Google OAuth Help: https://support.google.com/cloud/answer/6158849
+GitHub OAuth Help: https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps
+Railway Help: https://docs.railway.app/
+Vercel Help: https://vercel.com/docs
+
+
+Questions? Check: OAUTH2_COMPLETE_FLOW_DIAGRAM.txt for visual explanation

@@ -1,0 +1,187 @@
+🔐 EXACT VALUES TO FILL IN GOOGLE & GITHUB
+===========================================
+
+
+═══════════════════════════════════════════════════════════════════
+
+1️⃣ GOOGLE CLOUD CONSOLE
+═══════════════════════════════════════════════════════════════════
+
+URL TO VISIT:
+https://console.cloud.google.com/apis/credentials
+
+STEPS:
+1. Click on your OAuth 2.0 Client ID (the one for "TaskFlow CRM")
+2. Scroll to section: "Authorized redirect URIs"
+3. Click the button "ADD URI"
+4. PASTE THIS EXACT TEXT:
+
+┌─────────────────────────────────────────────────────────────┐
+│ https://ai-crmsite.vercel.app/oauth2/callback              │
+└─────────────────────────────────────────────────────────────┘
+
+5. Click "SAVE" button
+
+THAT'S IT! Google will now accept logins from your new Vercel domain.
+
+
+═══════════════════════════════════════════════════════════════════
+
+2️⃣ GITHUB OAUTH APP
+═══════════════════════════════════════════════════════════════════
+
+URL TO VISIT:
+https://github.com/settings/developers
+
+STEPS:
+1. Click on your OAuth App called "TaskFlow CRM"
+2. Find the field: "Authorization callback URL"
+3. CLEAR the existing value
+4. PASTE THIS EXACT TEXT:
+
+┌─────────────────────────────────────────────────────────────┐
+│ https://ai-crmsite.vercel.app/oauth2/callback              │
+└─────────────────────────────────────────────────────────────┘
+
+5. Click "Update application" button
+
+THAT'S IT! GitHub will now accept logins from your new Vercel domain.
+
+
+═══════════════════════════════════════════════════════════════════
+
+📋 COPY-PASTE VALUES:
+═══════════════════════════════════════════════════════════════════
+
+Google - Authorized Redirect URI:
+https://ai-crmsite.vercel.app/oauth2/callback
+
+
+GitHub - Authorization Callback URL:
+https://ai-crmsite.vercel.app/oauth2/callback
+
+
+═══════════════════════════════════════════════════════════════════
+
+⚠️ IMPORTANT NOTES:
+═══════════════════════════════════════════════════════════════════
+
+✓ Copy the URL EXACTLY as shown
+✓ No extra spaces
+✓ No extra slashes at the end
+✓ It's HTTPS (not HTTP)
+✓ Case-sensitive (vercel.app not Vercel.app)
+✓ Your domain name: ai-crmsite.vercel.app
+
+If you have other URIs already there (from old deployment):
+✓ KEEP them (for local development: http://localhost:3000/oauth2/callback)
+✓ Just ADD the new one
+
+
+═══════════════════════════════════════════════════════════════════
+
+🎬 AFTER YOU UPDATE GOOGLE & GITHUB:
+═══════════════════════════════════════════════════════════════════
+
+Your users will be able to:
+1. Click "Sign in with Google" button
+2. OR click "Sign in with GitHub" button
+3. Get taken to login page
+4. Come back to your app
+5. Be logged in automatically ✅
+
+
+═══════════════════════════════════════════════════════════════════
+
+❌ WHAT NOT TO DO:
+═══════════════════════════════════════════════════════════════════
+
+❌ Don't add: https://crm-production-932d.up.railway.app/login/oauth2/code/google
+   (This is backend internal - Google doesn't see it)
+
+❌ Don't change the URL structure
+   (It must be EXACTLY: https://ai-crmsite.vercel.app/oauth2/callback)
+
+❌ Don't add Java or any other code
+   (Just the URL, nothing else)
+
+❌ Don't use your old Vercel domain
+   (Use the NEW one: ai-crmsite.vercel.app)
+
+
+═══════════════════════════════════════════════════════════════════
+
+✅ VERIFICATION CHECKLIST:
+═══════════════════════════════════════════════════════════════════
+
+After you add these URLs:
+
+[ ] Google Console shows: https://ai-crmsite.vercel.app/oauth2/callback
+    in the "Authorized redirect URIs" list
+
+[ ] GitHub OAuth app shows: https://ai-crmsite.vercel.app/oauth2/callback
+    in the "Authorization callback URL" field
+
+[ ] You clicked SAVE in both places
+
+
+═══════════════════════════════════════════════════════════════════
+
+⏭️ NEXT STEPS AFTER THIS:
+═══════════════════════════════════════════════════════════════════
+
+1. Update Railway backend variables (4 values)
+   → CORS_ALLOWED_ORIGINS=https://ai-crmsite.vercel.app
+   → OAUTH2_FRONTEND_FAILURE_URL=https://ai-crmsite.vercel.app/login?error=oauth2_failed
+   → OAUTH2_REDIRECT_URI=https://ai-crmsite.vercel.app/oauth2/callback
+   → WEBSOCKET_ALLOWED_ORIGINS=https://ai-crmsite.vercel.app
+
+2. Wait 2-5 minutes for Railway to redeploy
+
+3. Test at: https://ai-crmsite.vercel.app/login
+   Click the OAuth buttons to test
+
+
+═══════════════════════════════════════════════════════════════════
+
+❓ QUESTION: Why do I need to add this URL?
+═════════════════════════════════════════════════════════════════════
+
+Google and GitHub are like security guards. They need to know:
+"Where can I send users AFTER they log in?"
+
+You're telling them:
+Google: "Send them to https://ai-crmsite.vercel.app/oauth2/callback"
+GitHub: "Send them to https://ai-crmsite.vercel.app/oauth2/callback"
+
+If you don't tell them this, they will reject the login request.
+
+
+═══════════════════════════════════════════════════════════════════
+
+❓ QUESTION: What about Java/JavaScript?
+═════════════════════════════════════════════════════════════════════
+
+No Java or JavaScript needed here!
+
+✓ Your code already has the URLs built in
+✓ Frontend automatically uses: window.location.origin + "/oauth2/callback"
+✓ Backend is already configured
+✓ You just need to tell Google & GitHub where to send people
+
+Everything is automatic!
+
+
+═══════════════════════════════════════════════════════════════════
+
+🚀 THAT'S IT!
+═════════════
+
+Just add ONE URL to each:
+
+Google: https://ai-crmsite.vercel.app/oauth2/callback
+GitHub: https://ai-crmsite.vercel.app/oauth2/callback
+
+Click SAVE in both places.
+
+Done! Your OAuth will work! ✅

@@ -109,12 +109,13 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
       
       if (data.contentMode === 'create') {
         // Create new template first
+        const htmlContent = buildHtmlContent(data)
         const templatePayload = {
           name: data.templateName.trim(),
           description: data.description ? `Campaign: ${data.campaignName.trim()} - ${data.description.trim()}` : `Auto-created from campaign: ${data.campaignName.trim()}`,
           category: 'CAMPAIGN',
           subjectTemplate: data.emailSubject.trim(),
-          htmlContent: data.emailBody,
+          htmlContent,
           plainTextContent: data.emailBody.replace(/<[^>]*>/g, ''),
           variables: [],  // Empty array instead of string
           isPublic: false,
@@ -223,6 +224,20 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
     },
   })
   
+  // Helper function to build HTML email content with heading, body, and CTA button
+  const buildHtmlContent = (data) => {
+    const heading = data.emailHeading
+      ? `<h1 style="font-family: Arial, Helvetica, sans-serif; color: #1a1a2e; font-size: 24px; font-weight: 700; margin: 0 0 16px 0;">${data.emailHeading}</h1>`
+      : ''
+    const body = data.emailBody
+      ? `<p style="font-family: Arial, Helvetica, sans-serif; color: #333333; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0;">${data.emailBody}</p>`
+      : ''
+    const cta = data.ctaButtonText && data.ctaButtonUrl
+      ? `<div style="margin: 24px 0 0 0;"><a href="${data.ctaButtonUrl}" style="display: inline-block; background-color: #7C3AED; color: #ffffff; font-family: Arial, Helvetica, sans-serif; font-size: 16px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 8px;">${data.ctaButtonText}</a></div>`
+      : ''
+    return `<div style="background-color: #f8f9fa; padding: 32px;"><div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; padding: 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">${heading}${body}${cta}</div></div>`
+  }
+
   // Helper function to get recipient data
   const getRecipientData = (data) => {
     if (data.audienceMode === 'manual') {

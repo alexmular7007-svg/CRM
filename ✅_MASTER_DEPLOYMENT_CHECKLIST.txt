@@ -1,0 +1,333 @@
+✅ MASTER DEPLOYMENT CHECKLIST
+=============================
+
+Your New Frontend: https://ai-crmsite.vercel.app/
+Your Backend: https://crm-production-932d.up.railway.app/
+
+
+═══════════════════════════════════════════════════════════════════
+
+PHASE 1: GOOGLE CLOUD CONSOLE SETUP
+──────────────────────────────────────
+
+[ ] Step 1: Open https://console.cloud.google.com/apis/credentials
+[ ] Step 2: Click the OAuth 2.0 Client ID labeled "TaskFlow CRM"
+[ ] Step 3: In "Authorized redirect URIs" section, click "Add URI"
+[ ] Step 4: Enter: https://ai-crmsite.vercel.app/oauth2/callback
+[ ] Step 5: Click Save/Update button
+[ ] Step 6: Verify you see these URIs:
+    [ ] https://ai-crmsite.vercel.app/oauth2/callback (NEW)
+    [ ] http://localhost:3000/oauth2/callback (DEV)
+    [ ] https://crm-production-932d.up.railway.app/login/oauth2/code/google (BACKEND)
+
+GOOGLE CONSOLE COMPLETE: ______ (time)
+
+
+═══════════════════════════════════════════════════════════════════
+
+PHASE 2: GITHUB OAUTH APP SETUP
+────────────────────────────────
+
+[ ] Step 1: Open https://github.com/settings/developers
+[ ] Step 2: Click on your "TaskFlow CRM" OAuth App
+[ ] Step 3: Find the field "Authorization callback URL"
+[ ] Step 4: Clear the existing value
+[ ] Step 5: Enter: https://ai-crmsite.vercel.app/oauth2/callback
+[ ] Step 6: Click "Update application"
+[ ] Step 7: Verify it shows the new URL
+[ ] Step 8: Note: You can also add as additional URL instead
+
+GITHUB OAUTH COMPLETE: ______ (time)
+
+
+═══════════════════════════════════════════════════════════════════
+
+PHASE 3: RAILWAY BACKEND ENVIRONMENT VARIABLES
+────────────────────────────────────────────────
+
+[ ] Step 1: Go to https://railway.app/dashboard
+[ ] Step 2: Select "CRM Backend" service from the list
+[ ] Step 3: Click "Settings" tab
+[ ] Step 4: Click "Variables" section
+[ ] Step 5: Find and update these 4 variables:
+
+    VARIABLE #1: CORS_ALLOWED_ORIGINS
+    [ ] Current value: https://crm-taskflow.vercel.app
+    [ ] Clear it
+    [ ] New value: https://ai-crmsite.vercel.app
+    [ ] Click save/update
+
+    VARIABLE #2: OAUTH2_FRONTEND_FAILURE_URL
+    [ ] Current value: https://crm-taskflow.vercel.app/login?error=oauth2_failed
+    [ ] Clear it
+    [ ] New value: https://ai-crmsite.vercel.app/login?error=oauth2_failed
+    [ ] Click save/update
+
+    VARIABLE #3: OAUTH2_REDIRECT_URI
+    [ ] Check if it exists
+    [ ] Set to: https://ai-crmsite.vercel.app/oauth2/callback
+    [ ] Click save/update
+
+    VARIABLE #4: WEBSOCKET_ALLOWED_ORIGINS
+    [ ] Check if it exists
+    [ ] Set to: https://ai-crmsite.vercel.app
+    [ ] Click save/update
+
+[ ] Step 6: After updating all variables, Railway auto-redeploys
+[ ] Step 7: Wait 2-5 minutes for deployment to complete
+[ ] Step 8: Check deployment logs for success (no errors)
+[ ] Step 9: Verify backend is running:
+    [ ] Visit: https://crm-production-932d.up.railway.app/actuator/health
+    [ ] Should show status: UP
+
+RAILWAY BACKEND COMPLETE: ______ (time + 5 min deploy time)
+
+
+═══════════════════════════════════════════════════════════════════
+
+PHASE 4: VERIFY FRONTEND (Already Done!)
+──────────────────────────────────────────
+
+[✓] Frontend .env.production updated
+[✓] Changes committed to GitHub
+[✓] Vercel auto-deployed
+
+Verify:
+[ ] Visit: https://ai-crmsite.vercel.app/
+[ ] Should load landing page
+[ ] Should see "Sign in with Google" button
+[ ] Should see "Sign in with GitHub" button
+
+FRONTEND VERIFICATION COMPLETE: ______ (time)
+
+
+═══════════════════════════════════════════════════════════════════
+
+PHASE 5: TEST OAUTH LOGIN FLOW
+────────────────────────────────
+
+TEST 1: Google OAuth Login
+[ ] Step 1: Visit https://ai-crmsite.vercel.app/login
+[ ] Step 2: Verify page loads without errors
+[ ] Step 3: Open browser console (F12)
+[ ] Step 4: Check console - no red errors
+[ ] Step 5: Click "Sign in with Google" button
+[ ] Step 6: Should redirect to accounts.google.com
+[ ] Step 7: Log in with your Google account
+[ ] Step 8: Approve permissions (if prompted)
+[ ] Step 9: Should redirect back to: https://ai-crmsite.vercel.app/oauth2/callback
+[ ] Step 10: Should show loading spinner briefly
+[ ] Step 11: Should redirect to dashboard
+[ ] Step 12: Verify you're logged in (user profile visible)
+[ ] Step 13: Check console - no CORS errors
+[ ] Step 14: Check Network tab - all requests successful (200s)
+
+GOOGLE LOGIN TEST: ✓ PASSED / ✗ FAILED
+
+If failed, check:
+  [ ] Google Console has correct redirect URI
+  [ ] Railway CORS_ALLOWED_ORIGINS is set
+  [ ] Browser developer console for specific error
+  [ ] Railway logs for backend errors
+
+
+TEST 2: GitHub OAuth Login
+[ ] Step 1: Sign out from dashboard
+[ ] Step 2: Visit https://ai-crmsite.vercel.app/login
+[ ] Step 3: Click "Sign in with GitHub" button
+[ ] Step 4: Should redirect to github.com/login
+[ ] Step 5: Log in with your GitHub account (if not already)
+[ ] Step 6: Authorize the app (if prompted)
+[ ] Step 7: Should redirect back to: https://ai-crmsite.vercel.app/oauth2/callback
+[ ] Step 8: Should show loading spinner briefly
+[ ] Step 9: Should redirect to dashboard
+[ ] Step 10: Verify you're logged in (user profile visible)
+[ ] Step 11: Check console - no CORS errors
+[ ] Step 12: Check Network tab - all requests successful (200s)
+
+GITHUB LOGIN TEST: ✓ PASSED / ✗ FAILED
+
+If failed, check:
+  [ ] GitHub OAuth app has correct callback URL
+  [ ] Railway CORS_ALLOWED_ORIGINS is set
+  [ ] Browser developer console for specific error
+  [ ] Railway logs for backend errors
+
+
+TEST 3: Full Application Flow
+[ ] Step 1: Logged in from OAuth
+[ ] Step 2: Can see dashboard
+[ ] Step 3: Can access workspaces
+[ ] Step 4: Can create/view tasks
+[ ] Step 5: Can access chat
+[ ] Step 6: No console errors
+[ ] Step 7: No network errors
+
+FULL APPLICATION TEST: ✓ PASSED / ✗ FAILED
+
+OAUTH LOGIN TEST COMPLETE: ______ (time)
+
+
+═══════════════════════════════════════════════════════════════════
+
+TROUBLESHOOTING CHECKLIST
+──────────────────────────
+
+If CORS Error appears:
+
+[ ] Google Console:
+    [ ] Verify redirect URI matches exactly
+    [ ] No extra spaces or slashes
+    [ ] Case-sensitive
+
+[ ] GitHub OAuth:
+    [ ] Verify callback URL matches exactly
+    [ ] No extra spaces or slashes
+    [ ] Case-sensitive
+
+[ ] Railway variables:
+    [ ] CORS_ALLOWED_ORIGINS = https://ai-crmsite.vercel.app
+    [ ] No http:// (must be https://)
+    [ ] No trailing slash
+
+[ ] Wait and retry:
+    [ ] Wait 2-5 minutes after updating Railway
+    [ ] Hard refresh browser (Ctrl+Shift+R)
+    [ ] Try again
+
+
+If OAuth provider error appears:
+
+[ ] Check Google Console:
+    [ ] Client ID matches .env.production
+    [ ] Redirect URI is in authorized list
+
+[ ] Check GitHub OAuth:
+    [ ] Client ID matches .env.production
+    [ ] Callback URL is set
+
+[ ] Check frontend environment:
+    [ ] VITE_GOOGLE_CLIENT_ID in .env.production
+    [ ] VITE_GITHUB_CLIENT_ID in .env.production
+    [ ] Code is deployed on Vercel
+
+
+If backend not responding:
+
+[ ] Check Railway:
+    [ ] Service is running (green indicator)
+    [ ] No deployment errors
+    [ ] Database is connected
+
+[ ] Check health:
+    [ ] Visit https://crm-production-932d.up.railway.app/actuator/health
+    [ ] Should show "UP" status
+
+[ ] Check database:
+    [ ] Supabase circuit breaker not active
+    [ ] CONNECTION ERROR = wait 10-15 minutes
+
+
+If user profile not loading:
+
+[ ] Check backend logs:
+    [ ] No authentication errors
+    [ ] No database errors
+    [ ] No CORS errors
+
+[ ] Check JWT token:
+    [ ] Browser DevTools → Application → localStorage
+    [ ] Should see JWT token after login
+    [ ] Token should not be empty
+
+
+═══════════════════════════════════════════════════════════════════
+
+FINAL VERIFICATION CHECKLIST
+─────────────────────────────
+
+[ ] Google Console updated with new Vercel URL
+[ ] GitHub OAuth app updated with new Vercel URL
+[ ] Railway environment variables updated (4 variables)
+[ ] Railway auto-deployed successfully
+[ ] Frontend loads without errors
+[ ] Google OAuth login works end-to-end
+[ ] GitHub OAuth login works end-to-end
+[ ] User can access dashboard
+[ ] No console errors in browser DevTools
+[ ] No Network tab failures (all 200s)
+[ ] WebSocket connected (if applicable)
+[ ] Email service accessible
+[ ] Database connected
+
+
+═══════════════════════════════════════════════════════════════════
+
+DEPLOYMENT STATUS SUMMARY
+───────────────────────────
+
+Date/Time Started: _________________
+Date/Time Completed: _________________
+Total Time: _________________
+
+Google Console: [ ] ✓ Completed / [ ] ✗ Pending
+GitHub OAuth: [ ] ✓ Completed / [ ] ✗ Pending
+Railway Variables: [ ] ✓ Completed / [ ] ✗ Pending
+Frontend Deployment: [✓] ✓ Completed / [ ] ✗ Pending
+OAuth Testing: [ ] ✓ Passed / [ ] ✗ Failed
+
+DEPLOYMENT STATUS: [ ] ✓ COMPLETE / [ ] ✗ IN PROGRESS / [ ] ✗ ISSUES FOUND
+
+
+═══════════════════════════════════════════════════════════════════
+
+SIGN OFF
+─────────
+
+I have successfully completed all deployment steps:
+
+Name: _____________________
+Date: _____________________
+Time: _____________________
+
+Notes: _________________________________________________________________
+_________________________________________________________________
+_________________________________________________________________
+
+
+═══════════════════════════════════════════════════════════════════
+
+REFERENCE DOCUMENTS
+────────────────────
+
+If you need more help, check:
+
+1. 🎯_NEW_VERCEL_DEPLOYMENT_GUIDE.txt
+   → Quick overview and summary
+
+2. NEXT_STEPS_ACTION_PLAN.txt
+   → Detailed step-by-step instructions
+
+3. DEPLOYMENT_CHECKLIST_NEW_VERCEL.txt
+   → Extended troubleshooting guide
+
+4. OAUTH2_COMPLETE_FLOW_DIAGRAM.txt
+   → How OAuth flow works
+
+5. NEW_VERCEL_CONFIGURATION_SUMMARY.txt
+   → All variables and credentials
+
+6. QUICK_REFERENCE_URLS.txt
+   → All links and URLs
+
+7. RAILWAY_OAUTH_VARIABLES_UPDATE.txt
+   → Railway-specific updates
+
+═══════════════════════════════════════════════════════════════════
+
+🎉 DEPLOYMENT COMPLETE!
+
+Your app is now live and ready to use:
+https://ai-crmsite.vercel.app/
+
+Enjoy! 🚀

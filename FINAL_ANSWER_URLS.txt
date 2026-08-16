@@ -1,0 +1,87 @@
+✅ FINAL ANSWER - WHERE TO PUT URLs
+===================================
+
+
+Q: Do we put Railway URL in Google/GitHub OAuth?
+A: NO ❌
+
+
+Q: What do we put?
+A: ONLY Vercel URL
+
+
+═══════════════════════════════════════════════════════════════════
+
+FILL IN GOOGLE:
+═══════════════
+
+Authorized redirect URIs: 
+
+https://ai-crmsite.vercel.app/oauth2/callback
+
+(NO Railway URL here!)
+
+
+═══════════════════════════════════════════════════════════════════
+
+FILL IN GITHUB:
+═══════════════
+
+Authorization callback URL:
+
+https://ai-crmsite.vercel.app/oauth2/callback
+
+(NO Railway URL here!)
+
+
+═══════════════════════════════════════════════════════════════════
+
+WHERE RAILWAY URL GOES:
+═══════════════════════
+
+Railway → Backend Service → Settings → Variables
+
+Already done for you:
+
+OAUTH2_REDIRECT_URI_GOOGLE=https://crm-production-932d.up.railway.app/login/oauth2/code/google
+
+OAUTH2_REDIRECT_URI_GITHUB=https://crm-production-932d.up.railway.app/login/oauth2/code/github
+
+(Railway URLs go in Railway settings, NOT Google/GitHub)
+
+
+═══════════════════════════════════════════════════════════════════
+
+SIMPLE RULE:
+════════════
+
+Google/GitHub = Vercel URL only ✓
+Railway = Railway URL only ✓
+JavaScript = Both URLs ✓
+
+
+═══════════════════════════════════════════════════════════════════
+
+WHY?
+════
+
+Google/GitHub need to know where to send the user:
+→ Send to Vercel frontend (user-facing)
+
+Backend needs to know where to process OAuth:
+→ Uses Railway backend URL (hidden/internal)
+
+Frontend needs both:
+→ Vercel URL (where it is)
+→ Railway URL (where backend is)
+
+
+═══════════════════════════════════════════════════════════════════
+
+THAT'S IT!
+══════════
+
+Google:  https://ai-crmsite.vercel.app/oauth2/callback
+GitHub:  https://ai-crmsite.vercel.app/oauth2/callback
+
+Nothing else! ✅

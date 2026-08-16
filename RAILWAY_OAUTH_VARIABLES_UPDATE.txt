@@ -1,0 +1,66 @@
+🚂 RAILWAY BACKEND - OAUTH ENVIRONMENT VARIABLES UPDATE
+========================================================
+
+New Frontend URL: https://ai-crmsite.vercel.app/
+
+VARIABLES TO UPDATE IN RAILWAY:
+================================
+
+Go to Railway → Backend Service → Settings → Variables
+
+UPDATE THESE 4 VARIABLES:
+
+1. OAUTH2_REDIRECT_URI_GOOGLE
+   FROM: https://crm-production-932d.up.railway.app/login/oauth2/code/google
+   TO:   https://crm-production-932d.up.railway.app/login/oauth2/code/google
+   STATUS: ✓ NO CHANGE (Backend OAuth endpoint stays the same)
+
+2. OAUTH2_REDIRECT_URI_GITHUB
+   FROM: https://crm-production-932d.up.railway.app/login/oauth2/code/github
+   TO:   https://crm-production-932d.up.railway.app/login/oauth2/code/github
+   STATUS: ✓ NO CHANGE (Backend OAuth endpoint stays the same)
+
+3. CORS_ALLOWED_ORIGINS
+   FROM: https://crm-taskflow.vercel.app
+   TO:   https://ai-crmsite.vercel.app
+   STATUS: ⚠️ UPDATE REQUIRED
+
+4. OAUTH2_FRONTEND_FAILURE_URL
+   FROM: https://crm-taskflow.vercel.app/login?error=oauth2_failed
+   TO:   https://ai-crmsite.vercel.app/login?error=oauth2_failed
+   STATUS: ⚠️ UPDATE REQUIRED
+
+5. OAUTH2_REDIRECT_URI (Frontend callback)
+   FROM: https://crm-taskflow.vercel.app/oauth2/callback
+   TO:   https://ai-crmsite.vercel.app/oauth2/callback
+   STATUS: ⚠️ UPDATE REQUIRED (IF PRESENT)
+
+
+COMPLETE UPDATED OAUTH VARIABLES:
+=================================
+
+OAUTH2_REDIRECT_URI_GOOGLE=https://crm-production-932d.up.railway.app/login/oauth2/code/google
+OAUTH2_REDIRECT_URI_GITHUB=https://crm-production-932d.up.railway.app/login/oauth2/code/github
+OAUTH2_REDIRECT_URI=https://ai-crmsite.vercel.app/oauth2/callback
+CORS_ALLOWED_ORIGINS=https://ai-crmsite.vercel.app
+OAUTH2_FRONTEND_FAILURE_URL=https://ai-crmsite.vercel.app/login?error=oauth2_failed
+
+WEBSOCKET_ALLOWED_ORIGINS=https://ai-crmsite.vercel.app
+
+
+STEPS:
+======
+1. Go to Railway Dashboard
+2. Select CRM Backend Service
+3. Go to Settings → Variables
+4. Find and update the 3 variables above (CORS, OAUTH2_FRONTEND_FAILURE_URL, OAUTH2_REDIRECT_URI)
+5. Save changes
+6. Railway will automatically redeploy with new variables
+
+
+VERIFICATION:
+=============
+After updating, test OAuth flow at: https://ai-crmsite.vercel.app/login
+- Click "Sign in with Google" button
+- Should redirect to Google, then back to your new Vercel URL
+- Should work without CORS errors

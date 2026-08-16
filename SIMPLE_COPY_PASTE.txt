@@ -1,0 +1,49 @@
+📌 COPY & PASTE - NOTHING ELSE NEEDED
+====================================
+
+
+🔵 GOOGLE CLOUD CONSOLE
+════════════════════════
+
+1. Visit: https://console.cloud.google.com/apis/credentials
+2. Click on your OAuth 2.0 Client ID
+3. Click "ADD URI" button
+4. COPY & PASTE THIS EXACTLY:
+
+https://ai-crmsite.vercel.app/oauth2/callback
+
+5. Click "SAVE"
+6. DONE ✅
+
+
+🐙 GITHUB OAUTH APP
+════════════════════
+
+1. Visit: https://github.com/settings/developers
+2. Click your OAuth App "TaskFlow CRM"
+3. Find field: "Authorization callback URL"
+4. DELETE the old value
+5. COPY & PASTE THIS EXACTLY:
+
+https://ai-crmsite.vercel.app/oauth2/callback
+
+6. Click "Update application"
+7. DONE ✅
+
+
+═════════════════════════════════════════════════════════════
+
+BOTH GET THE SAME URL:
+
+https://ai-crmsite.vercel.app/oauth2/callback
+
+═════════════════════════════════════════════════════════════
+
+NO CODE!
+NO JAVA!
+NO JAVASCRIPT!
+NO CONFIGURATION!
+
+Just paste the URL and click save twice (Google + GitHub)
+
+That's it! ✅

@@ -1,0 +1,214 @@
+📋 CONFIGURATION SUMMARY - NEW VERCEL DOMAIN
+=============================================
+
+All URLs and Values for Your New Deployment:
+
+NEW VERCEL DOMAIN:  https://ai-crmsite.vercel.app/
+BACKEND DOMAIN:     https://crm-production-932d.up.railway.app/
+
+
+1️⃣ GOOGLE CLOUD CONSOLE
+=======================
+URL: https://console.cloud.google.com/apis/credentials
+
+OAuth 2.0 Client ID: 868446398693-tpstebo709mvs71sgl2dn53bkvmktdlo.apps.googleusercontent.com
+Client Secret: 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
+
+Authorized Redirect URIs (add these):
+  ✓ https://ai-crmsite.vercel.app/oauth2/callback
+  ✓ http://localhost:3000/oauth2/callback
+  
+Keep existing:
+  ✓ https://crm-production-932d.up.railway.app/login/oauth2/code/google (for backend)
+
+
+2️⃣ GITHUB OAUTH APP
+====================
+URL: https://github.com/settings/developers
+
+OAuth App: "TaskFlow CRM"
+Client ID: Ov23limUdSzMDoTdWkX5
+Client Secret: b7c859a0569e1391f7e598f6da9e9326f0d7669f
+
+Authorization Callback URL:
+  ✓ https://ai-crmsite.vercel.app/oauth2/callback
+  
+Or add as additional URL:
+  ✓ https://ai-crmsite.vercel.app/oauth2/callback
+
+
+3️⃣ RAILWAY BACKEND - OAUTH VARIABLES
+=====================================
+These must be updated in Railway → Backend Service → Settings → Variables
+
+CORS_ALLOWED_ORIGINS=https://ai-crmsite.vercel.app
+
+OAUTH2_FRONTEND_FAILURE_URL=https://ai-crmsite.vercel.app/login?error=oauth2_failed
+
+OAUTH2_REDIRECT_URI=https://ai-crmsite.vercel.app/oauth2/callback
+
+WEBSOCKET_ALLOWED_ORIGINS=https://ai-crmsite.vercel.app
+
+
+4️⃣ VERCEL FRONTEND - ENVIRONMENT VARIABLES (Already Set)
+=========================================================
+These are in .env.production:
+
+VITE_API_URL=https://crm-production-932d.up.railway.app
+VITE_WS_URL=wss://crm-production-932d.up.railway.app/ws
+VITE_GOOGLE_CLIENT_ID=868446398693-tpstebo709mvs71sgl2dn53bkvmktdlo.apps.googleusercontent.com
+VITE_GITHUB_CLIENT_ID=Ov23limUdSzMDoTdWkX5
+VITE_CLOUDINARY_CLOUD_NAME=lb7tu53k
+VITE_CLOUDINARY_UPLOAD_PRESET=taskflow_avatars
+
+
+5️⃣ IMPORTANT BACKEND OAUTH VARIABLES (No Change)
+==================================================
+These stay the same in Railway (OAuth code exchange endpoints):
+
+OAUTH2_REDIRECT_URI_GOOGLE=https://crm-production-932d.up.railway.app/login/oauth2/code/google
+OAUTH2_REDIRECT_URI_GITHUB=https://crm-production-932d.up.railway.app/login/oauth2/code/github
+
+Why no change? These are backend-internal endpoints that process OAuth codes.
+Google/GitHub don't see these - only the frontend callback URL matters.
+
+
+6️⃣ ALL OTHER RAILWAY VARIABLES (Complete List)
+================================================
+
+DATABASE_URL=jdbc:postgresql://aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres?sslmode=require
+DATABASE_USERNAME=postgres.xkzpzcvwzqjavftrnxjl
+DATABASE_PASSWORD=TASKFLOWCRM@#12345
+DATABASE_PORT=5432
+DATABASE_NAME=postgres
+DB_POOL_SIZE=10
+
+SPRING_PROFILES_ACTIVE=prod
+SERVER_PORT=8080
+HIBERNATE_DDL_AUTO=update
+
+JWT_SECRET=404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+JWT_EXPIRATION=86400000
+JWT_REFRESH_EXPIRATION=604800000
+
+GOOGLE_CLIENT_ID=868446398693-tpstebo709mvs71sgl2dn53bkvmktdlo.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=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
+GITHUB_CLIENT_ID=Ov23limUdSzMDoTdWkX5
+GITHUB_CLIENT_SECRET=b7c859a0569e1391f7e598f6da9e9326f0d7669f
+
+BREVO_API_KEY=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
+APP_MAIL_FROM=xsde790@gmail.com
+APP_MAIL_FROM_NAME=TaskFlow
+
+XAI_API_KEY=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
+XAI_MODEL=grok-4.20-reasoning
+XAI_BASE_URL=https://api.x.ai/v1/chat/completions
+
+AI_TEMPERATURE=0.7
+AI_MAX_TOKENS=1000
+AI_TIMEOUT=30000
+AI_RETRY_MAX_ATTEMPTS=3
+AI_RETRY_BACKOFF=1000
+AI_CACHE_TTL=1800000
+
+CLOUDINARY_CLOUD_NAME=lb7tu53k
+CLOUDINARY_API_KEY=288781639334571
+CLOUDINARY_API_SECRET=T-hLwbJ_DJ-FENIW3mielvMcfQw
+CLOUDINARY_MAX_FILE_SIZE=20971520
+CLOUDINARY_CHAT_FOLDER=chat
+CLOUDINARY_TASK_FOLDER=tasks
+
+INVITATION_BASE_URL=https://ai-crmsite.vercel.app/invitations
+LOG_LEVEL=INFO
+SQL_LOG_LEVEL=WARN
+UPLOAD_DIR=/tmp/uploads
+MAX_FILE_SIZE=52428800
+DEFAULT_PAGE_SIZE=20
+ASYNC_CORE_POOL_SIZE=5
+ASYNC_MAX_POOL_SIZE=10
+SCHEDULER_POOL_SIZE=5
+
+REDIS_ENABLED=false
+SPRING_AUTOCONFIGURE_EXCLUDE=org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+
+
+7️⃣ QUICK REFERENCE - WHAT CHANGED
+==================================
+
+From Old:                              To New:
+─────────────────────────────────────────────────────────────
+crm-taskflow.vercel.app        →    ai-crmsite.vercel.app
+crm-production-17c2...         →    crm-production-932d...
+(old Railway backend)               (current Railway backend)
+
+
+8️⃣ DEPLOYMENT URLS AFTER UPDATE
+================================
+
+Frontend:  https://ai-crmsite.vercel.app/
+Login:     https://ai-crmsite.vercel.app/login
+OAuth2:    https://ai-crmsite.vercel.app/oauth2/callback
+Dashboard: https://ai-crmsite.vercel.app/dashboard
+
+Backend:   https://crm-production-932d.up.railway.app/
+Health:    https://crm-production-932d.up.railway.app/actuator/health
+API:       https://crm-production-932d.up.railway.app/api/...
+
+
+9️⃣ TESTING CHECKLIST
+====================
+
+OAuth Google:
+  [ ] Frontend loads: https://ai-crmsite.vercel.app/
+  [ ] Click: "Sign in with Google"
+  [ ] Redirects to: accounts.google.com ✓
+  [ ] Enter Google credentials
+  [ ] Redirects back to: https://ai-crmsite.vercel.app/oauth2/callback ✓
+  [ ] Dashboard loads ✓
+  [ ] No CORS errors ✓
+
+OAuth GitHub:
+  [ ] Frontend loads: https://ai-crmsite.vercel.app/
+  [ ] Click: "Sign in with GitHub"
+  [ ] Redirects to: github.com/login ✓
+  [ ] Enter GitHub credentials
+  [ ] Redirects back to: https://ai-crmsite.vercel.app/oauth2/callback ✓
+  [ ] Dashboard loads ✓
+  [ ] No CORS errors ✓
+
+
+🔟 IF SOMETHING GOES WRONG
+==========================
+
+CORS Error:
+  1. Check Railway: CORS_ALLOWED_ORIGINS=https://ai-crmsite.vercel.app
+  2. Wait 2-5 minutes for Railway to redeploy
+  3. Hard refresh browser (Ctrl+Shift+R)
+
+OAuth Provider Error:
+  1. Check Google Console - redirect URI must match exactly
+  2. Check GitHub OAuth App - callback URL must match exactly
+  3. Make sure new Vercel URL is added (not just old one)
+
+Database Connection Error:
+  1. Check DATABASE_PASSWORD is complete: TASKFLOWCRM@#12345
+  2. Check Supabase circuit breaker isn't active
+  3. Wait 10-15 minutes if circuit breaker is active
+
+Frontend not loading:
+  1. Check Vercel deployment succeeded
+  2. Check Vercel environment variables are set
+  3. Hard refresh browser (Ctrl+Shift+R)
+
+Backend not responding:
+  1. Check Railway service is running
+  2. Check Railway deployment logs
+  3. Verify database connection is working
+
+
+✅ YOU'RE ALL SET!
+=================
+Once you update Google Console, GitHub, and Railway variables,
+your app will be fully deployed and ready to use!
+
+Production URL: https://ai-crmsite.vercel.app/

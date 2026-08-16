@@ -38,10 +38,10 @@ export default function EmailCampaignDetails() {
 
   // Use backend metrics if available, otherwise fallback to recipient count
   const metrics = [
-    { label: 'Recipients', value: analyticsData.totalRecipients || item.totalRecipients || recipientItems.length, icon: Users },
-    { label: 'Delivered', value: analyticsData.deliveredCount || 0, icon: Mail },
-    { label: 'Opened', value: analyticsData.openedCount || 0, icon: Mail },
-    { label: 'Clicked', value: analyticsData.clickedCount || 0, icon: Mail }
+    { label: 'Recipients', value: analyticsData.totalSent || item.totalRecipients || recipientItems.length, icon: Users },
+    { label: 'Delivered', value: analyticsData.totalDelivered || 0, icon: Mail },
+    { label: 'Opened', value: analyticsData.totalOpened || 0, icon: Mail },
+    { label: 'Clicked', value: analyticsData.totalClicked || 0, icon: Mail }
   ]
 
   // Calculate rates
