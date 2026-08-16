@@ -59,8 +59,7 @@ export default function EmailCampaignDetails() {
     {/* Main Metrics */}
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{metrics.map(({ label, value, icon: Icon }) => <div key={label} className="rounded-lg border border-gray-200 bg-white p-4 dark:border-[#30363D] dark:bg-[#161B22]"><Icon size={18} className="text-violet-600" /><p className="mt-3 text-2xl font-bold text-gray-900 dark:text-white">{value}</p><p className="text-sm text-gray-600 dark:text-gray-400">{label}</p></div>)}</div>
 
-    {/* Analytics Rates - only show if campaign has been sent */}
-    {metrics[1].value > 0 && (
+    {/* Analytics Rates */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-[#30363D] dark:bg-[#161B22]">
           <div className="flex items-center justify-between">
@@ -90,7 +89,6 @@ export default function EmailCampaignDetails() {
           </div>
         </div>
       </div>
-    )}
 
     {/* Recipients Table */}
     <div className="rounded-lg border border-gray-200 bg-white dark:border-[#30363D] dark:bg-[#161B22]">
