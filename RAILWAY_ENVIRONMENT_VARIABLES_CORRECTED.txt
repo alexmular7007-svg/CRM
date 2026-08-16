@@ -1,0 +1,175 @@
+================================================================================
+RAILWAY BACKEND SERVICE - CORRECTED ENVIRONMENT VARIABLES
+================================================================================
+
+NEW BACKEND URL: https://crm-production-932d.up.railway.app
+
+================================================================================
+DATABASE CONFIGURATION
+================================================================================
+
+SPRING_PROFILES_ACTIVE=prod
+SERVER_PORT=8080
+DATABASE_URL=jdbc:postgresql://aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres?sslmode=require
+DATABASE_USERNAME=postgres.xkzpzcvwzqjavftrnxjl
+DATABASE_PASSWORD=TASKFLOWCRM@#12345
+DATABASE_PORT=5432
+DATABASE_NAME=postgres
+DB_POOL_SIZE=10
+HIBERNATE_DDL_AUTO=update
+
+================================================================================
+JWT CONFIGURATION
+================================================================================
+
+JWT_SECRET=404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+JWT_EXPIRATION=86400000
+JWT_REFRESH_EXPIRATION=604800000
+
+================================================================================
+OAUTH2 CONFIGURATION (UPDATED WITH NEW BACKEND URL)
+================================================================================
+
+GOOGLE_CLIENT_ID=868446398693-tpstebo709mvs71sgl2dn53bkvmktdlo.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=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
+OAUTH2_REDIRECT_URI_GOOGLE=https://crm-production-932d.up.railway.app/login/oauth2/code/google
+
+GITHUB_CLIENT_ID=Ov23limUdSzMDoTdWkX5
+GITHUB_CLIENT_SECRET=b7c859a0569e1391f7e598f6da9e9326f0d7669f
+OAUTH2_REDIRECT_URI_GITHUB=https://crm-production-932d.up.railway.app/login/oauth2/code/github
+
+OAUTH2_REDIRECT_URI=https://crm-taskflow.vercel.app/oauth2/callback
+
+================================================================================
+CORS & WEBSOCKET CONFIGURATION
+================================================================================
+
+CORS_ALLOWED_ORIGINS=https://crm-taskflow.vercel.app
+CORS_ALLOW_CREDENTIALS=true
+WEBSOCKET_ALLOWED_ORIGINS=https://crm-taskflow.vercel.app
+
+================================================================================
+REDIS CONFIGURATION (DISABLED)
+================================================================================
+
+REDIS_ENABLED=false
+SPRING_AUTOCONFIGURE_EXCLUDE=org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+
+================================================================================
+EMAIL CONFIGURATION (BREVO)
+================================================================================
+
+BREVO_API_KEY=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
+APP_MAIL_FROM=xsde790@gmail.com
+APP_MAIL_FROM_NAME=TaskFlow
+
+================================================================================
+AI CONFIGURATION (XAI - GROK)
+================================================================================
+
+XAI_API_KEY=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
+XAI_MODEL=grok-4.20-reasoning
+XAI_BASE_URL=https://api.x.ai/v1/chat/completions
+AI_TEMPERATURE=0.7
+AI_MAX_TOKENS=1000
+AI_TIMEOUT=30000
+AI_RETRY_MAX_ATTEMPTS=3
+AI_RETRY_BACKOFF=1000
+AI_CACHE_TTL=1800000
+
+================================================================================
+CLOUDINARY CONFIGURATION
+================================================================================
+
+CLOUDINARY_CLOUD_NAME=lb7tu53k
+CLOUDINARY_API_KEY=288781639334571
+CLOUDINARY_API_SECRET=T-hLwbJ_DJ-FENIW3mielvMcfQw
+CLOUDINARY_MAX_FILE_SIZE=20971520
+CLOUDINARY_CHAT_FOLDER=chat
+CLOUDINARY_TASK_FOLDER=tasks
+
+================================================================================
+APPLICATION CONFIGURATION
+================================================================================
+
+INVITATION_BASE_URL=https://crm-taskflow.vercel.app/invitations
+OAUTH2_FRONTEND_FAILURE_URL=https://crm-taskflow.vercel.app/login?error=oauth2_failed
+LOG_LEVEL=INFO
+SQL_LOG_LEVEL=WARN
+UPLOAD_DIR=/tmp/uploads
+MAX_FILE_SIZE=52428800
+DEFAULT_PAGE_SIZE=20
+
+================================================================================
+ASYNC & SCHEDULER CONFIGURATION
+================================================================================
+
+ASYNC_CORE_POOL_SIZE=5
+ASYNC_MAX_POOL_SIZE=10
+SCHEDULER_POOL_SIZE=5
+
+================================================================================
+VERIFICATION CHECKLIST
+================================================================================
+
+✅ DATABASE_PASSWORD = TASKFLOWCRM@#12345 (complete, no truncation)
+✅ OAUTH2_REDIRECT_URI_GOOGLE = https://crm-production-932d.up.railway.app/login/oauth2/code/google
+✅ OAUTH2_REDIRECT_URI_GITHUB = https://crm-production-932d.up.railway.app/login/oauth2/code/github
+✅ OAUTH2_REDIRECT_URI = https://crm-taskflow.vercel.app/oauth2/callback
+✅ CORS_ALLOWED_ORIGINS = https://crm-taskflow.vercel.app
+✅ WEBSOCKET_ALLOWED_ORIGINS = https://crm-taskflow.vercel.app
+✅ BREVO_API_KEY = Active
+✅ XAI_API_KEY = Active
+
+================================================================================
+STEP-BY-STEP COPY-PASTE GUIDE FOR RAILWAY
+================================================================================
+
+1. Go to: Railway Dashboard → Backend Service → Variables
+2. Delete OLD values for:
+   - OAUTH2_REDIRECT_URI_GOOGLE (OLD)
+   - OAUTH2_REDIRECT_URI_GITHUB (OLD)
+
+3. Add/Update these variables with the values above
+
+4. Click "Save"
+
+5. Go to "Deployments" tab and click "Redeploy"
+
+6. Wait for build to complete
+
+7. Check logs for:
+   - ✅ No "password authentication failed" errors
+   - ✅ No "Dockerfile" errors
+   - ✅ Application started successfully
+
+================================================================================
+EXTERNAL OAUTH2 CONFIGURATION (Also needs update)
+================================================================================
+
+GOOGLE CLOUD CONSOLE:
+  https://console.cloud.google.com/apis/credentials
+  
+  Update "Authorized redirect URIs":
+  - https://crm-production-932d.up.railway.app/login/oauth2/code/google
+  - https://crm-taskflow.vercel.app/oauth2/callback
+
+GITHUB OAUTH APP:
+  https://github.com/settings/developers
+  
+  Update "Authorization callback URL":
+  - https://crm-production-932d.up.railway.app/login/oauth2/code/github
+
+================================================================================
+QUICK REFERENCE
+================================================================================
+
+Backend URL:    https://crm-production-932d.up.railway.app
+Frontend URL:   https://crm-taskflow.vercel.app
+Database:       Supabase PostgreSQL
+Email Service:  Brevo (SendinBlue)
+AI Model:       XAI Grok
+Image Storage:  Cloudinary
+OAuth2:         Google + GitHub
+
+================================================================================
