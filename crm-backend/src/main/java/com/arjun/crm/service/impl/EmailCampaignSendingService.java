@@ -69,15 +69,16 @@ public class EmailCampaignSendingService {
             log.info("[STEP 1] Campaign loaded: {} (ID: {}, Status: {})", 
                     campaign.getName(), campaign.getId(), campaign.getStatus());
             
-            // Step 2: Load template
+            // Step 2: Load template (optional now - can use custom HTML)
             EmailTemplate template = campaign.getTemplate();
-            if (template == null) {
-                log.error("[STEP 2] Campaign has no template associated");
-                updateCampaignFailed(campaign, "No template associated with campaign");
+            log.info("[STEP 2] Template loaded: {}", template != null ? template.getName() + " (ID: " + template.getId() + ")" : "NONE - using custom HTML");
+            
+            // Check if we have either a template OR custom HTML content
+            if (template == null && (campaign.getCustomHtmlContent() == null || campaign.getCustomHtmlContent().trim().isEmpty())) {
+                log.error("[STEP 2] Campaign has no template and no custom HTML content");
+                updateCampaignFailed(campaign, "Campaign must have either a template or custom HTML content");
                 return;
             }
-            
-            log.info("[STEP 2] Template loaded: {} (ID: {})", template.getName(), template.getId());
             
             // Step 3: Load all recipients with status = PENDING
             log.info("[STEP 3] Loading recipients with status=PENDING...");
@@ -110,9 +111,19 @@ public class EmailCampaignSendingService {
                                 recipient.getRecipientEmail(), recipient.getId());
                         
                         // Get email content: either custom HTML or template HTML
-                        String emailContent = campaign.getCustomHtmlContent() != null 
+                        String emailContent = campaign.getCustomHtmlContent() != null && !campaign.getCustomHtmlContent().trim().isEmpty()
                             ? campaign.getCustomHtmlContent()
-                            : (template != null ? template.getHtmlContent() : "");
+                            : (template != null && template.getHtmlContent() != null ? template.getHtmlContent() : "");
+                        
+                        // SAFETY CHECK: Prevent empty email body
+                        if (emailContent == null || emailContent.trim().isEmpty()) {
+                            log.error("[STEP 4] Email content is empty for recipient: {}", recipient.getRecipientEmail());
+                            recipient.setStatus("FAILED");
+                            recipient.setErrorMessage("Email content is empty - no template or custom HTML provided");
+                            recipientRepository.save(recipient);
+                            failureCount++;
+                            continue;  // Skip this recipient
+                        }
                         
                         // Add CTA button if configured
                         if (campaign.getCtaButtonUrl() != null && !campaign.getCtaButtonUrl().isEmpty()) {
@@ -141,10 +152,26 @@ public class EmailCampaignSendingService {
                                 recipient
                         );
                         
+                        // SAFETY CHECK: Ensure rendered subject is not empty
+                        if (renderedSubject == null || renderedSubject.trim().isEmpty()) {
+                            renderedSubject = "Your Email";
+                            log.warn("[STEP 4] Subject was empty, using default: {}", renderedSubject);
+                        }
+                        
                         String renderedHtml = renderTemplate(
                                 emailContent,
                                 recipient
                         );
+                        
+                        // SAFETY CHECK: Ensure rendered HTML is not empty before sending to Brevo
+                        if (renderedHtml == null || renderedHtml.trim().isEmpty()) {
+                            log.error("[STEP 4] Rendered HTML is empty for recipient: {}", recipient.getRecipientEmail());
+                            recipient.setStatus("FAILED");
+                            recipient.setErrorMessage("Rendered HTML is empty after template processing");
+                            recipientRepository.save(recipient);
+                            failureCount++;
+                            continue;  // Skip this recipient
+                        }
                         
                         log.info("[STEP 4] Template rendered for: {}", recipient.getRecipientEmail());
                         log.info("[STEP 4] Rendered Subject: {}", renderedSubject);
