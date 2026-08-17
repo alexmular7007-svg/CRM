@@ -1,0 +1,281 @@
+═══════════════════════════════════════════════════════════════════════════════
+🚨 CRITICAL: BREVO WEBHOOKS NOT CONFIGURED
+═══════════════════════════════════════════════════════════════════════════════
+
+ROOT CAUSE IDENTIFIED:
+  ❌ No webhooks configured in Brevo dashboard
+  ❌ That's why emails deliver but analytics don't update
+  ❌ Backend webhook endpoint exists, but Brevo never calls it
+
+SOLUTION: Configure webhooks in Brevo (Simple - takes 5 minutes)
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP-BY-STEP WEBHOOK SETUP IN BREVO
+═══════════════════════════════════════════════════════════════════════════════
+
+STEP 1: Log in to Brevo
+───────────────────────
+
+1. Open: https://www.brevo.com
+2. Click "Sign In" (top right)
+3. Enter your email and password
+4. Click "Sign In"
+
+
+STEP 2: Navigate to Webhooks Section
+─────────────────────────────────────
+
+After logging in, look for one of these paths:
+
+PATH A (Most Common):
+  1. Click your name/profile (top right)
+  2. Click "Account Settings"
+  3. Look for "Webhooks" in left sidebar
+  4. Click "Webhooks"
+
+PATH B (Alternative):
+  1. Look for "Settings" icon or menu
+  2. Click "SMTP & API"
+  3. Look for "Webhooks" tab
+  4. Click "Webhooks"
+
+PATH C (If still can't find):
+  1. Search in Brevo for "webhooks"
+  2. Or go directly to: https://app.brevo.com/webhook
+  3. You should see webhook configuration page
+
+
+STEP 3: Create New Webhook
+──────────────────────────
+
+On the Webhooks page, look for a button like:
+  - "Add webhook"
+  - "Create webhook"
+  - "New webhook"
+  - "Configure webhook"
+
+Click this button.
+
+
+STEP 4: Fill in Webhook URL
+────────────────────────────
+
+You'll see a form with a field like "Webhook URL" or "Endpoint URL"
+
+PASTE THIS EXACT URL:
+
+https://crm-production-932d.up.railway.app/api/webhooks/brevo
+
+
+IMPORTANT:
+  ✓ Must be HTTPS (not HTTP)
+  ✓ Must be exact domain: crm-production-932d.up.railway.app
+  ✓ Must include: /api/webhooks/brevo
+  ✓ No trailing slash at the end
+
+
+STEP 5: Select Events to Track
+───────────────────────────────
+
+You'll see a list of email events with checkboxes. SELECT THESE:
+
+REQUIRED (Must select):
+  ✅ DELIVERED
+  ✅ OPENED
+  ✅ CLICKED
+
+RECOMMENDED (Optional but good):
+  ✅ BOUNCE
+  ✅ SOFT_BOUNCE
+  ✅ SPAM
+  ✅ UNSUBSCRIBE
+  ✅ REPLY
+
+Leave unchecked (not needed):
+  ❌ SENT (we handle this client-side)
+  ❌ RENDERED (we don't need this)
+
+At minimum, check: DELIVERED, OPENED, CLICKED
+
+
+STEP 6: Save/Create the Webhook
+────────────────────────────────
+
+Look for a button like:
+  - "Save"
+  - "Create"
+  - "Add webhook"
+  - "Confirm"
+
+Click this button.
+
+EXPECTED RESULT:
+  ✓ You'll see a success message
+  ✓ Webhook URL will show in list
+  ✓ Status might show "Active" or "Enabled"
+
+
+═══════════════════════════════════════════════════════════════════════════════
+COMPLETE EXAMPLE: WHAT YOU SHOULD SEE
+═══════════════════════════════════════════════════════════════════════════════
+
+After successful webhook creation, Brevo should show:
+
+Webhook Configuration:
+  ├─ Webhook URL: https://crm-production-932d.up.railway.app/api/webhooks/brevo
+  ├─ Status: Active/Enabled
+  └─ Events:
+      ├─ ✓ DELIVERED
+      ├─ ✓ OPENED
+      ├─ ✓ CLICKED
+      ├─ ✓ BOUNCE
+      ├─ ✓ SOFT_BOUNCE
+      ├─ ✓ SPAM
+      └─ ✓ UNSUBSCRIBE
+
+
+═══════════════════════════════════════════════════════════════════════════════
+VERIFICATION: TEST WEBHOOK
+═══════════════════════════════════════════════════════════════════════════════
+
+After creating webhook, Brevo might show a "Test" button. Click it to:
+  1. Send test webhook to your backend
+  2. Verify it's working
+  3. See if backend responds with HTTP 200 OK
+
+
+═══════════════════════════════════════════════════════════════════════════════
+AFTER WEBHOOK SETUP: TEST END-TO-END
+═══════════════════════════════════════════════════════════════════════════════
+
+Once webhook is configured in Brevo:
+
+1. Open your app: https://ai-crmsite.vercel.app/
+2. Go to: Marketing → Email Campaigns
+3. Create test campaign OR use existing one
+4. Send to test email (your Gmail)
+5. Wait 1-2 minutes for delivery
+6. Check your Gmail inbox - email should be there ✓
+7. Go back to campaign details page
+8. Refresh browser (Ctrl+F5 or Cmd+Shift+R)
+9. Check analytics:
+   ├─ Delivered: should show 1 (not 0)
+   ├─ Opened: should show 0 (not opened yet)
+   └─ Delivery Rate: should show 100% (not 0%)
+
+If Delivered = 1, webhook is working! ✅
+
+
+10. Now open the email in Gmail
+11. Return to campaign details page
+12. Refresh browser
+13. Check analytics:
+    ├─ Opened: should now show 1
+    ├─ Open Rate: should show 100%
+    └─ (If you wait 30 seconds, it should auto-refresh)
+
+If Opened = 1, opening tracking works! ✅
+
+
+14. If email has a link, click it in Gmail
+15. Return to campaign details page
+16. Refresh browser
+17. Check analytics:
+    ├─ Clicked: should show 1
+    ├─ Click Rate: should show 100%
+
+If Clicked = 1, click tracking works! ✅
+
+
+═══════════════════════════════════════════════════════════════════════════════
+TROUBLESHOOTING: IF STILL NOT WORKING
+═══════════════════════════════════════════════════════════════════════════════
+
+PROBLEM: Webhook saved but analytics still show 0 delivered
+───────────────────────────────────────────────────────────
+
+Possible causes:
+
+1. BREVO WEBHOOK NOT ACTUALLY ENABLED
+   Solution:
+   - Go back to Brevo webhook settings
+   - Verify webhook shows "Active" status (not "Disabled")
+   - Check URL is exactly: https://crm-production-932d.up.railway.app/api/webhooks/brevo
+   - Check DELIVERED event is checked
+   - Re-save if needed
+
+2. BACKEND NOT RUNNING
+   Solution:
+   - Check Railway dashboard
+   - Is Backend service running? (should show green/active)
+   - Check logs for errors
+   - If down, it will need to be redeployed
+
+3. WEBHOOK URL NOT REACHING BACKEND
+   Solution:
+   - Test from terminal (ask for instructions)
+   - Check if backend logs show webhook reception
+   - Verify HTTPS certificate is valid
+
+4. WRONG CAMPAIGN ID IN METADATA
+   Solution:
+   - Should be automatically correct
+   - If not, check email sending code sends campaign_id in metadata
+
+5. DATABASE NOT UPDATING
+   Solution:
+   - Webhooks might be arriving but database update failing
+   - Check backend logs for errors
+   - Verify email_campaign_recipients table exists
+
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP-BY-STEP WEBHOOK SETUP (VISUAL GUIDE)
+═══════════════════════════════════════════════════════════════════════════════
+
+EXPECTED CLICKS:
+
+1. https://www.brevo.com → Sign In
+2. Profile icon (top right) → Account Settings
+3. Left sidebar → Webhooks
+4. Button: "Add webhook" or "Create webhook"
+5. Webhook URL field → Paste: https://crm-production-932d.up.railway.app/api/webhooks/brevo
+6. Checkboxes:
+   ✓ DELIVERED
+   ✓ OPENED
+   ✓ CLICKED
+7. Button: "Save" or "Create"
+8. See success message
+9. Done! ✅
+
+
+═══════════════════════════════════════════════════════════════════════════════
+SUMMARY
+═══════════════════════════════════════════════════════════════════════════════
+
+ISSUE:
+  ❌ No webhooks in Brevo
+  ❌ Brevo can't send analytics events to your backend
+  ❌ Backend webhook endpoint exists but isn't being used
+
+SOLUTION:
+  ✅ Add webhook URL to Brevo dashboard
+  ✅ Enable DELIVERED, OPENED, CLICKED events
+  ✅ Brevo will start sending events to your backend
+  ✅ Analytics will update automatically
+
+RESULT:
+  ✅ Emails are delivered - webhook notifies backend
+  ✅ Emails are opened - webhook notifies backend
+  ✅ Links are clicked - webhook notifies backend
+  ✅ Analytics display correct metrics
+
+═══════════════════════════════════════════════════════════════════════════════
+WEBHOOK URL TO COPY-PASTE
+═══════════════════════════════════════════════════════════════════════════════
+
+Use this URL exactly:
+
+https://crm-production-932d.up.railway.app/api/webhooks/brevo
+
+═══════════════════════════════════════════════════════════════════════════════

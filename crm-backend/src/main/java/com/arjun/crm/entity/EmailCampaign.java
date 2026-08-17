@@ -79,6 +79,15 @@ public class EmailCampaign {
     @Column(length = 50)
     private String contentType;  // TEMPLATE, CUSTOM_HTML, MARKDOWN
     
+    @Column(columnDefinition = "TEXT")
+    private String customHtmlContent;  // Custom HTML content when contentType = CUSTOM_HTML
+    
+    @Column(length = 255)
+    private String ctaButtonText;  // e.g., "Explore AI CRM"
+    
+    @Column(length = 2048)
+    private String ctaButtonUrl;  // e.g., "https://my-project-domain.com"
+    
     @Column(nullable = false, length = 50)
     private String status;  // DRAFT, SCHEDULED, SENDING, SENT, PAUSED, FAILED, ARCHIVED
     

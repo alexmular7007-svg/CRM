@@ -92,6 +92,9 @@ public class EmailCampaignServiceImpl implements EmailCampaignService {
                 .subjectVariables(request.getVariables())
                 .template(template)
                 .contentType(request.getContentType() != null ? request.getContentType() : "TEMPLATE")
+                .customHtmlContent(request.getHtmlContent())
+                .ctaButtonText(request.getCtaButtonText())
+                .ctaButtonUrl(request.getCtaButtonUrl())
                 .status(request.getStatus() != null ? request.getStatus() : "DRAFT")
                 .isActive(request.getIsActive() != null ? request.getIsActive() : true)
                 .createdBy(authenticatedUser)
@@ -102,8 +105,8 @@ public class EmailCampaignServiceImpl implements EmailCampaignService {
                 .build();
         
         campaign = campaignRepository.save(campaign);
-        log.info("Campaign created: {} (ID: {}) with recipientMode: {}", 
-                campaign.getName(), campaign.getId(), campaign.getRecipientMode());
+        log.info("Campaign created: {} (ID: {}) with CTA: {} ({})", 
+                campaign.getName(), campaign.getId(), campaign.getCtaButtonText(), campaign.getCtaButtonUrl());
         
         return mapToResponse(campaign);
     }

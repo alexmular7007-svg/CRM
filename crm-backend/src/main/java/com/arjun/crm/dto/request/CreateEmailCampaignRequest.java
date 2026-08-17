@@ -40,6 +40,11 @@ public class CreateEmailCampaignRequest {
     
     private String[] variables;  // Array of variable names
     
+    // CTA Button Configuration
+    private String ctaButtonText;  // e.g., "Explore AI CRM", "Get 60% OFF"
+    
+    private String ctaButtonUrl;  // e.g., "https://my-project-domain.com"
+    
     // NEW: Recipient mode - MANUAL, SEGMENT, or CRM_FILTER
     private String recipientMode;  // MANUAL, SEGMENT, CRM_FILTER
     

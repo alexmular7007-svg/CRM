@@ -109,14 +109,40 @@ public class EmailCampaignSendingService {
                         log.info("[STEP 4] Processing recipient: {} (ID: {})", 
                                 recipient.getRecipientEmail(), recipient.getId());
                         
+                        // Get email content: either custom HTML or template HTML
+                        String emailContent = campaign.getCustomHtmlContent() != null 
+                            ? campaign.getCustomHtmlContent()
+                            : (template != null ? template.getHtmlContent() : "");
+                        
+                        // Add CTA button if configured
+                        if (campaign.getCtaButtonUrl() != null && !campaign.getCtaButtonUrl().isEmpty()) {
+                            String ctaButtonText = campaign.getCtaButtonText() != null && !campaign.getCtaButtonText().isEmpty()
+                                ? campaign.getCtaButtonText()
+                                : "Learn More";
+                            
+                            String ctaHtml = String.format(
+                                "<div style=\"text-align: center; margin: 30px 0;\">" +
+                                "  <a href=\"%s\" style=\"display: inline-block; padding: 15px 40px; background-color: #3b82f6; " +
+                                "color: white; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;\">" +
+                                "%s</a>" +
+                                "</div>",
+                                campaign.getCtaButtonUrl(),
+                                ctaButtonText
+                            );
+                            
+                            // Append CTA to email content
+                            emailContent = emailContent + ctaHtml;
+                            log.info("[STEP 4] CTA button added: {} ({})", ctaButtonText, campaign.getCtaButtonUrl());
+                        }
+                        
                         // Render email template
                         String renderedSubject = renderTemplate(
-                                campaign.getSubject() != null ? campaign.getSubject() : template.getSubjectTemplate(),
+                                campaign.getSubject() != null ? campaign.getSubject() : (template != null ? template.getSubjectTemplate() : ""),
                                 recipient
                         );
                         
                         String renderedHtml = renderTemplate(
-                                template.getHtmlContent(),
+                                emailContent,
                                 recipient
                         );
                         

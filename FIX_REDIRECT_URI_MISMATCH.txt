@@ -1,0 +1,211 @@
+🚨 ERROR: redirect_uri_mismatch
+===============================
+
+PROBLEM:
+========
+Google says: "I don't recognize this redirect_uri"
+
+REASON:
+=======
+The URL sent by frontend doesn't match Google Console settings
+
+
+WHAT FRONTEND IS SENDING:
+=========================
+
+Your code sends this redirect_uri to Google:
+
+https://ai-crmsite.vercel.app/oauth2/callback
+
+(window.location.origin + "/oauth2/callback")
+
+
+WHAT GOOGLE HAS REGISTERED:
+===========================
+
+You MUST have added this EXACTLY in Google Console:
+
+https://ai-crmsite.vercel.app/oauth2/callback
+
+If you added something different, Google rejects it.
+
+
+HOW TO FIX:
+===========
+
+STEP 1: Go to Google Cloud Console
+https://console.cloud.google.com/apis/credentials
+
+STEP 2: Click on your OAuth 2.0 Client ID ("TaskFlow CRM")
+
+STEP 3: Scroll down to "Authorized redirect URIs"
+
+STEP 4: Check if you see:
+✓ https://ai-crmsite.vercel.app/oauth2/callback
+
+If YES → Problem might be something else
+If NO → Add it now!
+
+STEP 5: Make sure it's EXACTLY:
+- https:// (not http://)
+- ai-crmsite (your Vercel domain)
+- .vercel.app (exact)
+- /oauth2/callback (no extra slashes)
+- No trailing slash at the end
+
+STEP 6: Save/Update
+
+STEP 7: Wait 5-10 minutes for changes to propagate
+
+STEP 8: Try login again
+
+
+COMMON MISTAKES:
+================
+
+❌ Wrong domain: https://crm-taskflow.vercel.app/oauth2/callback
+   → Should be: https://ai-crmsite.vercel.app/oauth2/callback
+
+❌ Wrong endpoint: https://ai-crmsite.vercel.app/oauth2
+   → Should be: https://ai-crmsite.vercel.app/oauth2/callback
+
+❌ Wrong protocol: http://ai-crmsite.vercel.app/oauth2/callback
+   → Should be: https://ai-crmsite.vercel.app/oauth2/callback
+
+❌ Trailing slash: https://ai-crmsite.vercel.app/oauth2/callback/
+   → Should be: https://ai-crmsite.vercel.app/oauth2/callback
+
+❌ Railway URL: https://crm-production-932d.up.railway.app/login/oauth2/code/google
+   → Should be: https://ai-crmsite.vercel.app/oauth2/callback
+
+
+EXACT URL TO ADD:
+=================
+
+Copy this EXACTLY and paste in Google Console:
+
+https://ai-crmsite.vercel.app/oauth2/callback
+
+No changes, no variations!
+
+
+VERIFICATION CHECKLIST:
+======================
+
+[ ] Google Console opened
+[ ] OAuth 2.0 Client ID clicked
+[ ] "Authorized redirect URIs" section found
+[ ] URL exactly matches: https://ai-crmsite.vercel.app/oauth2/callback
+[ ] No typos
+[ ] No extra spaces
+[ ] No trailing slash
+[ ] Saved/Updated
+[ ] Waited 5-10 minutes
+[ ] Tried login again
+
+
+IF STILL FAILING:
+=================
+
+1. Check if you're on the RIGHT Vercel domain
+   → Go to https://ai-crmsite.vercel.app/login
+   → Check browser URL bar
+   → Is it showing ai-crmsite.vercel.app?
+   → If NO, you're on wrong domain
+
+2. Hard refresh browser
+   → Ctrl + Shift + R (Windows)
+   → Cmd + Shift + R (Mac)
+
+3. Clear browser cache/cookies
+   → F12 → Application → Clear All
+
+4. Try incognito/private window
+   → Make sure no cached data interfering
+
+5. Double-check Google Console isn't cached
+   → Close and reopen Google Console
+   → Verify URL is really there
+
+
+FRONTEND CODE WORKING AS EXPECTED:
+==================================
+
+The code does this:
+
+const redirectUri = `${window.location.origin}/oauth2/callback`
+
+This means:
+- If you're on https://ai-crmsite.vercel.app/login
+- window.location.origin = https://ai-crmsite.vercel.app
+- redirectUri = https://ai-crmsite.vercel.app/oauth2/callback
+
+This is CORRECT ✓
+
+So problem is 100% that Google Console doesn't have this URL registered.
+
+
+STEP-BY-STEP FIX:
+=================
+
+1. Open: https://console.cloud.google.com/apis/credentials
+
+2. Find your OAuth app (should show client ID starting with 868446...)
+
+3. Click it to open details
+
+4. Scroll to "Authorized redirect URIs"
+
+5. You should see your URL there. If not:
+   - Click "ADD URI"
+   - Paste: https://ai-crmsite.vercel.app/oauth2/callback
+   - Click outside the field or press Enter
+   - Scroll down and click "SAVE" button
+
+6. Wait 5-10 minutes
+
+7. Go to: https://ai-crmsite.vercel.app/login
+
+8. Click "Sign in with Google"
+
+9. Should work now ✅
+
+
+IF YOU ADDED IT BUT STILL FAILS:
+===============================
+
+The URL might be cached in your browser:
+
+1. Hard refresh: Ctrl + Shift + R
+2. Clear all cookies: DevTools → Application → Clear All
+3. Try incognito window
+4. Then try login again
+
+
+GITHUB SAME ISSUE?
+==================
+
+If GitHub also failing with redirect_uri_mismatch:
+
+1. Go to: https://github.com/settings/developers
+2. Click your OAuth App "TaskFlow CRM"
+3. Find "Authorization callback URL"
+4. Make sure it exactly matches: https://ai-crmsite.vercel.app/oauth2/callback
+5. Save
+6. Wait 5-10 minutes
+7. Try again
+
+
+NEED MORE HELP?
+===============
+
+Check these common issues:
+
+- [ ] Is Vercel domain correct? (ai-crmsite.vercel.app)
+- [ ] Did you add it to Google Console?
+- [ ] Is the URL exactly matching (no typos)?
+- [ ] Did you wait 5-10 minutes for changes to propagate?
+- [ ] Did you hard refresh browser?
+- [ ] Are you testing on the right Vercel domain?
+
+If all yes but still failing, error is from Google side (misconfiguration).

@@ -1,0 +1,569 @@
+═════════════════════════════════════════════════════════════════════════════════
+CRITICAL INVESTIGATION: BREVO WEBHOOKS NOT REACHING BACKEND
+═════════════════════════════════════════════════════════════════════════════════
+
+DATE: August 15, 2026
+TIME: 15:55 UTC+5:30
+STATUS: INVESTIGATION IN PROGRESS
+ISSUE: Email reaches Gmail, webhook doesn't update analytics
+
+═════════════════════════════════════════════════════════════════════════════════
+INVESTIGATION FINDINGS
+═════════════════════════════════════════════════════════════════════════════════
+
+✅ CODE REVIEW COMPLETE - ALL BACKEND CODE CORRECT
+
+1. SECURITY CONFIGURATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILE: crm-backend/src/main/java/com/arjun/crm/config/SecurityConfig.java
+
+ENDPOINT SECURITY:
+  ✅ /api/webhooks/** is explicitly permitAll()
+  ✅ No JWT authentication required
+  ✅ CORS enabled with "*" origins
+  ✅ Stateless session (no cookies)
+  ✅ Ready for external webhook calls from Brevo
+
+CODE EVIDENCE (Line 100-105):
+  .requestMatchers("/api/webhooks/**").permitAll()
+  .anyRequest().authenticated()
+
+
+2. WEBHOOK CONTROLLER MAPPING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILE: crm-backend/src/main/java/com/arjun/crm/controller/BrevoWebhookController.java
+
+ENDPOINT:
+  ✅ @RequestMapping("/api/webhooks/brevo")
+  ✅ @PostMapping (receives POST requests)
+  ✅ @CrossOrigin(origins = "*")
+  ✅ No @PreAuthorize or other auth annotations
+  ✅ Returns HTTP 200 OK on success
+  ✅ Always returns HTTP 200 OK even on error (to prevent Brevo retries)
+
+EXPECTED HTTP BEHAVIOR:
+  ✅ POST to /api/webhooks/brevo → HTTP 200 OK
+  ✅ Webhook event validated and processed
+  ✅ No authentication required
+
+
+3. EMAIL SERVICE METADATA IMPLEMENTATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILE: crm-backend/src/main/java/com/arjun/crm/service/brevo/BrevoEmailService.java
+
+METHOD: sendEmail(String to, String subject, String html, Map<String, Object> metadata)
+
+METADATA IMPLEMENTATION:
+  ✅ Accepts optional metadata parameter
+  ✅ Includes metadata in Brevo API payload: body.put("metadata", metadata)
+  ✅ Metadata format: {"campaign_id": 1, "recipient_id": 42}
+  ✅ Passed to Brevo, echoed back in webhook events
+
+API PAYLOAD:
+  {
+    "sender": {"name": "...", "email": "..."},
+    "to": [{"email": "..."}],
+    "subject": "...",
+    "htmlContent": "...",
+    "metadata": {"campaign_id": 1, "recipient_id": 42}  ← CORRECT
+  }
+
+
+4. EMAIL CAMPAIGN SENDING SERVICE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILE: crm-backend/src/main/java/com/arjun/crm/service/impl/EmailCampaignSendingService.java
+
+METADATA PASSING:
+  ✅ Line 166-169: Passes campaign_id and recipient_id in metadata
+  ✅ Code snippet:
+     brevoEmailService.sendEmail(
+       recipient.getRecipientEmail(),
+       renderedSubject,
+       renderedHtml,
+       Map.of(
+         "campaign_id", campaign.getId(),      ← CORRECT
+         "recipient_id", recipient.getId()     ← CORRECT
+       )
+     )
+
+
+5. ANALYTICS WEBHOOK PROCESSING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILE: crm-backend/src/main/java/com/arjun/crm/service/impl/EmailAnalyticsServiceImpl.java
+
+WEBHOOK PROCESSING FLOW:
+  ✅ Step 1: Validate webhook payload
+  ✅ Step 2: Check for duplicate events (providerEventId)
+  ✅ Step 3: Extract campaign_id and recipient_id from metadata
+  ✅ Step 4: Find campaign and recipient
+  ✅ Step 5: Update recipient status and timestamps
+  ✅ Step 6: Create audit history record
+  ✅ Step 7: Update campaign metrics
+
+METADATA EXTRACTION (Lines 80-83):
+  Long campaignId = extractLongFromMetadata(request.getMetadata(), "campaign_id");
+  Long recipientId = extractLongFromMetadata(request.getMetadata(), "recipient_id");
+  
+  if (campaignId == null) {
+    log.warn("⚠️ Campaign ID not found in webhook metadata");
+    return;
+  }
+
+DATABASE UPDATES:
+  ✅ email_campaign_recipients: Updates status, timestamps
+  ✅ email_campaign_history: Appends audit records
+  ✅ email_campaigns: Updates sentCount, deliveredCount, openedCount, etc.
+
+
+═════════════════════════════════════════════════════════════════════════════════
+PROBLEM AREAS - INVESTIGATION NEEDED
+═════════════════════════════════════════════════════════════════════════════════
+
+❓ QUESTION 1: What is the current Brevo webhook URL?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Need to verify in Brevo dashboard:
+
+From application-prod.yml, current production URL is:
+  https://crm-production-932d.up.railway.app
+
+Your webhook should be configured as:
+  https://crm-production-932d.up.railway.app/api/webhooks/brevo
+
+POSSIBLE ISSUES:
+  ❌ Brevo dashboard shows OLD URL (different Railway domain)
+  ❌ Brevo dashboard shows HTTP instead of HTTPS
+  ❌ Brevo dashboard shows incorrect path (e.g., /webhooks instead of /api/webhooks/brevo)
+  ❌ Brevo webhook not configured at all
+
+ACTION ITEM:
+  □ Log into Brevo dashboard
+  □ Go to Settings → Webhooks (or Account → Webhooks)
+  □ Check the registered webhook URL
+  □ Verify it matches: https://crm-production-932d.up.railway.app/api/webhooks/brevo
+  □ Check which events are enabled: DELIVERED, OPENED, CLICKED
+  □ Take a screenshot and report findings
+
+
+❓ QUESTION 2: Is the Railway backend URL accessible and responding?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Need to test connectivity from external service:
+
+TEST 1 - Health Check:
+  curl -v https://crm-production-932d.up.railway.app/actuator/health
+  
+  Expected: HTTP 200 OK with JSON response
+  Failure: Means backend is down or unreachable
+
+TEST 2 - Webhook Endpoint:
+  curl -v -X POST https://crm-production-932d.up.railway.app/api/webhooks/brevo \
+    -H "Content-Type: application/json" \
+    -d '{}' 
+  
+  Expected: HTTP 200 OK (controller returns 200 even on invalid payload)
+  Failure 1: HTTP 404 - endpoint not found (route misconfigured)
+  Failure 2: HTTP 403 - authentication required (security config issue)
+  Failure 3: Connection refused - backend down
+  Failure 4: SSL error - HTTPS certificate issue
+
+TEST 3 - Valid Webhook Payload:
+  curl -v -X POST https://crm-production-932d.up.railway.app/api/webhooks/brevo \
+    -H "Content-Type: application/json" \
+    -d '{
+      "event": "DELIVERED",
+      "email": "test@example.com",
+      "message_id": "msg_123",
+      "ts": 1691000000,
+      "metadata": {"campaign_id": 1, "recipient_id": 42}
+    }'
+  
+  Expected: HTTP 200 OK
+  Check logs for: "[BrevoWebhookController] Received webhook event"
+
+ACTION ITEM:
+  □ Run TEST 1 command
+  □ Run TEST 2 command
+  □ Run TEST 3 command
+  □ Report all responses (status codes, error messages)
+
+
+❓ QUESTION 3: Are webhooks actually being called?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Need to check Railway backend logs:
+
+TEST 1 - Local Logs:
+  tail -f crm-backend/logs/crm-backend.log | grep -E "BrevoWebhookController|webhook"
+  
+  What to look for:
+    ✅ "🟢 [BrevoWebhookController] Received webhook event" - webhook arrived
+    ✅ "Processing webhook - Event: DELIVERED" - webhook processed
+    ✅ "✓ Recipient updated" - database updated
+    ✅ "✓ Campaign metrics updated" - metrics calculated
+  
+  What would indicate problem:
+    ❌ No log entries - webhook not reaching backend
+    ❌ "⚠️ Campaign ID not found" - metadata not passed from Brevo
+    ❌ "⚠️ Recipient not found" - wrong email or campaign ID
+
+TEST 2 - Brevo Dashboard:
+  1. Log into Brevo (https://www.brevo.com)
+  2. Go to Settings → Webhooks
+  3. Find your webhook URL
+  4. Click on it to see details
+  5. Look for "Recent Events" or "Event Log" tab
+  6. Should show recent webhook attempts
+
+  What to look for:
+    ✅ Webhook URL is correct
+    ✅ Recent webhook events listed
+    ✅ Status shows "Success" or "200 OK"
+  
+  What would indicate problem:
+    ❌ No recent events (webhook not being triggered)
+    ❌ Status shows "Failed" or "Connection refused"
+    ❌ Status shows "404 Not Found"
+
+TEST 3 - Brevo Webhook Test:
+  1. In Brevo dashboard, find webhook details
+  2. Look for "Send test webhook" or "Test" button
+  3. Click it to send a test event
+  4. Check your backend logs for reception
+  5. Check Brevo dashboard for response status
+
+ACTION ITEM:
+  □ Check backend logs for webhook events
+  □ Log into Brevo and view webhook event log
+  □ Send test webhook from Brevo dashboard
+  □ Report findings
+
+
+═════════════════════════════════════════════════════════════════════════════════
+LIKELY ROOT CAUSES (RANKED BY PROBABILITY)
+═════════════════════════════════════════════════════════════════════════════════
+
+#1 - MOST LIKELY: Old Webhook URL in Brevo
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Symptom: Email is sent but no webhook received
+Cause: Brevo dashboard still has OLD Railway URL from before you changed domains
+Solution: Update webhook URL in Brevo dashboard to current production URL
+
+Current Production URL: https://crm-production-932d.up.railway.app
+
+WHAT TO CHECK:
+  □ Brevo Webhook Settings - does URL match current Railway domain?
+  □ Check if you changed Railway domains recently
+  □ Look for old URLs like: crm-production-17c2.up.railway.app
+
+Fix: Update Brevo webhook URL to correct domain
+
+
+#2 - Backend URL Inaccessible
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Symptom: Brevo can't reach the backend endpoint
+Cause: Railway backend is down, HTTPS certificate invalid, or firewall blocking
+Solution: Verify backend is running and publicly accessible
+
+WHAT TO CHECK:
+  □ Is the backend running on Railway?
+  □ Is HTTPS certificate valid?
+  □ Run curl test to verify connectivity
+  □ Check Railway logs for 404 or connection errors
+
+Fix: Deploy backend, fix certificate, or update security groups
+
+
+#3 - Firewall/Network Blocking Brevo's IP Ranges
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Symptom: Webhook configuration looks correct but never receives events
+Cause: Firewall or WAF blocking Brevo's outbound IPs
+Solution: Whitelist Brevo's IP ranges in security group
+
+Brevo IPs to whitelist: (verify with Brevo support)
+  1. Get list from Brevo documentation
+  2. Add to Railway security group
+  3. Re-test webhook
+
+Fix: Configure security group to allow Brevo IPs
+
+
+#4 - Webhook Not Configured in Brevo at All
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Symptom: No webhook events in Brevo event log
+Cause: Webhook URL never registered, or events disabled
+Solution: Create or enable webhook in Brevo dashboard
+
+WHAT TO CHECK:
+  □ Is webhook URL configured in Brevo?
+  □ Are DELIVERED, OPENED, CLICKED events enabled?
+  □ Has webhook been saved/activated?
+
+Fix: Add webhook URL and enable required events in Brevo
+
+
+═════════════════════════════════════════════════════════════════════════════════
+DIAGNOSTIC COMMANDS
+═════════════════════════════════════════════════════════════════════════════════
+
+To diagnose the issue, run these commands:
+
+1. Test Backend Accessibility:
+   ────────────────────────────────────────────────────────────────────────────
+   curl -v https://crm-production-932d.up.railway.app/actuator/health
+   
+   Expected output:
+   < HTTP/1.1 200 OK
+   {"status":"UP","components":{"db":{"status":"UP"},...}}
+   
+   If you see:
+   - Connection refused: Backend is down
+   - HTTP 404: Route not found
+   - SSL error: Certificate issue
+
+
+2. Test Webhook Endpoint (Empty Body):
+   ────────────────────────────────────────────────────────────────────────────
+   curl -X POST https://crm-production-932d.up.railway.app/api/webhooks/brevo \
+     -H "Content-Type: application/json" \
+     -d '{}'
+   
+   Expected output:
+   < HTTP/1.1 200 OK
+   (empty body)
+   
+   If you see:
+   - HTTP 404: Endpoint doesn't exist
+   - HTTP 403: Authentication required
+   - HTTP 400: Validation error (acceptable, endpoint still works)
+
+
+3. Test Webhook Endpoint (Valid Payload):
+   ────────────────────────────────────────────────────────────────────────────
+   curl -X POST https://crm-production-932d.up.railway.app/api/webhooks/brevo \
+     -H "Content-Type: application/json" \
+     -d '{
+       "event": "DELIVERED",
+       "email": "arjun@example.com",
+       "message_id": "test_msg_001",
+       "ts": 1691000000,
+       "metadata": {
+         "campaign_id": 1,
+         "recipient_id": 1
+       }
+     }'
+   
+   Expected output:
+   < HTTP/1.1 200 OK
+   (empty body)
+   
+   Check backend logs for:
+   grep "BrevoWebhookController" logs/crm-backend.log
+
+
+4. View Backend Logs (Real-Time):
+   ────────────────────────────────────────────────────────────────────────────
+   tail -f crm-backend/logs/crm-backend.log | grep -E "webhook|Brevo|DELIVERED|OPENED"
+   
+   This will show all webhook-related logs in real-time
+
+
+5. Check Brevo Webhook Configuration:
+   ────────────────────────────────────────────────────────────────────────────
+   1. Open: https://www.brevo.com
+   2. Login: With your account credentials
+   3. Navigate: Settings → Webhooks (or Account → Webhooks)
+   4. Check:
+      - Webhook URL (should match production URL)
+      - Enabled events (DELIVERED, OPENED, CLICKED should be checked)
+      - Recent event log (to see if webhooks are being sent)
+
+
+═════════════════════════════════════════════════════════════════════════════════
+WHAT HAPPENS WHEN EMAIL IS SENT
+═════════════════════════════════════════════════════════════════════════════════
+
+EXPECTED FLOW:
+
+1. SENDING PHASE:
+   Application → EmailCampaignSendingService.sendCampaignAsync()
+   
+2. BREVO API CALL:
+   EmailCampaignSendingService → BrevoEmailService.sendEmail()
+   
+   Brevo API Request:
+   POST https://api.brevo.com/v3/smtp/email
+   {
+     "sender": {"name": "...", "email": "..."},
+     "to": [{"email": "test@gmail.com"}],
+     "subject": "Test Campaign",
+     "htmlContent": "<h1>Test</h1>",
+     "metadata": {
+       "campaign_id": 1,
+       "recipient_id": 42
+     }
+   }
+   
+   Brevo Response:
+   HTTP 201 Created
+   {"messageId": "2e280e7ad04ac2b5a83f9b1d8"}
+
+3. EMAIL DELIVERY:
+   Brevo sends email to recipient through SMTP
+
+4. DELIVERY COMPLETE:
+   Brevo detects email delivered to Gmail server
+
+5. WEBHOOK EVENT #1 - DELIVERED:
+   Brevo → Your Backend:
+   POST https://crm-production-932d.up.railway.app/api/webhooks/brevo
+   {
+     "event": "DELIVERED",
+     "email": "test@gmail.com",
+     "message_id": "2e280e7ad04ac2b5a83f9b1d8",
+     "ts": 1691000000,
+     "metadata": {
+       "campaign_id": 1,
+       "recipient_id": 42
+     }
+   }
+
+6. BACKEND PROCESSING:
+   BrevoWebhookController → EmailAnalyticsService.processWebhookEvent()
+   
+   - Extract campaign_id=1, recipient_id=42 from metadata
+   - Find EmailCampaignRecipient where id=42
+   - Update status to "DELIVERED"
+   - Update deliveredAt timestamp
+   - Update email_campaign_recipients table
+   - Create history record in email_campaign_history
+   - Update campaign.deliveredCount++
+   - Return HTTP 200 OK
+
+7. ANALYTICS UPDATED:
+   Frontend queries: GET /api/.../email-campaigns/1/analytics
+   Returns: {deliveredCount: 1, deliveryRate: 100%, ...}
+
+
+POTENTIAL FAILURE POINTS:
+
+❌ POINT 1: Email not sent to Brevo
+   Symptom: Email doesn't reach Gmail
+   Check: Backend logs for error from Brevo API call
+   Fix: Check BREVO_API_KEY, network connectivity
+
+❌ POINT 2: Email sent but without metadata
+   Symptom: Email delivered but webhook says campaign_id missing
+   Check: EmailCampaignSendingService passes metadata
+   Fix: Ensure Map.of("campaign_id", ..., "recipient_id", ...) is called
+
+❌ POINT 3: Webhook configured with wrong URL
+   Symptom: Email delivered, but webhook never sent
+   Check: Brevo dashboard shows correct URL
+   Fix: Update webhook URL in Brevo
+
+❌ POINT 4: Backend not reachable from Brevo
+   Symptom: Webhook sent but connection fails
+   Check: curl can reach endpoint
+   Fix: Verify backend is running, firewall permits connection
+
+❌ POINT 5: Webhook sent but endpoint returns 404
+   Symptom: Brevo shows "404 Not Found" in webhook log
+   Check: Controller mapped to /api/webhooks/brevo
+   Fix: Deploy correct code version
+
+❌ POINT 6: Webhook sent but analytics service fails
+   Symptom: HTTP 200 OK but logs show error
+   Check: Backend logs for processing errors
+   Fix: Check for duplicate event ID, missing campaign, etc.
+
+
+═════════════════════════════════════════════════════════════════════════════════
+PRODUCTION URL VERIFICATION
+═════════════════════════════════════════════════════════════════════════════════
+
+CURRENT CONFIGURATION:
+
+From application-prod.yml:
+  Backend URL: https://crm-production-932d.up.railway.app
+  Webhook Endpoint: https://crm-production-932d.up.railway.app/api/webhooks/brevo
+  OAuth2 Redirect (Google): https://crm-production-932d.up.railway.app/login/oauth2/code/google
+  OAuth2 Redirect (GitHub): https://crm-production-932d.up.railway.app/login/oauth2/code/github
+
+BREVO CONFIGURATION (NEEDS VERIFICATION):
+  ❓ Webhook URL in Brevo: https://crm-production-932d.up.railway.app/api/webhooks/brevo
+  ❓ Events Enabled: DELIVERED, OPENED, CLICKED
+  ❓ Recent Event Log: (check if webhooks are actually sent)
+
+OAUTH CONFIGURATION (Already working):
+  ✅ OAuth2 URLs match production domain
+  ✅ Users can log in with Google/GitHub
+  ✅ This proves backend URL is accessible and correct
+
+ACTION ITEM:
+  □ Update Brevo webhook URL to match prod domain (if different)
+  □ Enable all required events in Brevo
+  □ Test webhook by sending campaign
+
+
+═════════════════════════════════════════════════════════════════════════════════
+NEXT INVESTIGATION STEPS
+═════════════════════════════════════════════════════════════════════════════════
+
+PRIORITY 1 - IMMEDIATE:
+  1. Check Brevo dashboard for webhook URL configuration
+  2. Compare with: https://crm-production-932d.up.railway.app/api/webhooks/brevo
+  3. Run curl test: https://crm-production-932d.up.railway.app/actuator/health
+  4. Check if backend is running on Railway
+
+PRIORITY 2 - SECONDARY:
+  5. Check Brevo webhook event log for recent webhook attempts
+  6. Send test webhook from Brevo dashboard
+  7. Check backend logs for webhook reception
+
+PRIORITY 3 - TERTIARY:
+  8. Verify email sending works end-to-end
+  9. Check metadata is included in email payload
+  10. Verify database tables exist and are accessible
+
+═════════════════════════════════════════════════════════════════════════════════
+SUMMARY
+═════════════════════════════════════════════════════════════════════════════════
+
+WHAT'S CORRECT:
+  ✅ Backend webhook endpoint is correctly configured
+  ✅ Security allows /api/webhooks/brevo without authentication
+  ✅ BrevoEmailService includes metadata in API payload
+  ✅ EmailCampaignSendingService passes campaign_id and recipient_id
+  ✅ EmailAnalyticsService correctly processes webhook events
+  ✅ Database schema supports webhook analytics
+
+WHAT NEEDS VERIFICATION:
+  ❓ Is the Brevo webhook URL configured correctly?
+  ❓ Is the Railway backend publicly accessible?
+  ❓ Is the Railway backend running?
+  ❓ Are webhooks actually being triggered by Brevo?
+
+ROOT CAUSE (MOST LIKELY):
+  Brevo dashboard has OLD webhook URL pointing to old Railway domain
+
+IMMEDIATE ACTION:
+  1. Verify current webhook URL in Brevo dashboard
+  2. Compare with production URL from application-prod.yml
+  3. If different, update Brevo webhook configuration
+  4. Test with: curl and Brevo test webhook button
+
+═════════════════════════════════════════════════════════════════════════════════
+Investigation prepared by: Kiro Agent
+Time: August 15, 2026, 15:55 UTC+5:30
+Status: Code review complete, runtime investigation needed
+═════════════════════════════════════════════════════════════════════════════════
