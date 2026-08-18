@@ -1,0 +1,477 @@
+================================================================================
+                         API DOCUMENTATION
+                    Email Campaign Tracking System
+================================================================================
+
+BASE URL (Development):
+  http://localhost:8080
+
+BASE URL (Production):
+  https://api.your-domain.com
+
+================================================================================
+                      NEW TRACKING ENDPOINTS
+================================================================================
+
+1. CLICK TRACKING ENDPOINT
+================================================================================
+
+Name: Track Email Click
+Method: GET
+Path: /api/campaigns/track/click
+Authentication: NOT REQUIRED (public endpoint)
+
+Description:
+  Records when a recipient clicks the CTA button in an email.
+  Tracks the click and redirects to the original URL.
+
+Query Parameters:
+  campaignId (required, Long)
+    - ID of the campaign
+    - Example: 1
+    
+  recipientId (required, Long)
+    - ID of the recipient
+    - Example: 42
+    
+  redirect (optional, String)
+    - Original URL to redirect to
+    - Must be URL encoded
+    - Example: https%3A%2F%2Fwww.example.com%2Foffer
+
+Request Example:
+  GET /api/campaigns/track/click?campaignId=1&recipientId=42&redirect=https%3A%2F%2Fwww.example.com
+
+Response:
+  Status: 302 Found
+  Headers:
+    Location: [original-url]
+    Content-Length: 0
+  Body: Empty
+
+Database Updates:
+  email_campaign_recipients:
+    - firstClickedAt: Set to current timestamp (if null)
+    - lastClickedAt: Set to current timestamp
+    - clickCount: Incremented by 1
+    - status: Set to "CLICKED"
+  
+  email_campaign_history:
+    - New record created with event_type: "CLICKED"
+  
+  email_campaigns:
+    - clickedCount: Incremented
+
+Response Codes:
+  302 Found - Success, redirect URL provided
+  200 OK - Success, no redirect URL (fallback)
+  400 Bad Request - Missing required parameters
+  404 Not Found - Campaign or recipient not found (still redirects)
+  500 Internal Server Error - Database error
+
+Error Handling:
+  - System logs error but always attempts redirect
+  - User always sees destination URL
+  - Database update failures don't block redirect
+  - Graceful degradation
+
+Notes:
+  - Must be URL encoded by calling application
+  - Typically called from email HTML: <a href="/api/campaigns/track/click?...">
+  - No authentication needed (must be public for email clients)
+  - Response time: < 100ms expected
+
+Example Flow:
+  1. Email contains: <a href="http://api.yourapp.com/api/campaigns/track/click?campaignId=1&recipientId=42&redirect=https%3A%2F%2Fwww.example.com">Click Here</a>
+  2. User clicks link
+  3. Browser navigates to /api/campaigns/track/click?...
+  4. Backend records click in database
+  5. Backend returns 302 redirect
+  6. Browser follows redirect to https://www.example.com
+  7. User sees: https://www.example.com in browser
+  8. CRM has recorded: Click event for this recipient
+
+================================================================================
+
+2. OPEN TRACKING ENDPOINT
+================================================================================
+
+Name: Track Email Open
+Method: GET
+Path: /api/campaigns/track/open
+Authentication: NOT REQUIRED (public endpoint)
+
+Description:
+  Records when a recipient opens an email by loading the tracking pixel.
+  Returns a 1x1 transparent GIF to avoid visual impact.
+
+Query Parameters:
+  campaignId (required, Long)
+    - ID of the campaign
+    - Example: 1
+    
+  recipientId (required, Long)
+    - ID of the recipient
+    - Example: 42
+
+Request Example:
+  GET /api/campaigns/track/open?campaignId=1&recipientId=42
+
+Response:
+  Status: 200 OK
+  Content-Type: image/gif
+  Content-Length: 35
+  Headers:
+    Cache-Control: no-cache, no-store, must-revalidate
+    Pragma: no-cache
+    Expires: 0
+  Body: 35-byte transparent 1x1 GIF (binary)
+
+Database Updates:
+  email_campaign_recipients:
+    - openedAt: Set to current timestamp (first open only)
+    - status: Set to "OPENED"
+  
+  email_campaign_history:
+    - New record created with event_type: "OPENED"
+  
+  email_campaigns:
+    - openedCount: Incremented (if first open)
+
+Response Codes:
+  200 OK - Success, GIF pixel returned
+  400 Bad Request - Missing required parameters
+  404 Not Found - Campaign or recipient not found
+  500 Internal Server Error - Database error
+
+First-Open Logic:
+  - Only records first open (openedAt can only be set once)
+  - Subsequent opens don't update database
+  - But history records each attempt
+  - Prevents double-counting from multiple reloads
+
+Cache Control:
+  - No-cache: Must not be cached
+  - No-store: Proxy cannot store response
+  - Must-revalidate: Must revalidate after expiration
+  - Pragma: Legacy no-cache for older proxies
+  - Expires: Immediately expired
+  - Purpose: Ensure each pixel load is tracked separately
+
+Notes:
+  - Typically called from email HTML: <img src="/api/campaigns/track/open?..."/>
+  - Invisible to user (1x1 pixel)
+  - No authentication needed (must be public for email clients)
+  - Response time: < 50ms expected
+  - GIF format for compatibility across all email clients
+
+Example Flow:
+  1. Email contains: <img src="http://api.yourapp.com/api/campaigns/track/open?campaignId=1&recipientId=42" width="1" height="1" style="display:none;"/>
+  2. Email client opens message
+  3. Email client loads images
+  4. Tracking pixel URL requested
+  5. Backend records open in database
+  6. Backend returns GIF pixel
+  7. Email client renders 1x1 invisible image
+  8. User sees nothing (invisible pixel)
+  9. CRM has recorded: Open event for this recipient
+
+Support Notes:
+  - Not all email clients load images automatically (Gmail blocks by default)
+  - Outlook shows "Download Pictures" option
+  - Desktop clients may load images automatically
+  - Open tracking is advisory only, not guaranteed
+  - Combine with Brevo webhook for better accuracy
+
+================================================================================
+                   CAMPAIGN ANALYTICS ENDPOINT
+================================================================================
+
+Name: Get Campaign Analytics
+Method: GET
+Path: /api/workspaces/{workspaceId}/email-campaigns/{campaignId}/analytics
+Authentication: REQUIRED (Bearer token)
+
+Description:
+  Retrieves analytics metrics for a specific campaign.
+
+Path Parameters:
+  workspaceId (required, Long)
+    - Workspace ID
+    - Must be current user's workspace
+    
+  campaignId (required, Long)
+    - Campaign ID to retrieve analytics for
+
+Request Example:
+  GET /api/workspaces/1/email-campaigns/5/analytics
+  Headers:
+    Authorization: Bearer {token}
+    Content-Type: application/json
+
+Response:
+  Status: 200 OK
+  Content-Type: application/json
+
+Response Body:
+  {
+    "data": {
+      "campaignId": 5,
+      "campaignName": "Summer Sale 2024",
+      "campaignStatus": "SENT",
+      "sentAt": "2024-08-18T10:30:00Z",
+      "totalSent": 100,
+      "totalDelivered": 98,
+      "totalOpened": 45,
+      "totalClicked": 12,
+      "totalBounced": 2,
+      "totalFailed": 0,
+      "uniqueOpens": 45,
+      "uniqueClicks": 12,
+      "deliveryRate": 98.0,
+      "openRate": 45.92,
+      "clickRate": 12.24,
+      "bounceRate": 2.0,
+      "replyRate": 0.0
+    },
+    "message": "Campaign analytics retrieved successfully"
+  }
+
+Field Descriptions:
+  campaignId: Campaign ID
+  campaignName: Campaign name
+  campaignStatus: Current status (DRAFT/SENT/COMPLETED)
+  sentAt: Timestamp when campaign was sent
+  totalSent: Total recipients
+  totalDelivered: Count with deliveredAt NOT NULL
+  totalOpened: Count with openedAt NOT NULL
+  totalClicked: Count with firstClickedAt NOT NULL
+  totalBounced: Count with status = BOUNCED
+  totalFailed: Count with status = FAILED
+  uniqueOpens: Unique opens (same as totalOpened for email)
+  uniqueClicks: Unique clicks (same as totalClicked for email)
+  deliveryRate: (totalDelivered / totalSent) * 100
+  openRate: (totalOpened / totalDelivered) * 100
+  clickRate: (totalClicked / totalDelivered) * 100
+  bounceRate: (totalBounced / totalSent) * 100
+  replyRate: (totalReplies / totalSent) * 100
+
+Error Responses:
+  
+  400 Bad Request:
+    {
+      "error": "Campaign not found",
+      "code": "CAMPAIGN_NOT_FOUND",
+      "status": 400
+    }
+  
+  401 Unauthorized:
+    {
+      "error": "Invalid or missing authentication token",
+      "status": 401
+    }
+  
+  403 Forbidden:
+    {
+      "error": "You don't have permission to access this workspace",
+      "status": 403
+    }
+
+Response Codes:
+  200 OK - Success
+  400 Bad Request - Invalid parameters
+  401 Unauthorized - Missing/invalid token
+  403 Forbidden - No permission
+  404 Not Found - Campaign not found
+  500 Internal Server Error - Server error
+
+Update Frequency:
+  - Real-time (updated when webhooks/tracking events arrive)
+  - Slight delay possible while Brevo processes webhooks
+  - Typically updates within 1-5 seconds
+
+Calculation Notes:
+  - All rates calculated from database timestamps
+  - Not estimated or guessed
+  - Combines server-side tracking + Brevo webhook data
+  - More accurate than either source alone
+
+================================================================================
+                      EXISTING ENDPOINTS
+================================================================================
+
+CAMPAIGN MANAGEMENT:
+
+Create Campaign:
+  POST /api/workspaces/{workspaceId}/email-campaigns
+  Authentication: REQUIRED
+  Permission: OWNER/ADMIN
+  Fields: name, subject, description, templateId, contentType, etc.
+
+List Campaigns:
+  GET /api/workspaces/{workspaceId}/email-campaigns
+  Authentication: REQUIRED
+  Permission: All members can read
+  Query: page, size, sortBy
+
+Get Campaign:
+  GET /api/workspaces/{workspaceId}/email-campaigns/{campaignId}
+  Authentication: REQUIRED
+  Permission: All members can read
+
+Update Campaign:
+  PUT /api/workspaces/{workspaceId}/email-campaigns/{campaignId}
+  Authentication: REQUIRED
+  Permission: OWNER/ADMIN
+  Note: Only DRAFT campaigns can be updated
+
+Send Campaign:
+  POST /api/workspaces/{workspaceId}/email-campaigns/{campaignId}/send
+  Authentication: REQUIRED
+  Permission: OWNER/ADMIN
+  Effect: Immediately sends campaign to all recipients
+
+Schedule Campaign:
+  POST /api/workspaces/{workspaceId}/email-campaigns/{campaignId}/schedule
+  Authentication: REQUIRED
+  Permission: OWNER/ADMIN
+  Fields: scheduledAt, retryCount
+
+Delete Campaign:
+  DELETE /api/workspaces/{workspaceId}/email-campaigns/{campaignId}
+  Authentication: REQUIRED
+  Permission: OWNER/ADMIN
+  Note: Soft delete (not permanently removed)
+
+================================================================================
+                      ERROR HANDLING
+================================================================================
+
+All API responses follow standard format:
+
+Success Response:
+  {
+    "data": { ... },
+    "message": "Success message",
+    "status": 200
+  }
+
+Error Response:
+  {
+    "error": "Error message",
+    "code": "ERROR_CODE",
+    "status": 400,
+    "details": "Additional details"
+  }
+
+Common Error Codes:
+  CAMPAIGN_NOT_FOUND - Campaign doesn't exist
+  RECIPIENT_NOT_FOUND - Recipient doesn't exist
+  UNAUTHORIZED - Missing/invalid token
+  FORBIDDEN - No permission
+  INVALID_PARAMETERS - Required parameters missing
+  DATABASE_ERROR - Database operation failed
+  BREVO_ERROR - Brevo API error
+  VALIDATION_ERROR - Input validation failed
+
+HTTP Status Codes:
+  200 OK - Successful request
+  201 Created - Resource created
+  302 Found - Redirect (tracking endpoints)
+  400 Bad Request - Invalid request
+  401 Unauthorized - Authentication required
+  403 Forbidden - Permission denied
+  404 Not Found - Resource not found
+  500 Internal Server Error - Server error
+  503 Service Unavailable - Service down
+
+================================================================================
+                      RATE LIMITING
+================================================================================
+
+Public Tracking Endpoints:
+  /api/campaigns/track/click - 1000 requests/minute per IP (recommended)
+  /api/campaigns/track/open - 1000 requests/minute per IP (recommended)
+
+Authentication Endpoints:
+  Standard authentication rate limits apply
+
+API Endpoints:
+  100 requests/minute per authenticated user (recommended)
+
+Notes:
+  - Rate limiting not yet implemented in code
+  - Recommended for production deployment
+  - Use nginx/reverse proxy for rate limiting
+  - Or implement in application code
+
+================================================================================
+                      TESTING ENDPOINTS
+================================================================================
+
+Test Click Tracking:
+  curl "http://localhost:8080/api/campaigns/track/click?campaignId=1&recipientId=1&redirect=https%3A%2F%2Fwww.example.com"
+  Expected: 302 redirect
+
+Test Open Tracking:
+  curl "http://localhost:8080/api/campaigns/track/open?campaignId=1&recipientId=1"
+  Expected: 200 OK with GIF body
+
+Test Analytics:
+  curl -H "Authorization: Bearer {token}" \
+    http://localhost:8080/api/workspaces/1/email-campaigns/1/analytics
+  Expected: 200 OK with metrics
+
+================================================================================
+                      INTEGRATION EXAMPLES
+================================================================================
+
+JavaScript/Frontend:
+  // Click tracking (auto-generated in email)
+  <a href="/api/campaigns/track/click?campaignId=${id}&recipientId=${rid}&redirect=${encodeURIComponent(url)}">
+    Click Here
+  </a>
+
+  // Open tracking (auto-generated in email)
+  <img src="/api/campaigns/track/open?campaignId=${id}&recipientId=${rid}" 
+       width="1" height="1" style="display:none;"/>
+
+Java/Backend (Email Rendering):
+  String trackingUrl = String.format(
+    "/api/campaigns/track/click?campaignId=%d&recipientId=%d&redirect=%s",
+    campaignId,
+    recipientId,
+    URLEncoder.encode(originalUrl, "UTF-8")
+  );
+
+Python (Analytics Fetch):
+  import requests
+  
+  headers = {"Authorization": f"Bearer {token}"}
+  response = requests.get(
+    f"http://localhost:8080/api/workspaces/1/email-campaigns/1/analytics",
+    headers=headers
+  )
+  analytics = response.json()
+
+cURL (Analytics):
+  curl -H "Authorization: Bearer YOUR_TOKEN" \
+    http://localhost:8080/api/workspaces/1/email-campaigns/1/analytics | jq .
+
+================================================================================
+                      WEBHOOK CONFIGURATION
+================================================================================
+
+Brevo Webhook Configuration:
+  - Already configured in existing system
+  - Endpoint: POST /api/webhooks/brevo
+  - Events: SENT, DELIVERED, OPENED, CLICKED, BOUNCE, UNSUBSCRIBE
+  - Updates recipient status and metrics
+
+No Changes Needed For:
+  - Webhook endpoint
+  - Webhook configuration
+  - Brevo integration
+  - Existing data flow
+
+================================================================================

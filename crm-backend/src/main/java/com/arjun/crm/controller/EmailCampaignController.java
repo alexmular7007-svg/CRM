@@ -13,6 +13,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -235,5 +236,105 @@ public class EmailCampaignController {
         
         return ResponseEntity.ok()
                 .body(ApiResponse.success("Campaign analytics retrieved successfully", analytics));
+    }
+}
+
+/**
+ * Email Tracking Controller
+ * 
+ * Handles click and open tracking for email campaigns
+ * These endpoints are public (no auth required) to allow tracking from external redirects
+ * Base path: /api/campaigns/track
+ */
+@RestController
+@RequestMapping("/api/campaigns/track")
+@RequiredArgsConstructor
+@Slf4j
+@CrossOrigin(origins = "*")
+class EmailTrackingController {
+    
+    private final EmailAnalyticsService emailAnalyticsService;
+    
+    /**
+     * CLICK TRACKING: GET /api/campaigns/track/click
+     * 
+     * Records a click event and redirects to the original URL
+     * Public endpoint - no authentication required
+     * 
+     * @param campaignId The campaign ID
+     * @param recipientId The recipient ID
+     * @param redirect The original URL to redirect to
+     * @return 302 redirect to original URL
+     */
+    @GetMapping("/click")
+    public ResponseEntity<Void> trackClick(
+            @RequestParam Long campaignId,
+            @RequestParam Long recipientId,
+            @RequestParam(name = "redirect", required = false) String redirectUrl) {
+        
+        log.info("📊 Email CLICK tracked - campaignId: {}, recipientId: {}, redirect: {}", 
+                campaignId, recipientId, redirectUrl);
+        
+        try {
+            // Record click event in analytics
+            emailAnalyticsService.recordClick(campaignId, recipientId);
+        } catch (Exception e) {
+            log.warn("Failed to record click event", e);
+            // Don't fail - redirect anyway
+        }
+        
+        // Redirect to original URL if provided
+        if (redirectUrl != null && !redirectUrl.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .header(HttpHeaders.LOCATION, redirectUrl)
+                    .build();
+        }
+        
+        // Fallback if no redirect URL
+        return ResponseEntity.ok().build();
+    }
+    
+    /**
+     * OPEN TRACKING: GET /api/campaigns/track/open
+     * 
+     * Records an open event when tracking pixel is loaded
+     * Public endpoint - no authentication required
+     * Returns a 1x1 transparent GIF pixel
+     * 
+     * @param campaignId The campaign ID
+     * @param recipientId The recipient ID
+     * @return 200 OK with 1x1 transparent GIF
+     */
+    @GetMapping("/open")
+    public ResponseEntity<byte[]> trackOpen(
+            @RequestParam Long campaignId,
+            @RequestParam Long recipientId) {
+        
+        log.info("📊 Email OPEN tracked - campaignId: {}, recipientId: {}", campaignId, recipientId);
+        
+        try {
+            // Record open event in analytics
+            emailAnalyticsService.recordOpen(campaignId, recipientId);
+        } catch (Exception e) {
+            log.warn("Failed to record open event", e);
+            // Don't fail - return pixel anyway
+        }
+        
+        // Return 1x1 transparent GIF pixel
+        byte[] transparentPixel = new byte[]{
+            (byte)0x47, (byte)0x49, (byte)0x46, (byte)0x38, (byte)0x39, (byte)0x61,
+            (byte)0x01, (byte)0x00, (byte)0x01, (byte)0x00, (byte)0x80, (byte)0x00,
+            (byte)0x00, (byte)0xFF, (byte)0xFF, (byte)0xFF, (byte)0x00, (byte)0x00,
+            (byte)0x00, (byte)0x2C, (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
+            (byte)0x01, (byte)0x00, (byte)0x01, (byte)0x00, (byte)0x00, (byte)0x02,
+            (byte)0x02, (byte)0x44, (byte)0x01, (byte)0x00, (byte)0x3B
+        };
+        
+        return ResponseEntity.ok()
+                .header("Content-Type", "image/gif")
+                .header("Cache-Control", "no-cache, no-store, must-revalidate")
+                .header("Pragma", "no-cache")
+                .header("Expires", "0")
+                .body(transparentPixel);
     }
 }

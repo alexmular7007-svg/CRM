@@ -32,4 +32,22 @@ public interface EmailAnalyticsService {
      * @param campaignId Campaign ID
      */
     void updateAnalyticsSnapshot(Long campaignId);
+
+    /**
+     * Record a click event for a recipient
+     * Used by server-side click tracking endpoint
+     *
+     * @param campaignId Campaign ID
+     * @param recipientId Recipient ID
+     */
+    void recordClick(Long campaignId, Long recipientId);
+
+    /**
+     * Record an open event for a recipient
+     * Used by server-side open tracking pixel endpoint
+     *
+     * @param campaignId Campaign ID
+     * @param recipientId Recipient ID
+     */
+    void recordOpen(Long campaignId, Long recipientId);
 }

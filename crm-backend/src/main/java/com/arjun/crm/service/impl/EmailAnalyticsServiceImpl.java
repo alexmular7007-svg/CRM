@@ -317,4 +317,110 @@ public class EmailAnalyticsServiceImpl implements EmailAnalyticsService {
         // Implementation for manual snapshot update
         log.info("Analytics snapshot update requested for campaign: {}", campaignId);
     }
+
+    /**
+     * Record a click event for a recipient (server-side click tracking)
+     * Called when recipient clicks the tracking redirect link
+     */
+    @Override
+    public void recordClick(Long campaignId, Long recipientId) {
+        log.info("Recording click - campaignId: {}, recipientId: {}", campaignId, recipientId);
+        
+        // Load recipient
+        EmailCampaignRecipient recipient = recipientRepository.findById(recipientId)
+                .orElse(null);
+        
+        if (recipient == null) {
+            log.warn("Recipient not found for click tracking - ID: {}", recipientId);
+            return;
+        }
+        
+        // Update click tracking fields
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
+        if (recipient.getFirstClickedAt() == null) {
+            recipient.setFirstClickedAt(now);
+        }
+        recipient.setLastClickedAt(now);
+        recipient.setClickCount((recipient.getClickCount() != null ? recipient.getClickCount() : 0) + 1);
+        recipient.setStatus("CLICKED");
+        
+        // Save recipient
+        recipientRepository.save(recipient);
+        
+        // Update campaign metrics
+        EmailCampaign campaign = campaignRepository.findById(campaignId).orElse(null);
+        if (campaign != null) {
+            updateCampaignMetrics(campaign);
+            campaignRepository.save(campaign);
+        }
+        
+        // Create history record
+        if (campaign != null) {
+            EmailCampaignHistory history = EmailCampaignHistory.builder()
+                    .campaign(campaign)
+                    .recipient(recipient)
+                    .recipientEmail(recipient.getRecipientEmail())
+                    .eventType("CLICKED")
+                    .occurredAt(now)
+                    .metadata(Map.of("source", "server_side_tracking"))
+                    .build();
+            historyRepository.save(history);
+        }
+        
+        log.info("Click recorded successfully - campaignId: {}, recipientId: {}", campaignId, recipientId);
+    }
+
+    /**
+     * Record an open event for a recipient (server-side open tracking)
+     * Called when tracking pixel is loaded in email client
+     */
+    @Override
+    public void recordOpen(Long campaignId, Long recipientId) {
+        log.info("Recording open - campaignId: {}, recipientId: {}", campaignId, recipientId);
+        
+        // Load recipient
+        EmailCampaignRecipient recipient = recipientRepository.findById(recipientId)
+                .orElse(null);
+        
+        if (recipient == null) {
+            log.warn("Recipient not found for open tracking - ID: {}", recipientId);
+            return;
+        }
+        
+        // Only record first open
+        if (recipient.getOpenedAt() != null) {
+            log.debug("Email already marked as opened - ID: {}", recipientId);
+            return;
+        }
+        
+        // Update open tracking fields
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
+        recipient.setOpenedAt(now);
+        recipient.setStatus("OPENED");
+        
+        // Save recipient
+        recipientRepository.save(recipient);
+        
+        // Update campaign metrics
+        EmailCampaign campaign = campaignRepository.findById(campaignId).orElse(null);
+        if (campaign != null) {
+            updateCampaignMetrics(campaign);
+            campaignRepository.save(campaign);
+        }
+        
+        // Create history record
+        if (campaign != null) {
+            EmailCampaignHistory history = EmailCampaignHistory.builder()
+                    .campaign(campaign)
+                    .recipient(recipient)
+                    .recipientEmail(recipient.getRecipientEmail())
+                    .eventType("OPENED")
+                    .occurredAt(now)
+                    .metadata(Map.of("source", "server_side_tracking"))
+                    .build();
+            historyRepository.save(history);
+        }
+        
+        log.info("Open recorded successfully - campaignId: {}, recipientId: {}", campaignId, recipientId);
+    }
 }

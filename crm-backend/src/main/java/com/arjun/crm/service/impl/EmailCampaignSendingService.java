@@ -131,19 +131,28 @@ public class EmailCampaignSendingService {
                                 ? campaign.getCtaButtonText()
                                 : "Learn More";
                             
+                            // Generate tracking URL for click tracking
+                            // Format: /api/campaigns/track/click?campaignId=X&recipientId=Y&redirect=ORIGINAL_URL
+                            String trackingUrl = String.format(
+                                "/api/campaigns/track/click?campaignId=%d&recipientId=%d&redirect=%s",
+                                campaign.getId(),
+                                recipient.getId(),
+                                java.net.URLEncoder.encode(campaign.getCtaButtonUrl(), "UTF-8")
+                            );
+                            
                             String ctaHtml = String.format(
                                 "<div style=\"text-align: center; margin: 30px 0;\">" +
                                 "  <a href=\"%s\" style=\"display: inline-block; padding: 15px 40px; background-color: #3b82f6; " +
                                 "color: white; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;\">" +
                                 "%s</a>" +
                                 "</div>",
-                                campaign.getCtaButtonUrl(),
+                                trackingUrl,
                                 ctaButtonText
                             );
                             
                             // Append CTA to email content
                             emailContent = emailContent + ctaHtml;
-                            log.info("[STEP 4] CTA button added: {} ({})", ctaButtonText, campaign.getCtaButtonUrl());
+                            log.info("[STEP 4] CTA button added with click tracking: {} (tracking: {})", ctaButtonText, trackingUrl);
                         }
                         
                         // Render email template
@@ -172,6 +181,15 @@ public class EmailCampaignSendingService {
                             failureCount++;
                             continue;  // Skip this recipient
                         }
+                        
+                        // Add open tracking pixel to the end of the email
+                        String trackingPixel = String.format(
+                            "<img src=\"/api/campaigns/track/open?campaignId=%d&recipientId=%d\" width=\"1\" height=\"1\" style=\"display:none;\" />",
+                            campaign.getId(),
+                            recipient.getId()
+                        );
+                        renderedHtml = renderedHtml + "\n" + trackingPixel;
+                        log.info("[STEP 4] Open tracking pixel added to email");
                         
                         log.info("[STEP 4] Template rendered for: {}", recipient.getRecipientEmail());
                         log.info("[STEP 4] Rendered Subject: {}", renderedSubject);
