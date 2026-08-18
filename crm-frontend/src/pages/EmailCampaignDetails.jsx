@@ -1,305 +1,48 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMemo, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSelector } from 'react-redux'
-import { Link, useParams } from 'react-router-dom'
-import { useState } from 'react'
-import { ArrowLeft, Mail, Users, TrendingUp, BarChart3, Activity } from 'lucide-react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Activity, CheckCircle2, ChevronLeft, ChevronRight, Copy, Eye, FileText, Mail, MousePointer2, Pencil, Send, Settings2, Trash2, Users, X } from 'lucide-react'
+import { Area, AreaChart, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import toast from 'react-hot-toast'
 import { emailCampaignService } from '../services/emailCampaignService'
 import CampaignStatusBadge from '../components/emailcampaign/CampaignStatusBadge'
 import Spinner from '../components/common/Spinner'
 
+const date = value => value ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) : '—'
+const pct = (value, total) => total ? Math.round((value / total) * 100) : 0
+const normalEvent = value => ['HARD_BOUNCE', 'SOFT_BOUNCE'].includes(value) ? 'BOUNCED' : value === 'UNSUBSCRIBE' ? 'UNSUBSCRIBED' : value
+const colors = { DELIVERED: '#36d399', OPENED: '#8b5cf6', CLICKED: '#fb923c', BOUNCED: '#fb7185', UNSUBSCRIBED: '#64748b' }
+const accents = { Recipients: ['bg-blue-500/10', 'text-blue-400'], Delivered: ['bg-emerald-500/10', 'text-emerald-400'], Opened: ['bg-violet-500/10', 'text-violet-400'], Clicked: ['bg-orange-500/10', 'text-orange-400'] }
+
+function Metric({ label, value, subtext, Icon }) { const [bg, text] = accents[label]; return <div className="rounded-2xl border border-slate-800 bg-[#111827] p-5 shadow-[0_12px_35px_rgba(0,0,0,.16)] transition hover:-translate-y-0.5 hover:border-slate-700"><div className={`inline-flex rounded-xl p-2.5 ${bg}`}><Icon size={19} className={text}/></div><p className="mt-5 text-3xl font-semibold text-white">{value}</p><p className="mt-1 text-sm font-medium text-slate-300">{label}</p><p className="mt-2 text-xs text-slate-500">{subtext}</p></div> }
+function RateCard({ title, value, detail, Icon, color }) { return <div className="rounded-2xl border border-slate-800 bg-[#111827] p-5"><div className="flex justify-between"><div><p className="text-sm text-slate-400">{title}</p><p className="mt-2 text-3xl font-semibold text-white">{value}%</p></div><span className="rounded-full p-2.5" style={{ background: `${color}22`, color }}><Icon size={19}/></span></div><p className="mt-4 text-sm text-slate-400">{detail}</p><div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-800"><div className="h-full rounded-full" style={{ width: `${value}%`, background: color }}/></div></div> }
+function RecipientDetails({ recipient, events, close }) { if (!recipient) return null; const timeline = events.filter(x => x.recipientId === recipient.id); return <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/75"><aside className="h-full w-full max-w-md overflow-y-auto border-l border-slate-800 bg-[#0f172a] p-6"><div className="flex justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-wider text-violet-400">Recipient activity</p><h2 className="mt-1 break-all text-lg font-semibold text-white">{recipient.recipientEmail}</h2></div><button onClick={close} className="rounded-lg p-2 text-slate-400 hover:bg-slate-800"><X size={20}/></button></div><div className="mt-8 space-y-5">{timeline.length ? timeline.map(event => <div key={event.id} className="flex gap-3 border-b border-slate-800 pb-5"><span className="rounded-full bg-slate-800 p-2" style={{ color: colors[normalEvent(event.eventType)] || '#94a3b8' }}><Activity size={15}/></span><div><p className="text-sm font-medium text-white">{normalEvent(event.eventType)}</p><p className="mt-1 text-xs text-slate-500">{date(event.occurredAt)}</p>{event.linkUrl && <a href={event.linkUrl} target="_blank" rel="noreferrer" className="mt-2 block break-all text-xs text-violet-400">{event.linkUrl}</a>}{event.bounceReason && <p className="mt-2 text-xs text-rose-300">{event.bounceReason}</p>}</div></div>) : <p className="rounded-xl border border-slate-800 p-4 text-sm text-slate-400">No webhook or tracking events have been received yet.</p>}</div></aside></div> }
+
 export default function EmailCampaignDetails() {
-  const { id } = useParams()
-  const { currentWorkspace } = useSelector((state) => state.workspace)
-  const [activeTab, setActiveTab] = useState('overview')
-  
-  const campaign = useQuery({
-    queryKey: ['email-campaign', currentWorkspace?.id, id],
-    queryFn: () => emailCampaignService.getCampaign(currentWorkspace.id, id),
-    enabled: !!currentWorkspace?.id && !!id
-  })
-  
-  const recipients = useQuery({
-    queryKey: ['email-campaign-recipients', currentWorkspace?.id, id],
-    queryFn: () => emailCampaignService.listRecipients(currentWorkspace.id, id),
-    enabled: !!currentWorkspace?.id && !!id
-  })
-
-  const analytics = useQuery({
-    queryKey: ['email-campaign-analytics', currentWorkspace?.id, id],
-    queryFn: () => emailCampaignService.getAnalytics(currentWorkspace.id, id),
-    enabled: !!currentWorkspace?.id && !!id
-  })
-
-  if (campaign.isLoading) return <div className="space-y-4 p-6 animate-pulse"><div className="h-8 w-64 rounded bg-gray-200 dark:bg-[#21262D]" /><div className="h-48 rounded bg-gray-100 dark:bg-[#161B22]" /></div>
-  if (campaign.isError) return <div className="p-6"><div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-900/20 dark:text-red-200">Unable to load this campaign.</div></div>
-  
-  const item = campaign.data
-  const recipientItems = recipients.data?.content || []
-  const analyticsData = analytics.data || {}
-
-  // Use backend metrics if available, otherwise fallback to recipient count
-  const metrics = [
-    { label: 'Recipients', value: analyticsData.totalSent || item.totalRecipients || recipientItems.length, icon: Users },
-    { label: 'Delivered', value: analyticsData.totalDelivered || 0, icon: Mail },
-    { label: 'Opened', value: analyticsData.totalOpened || 0, icon: Mail },
-    { label: 'Clicked', value: analyticsData.totalClicked || 0, icon: Mail }
-  ]
-
-  // Calculate rates
-  const recipientCount = analyticsData.totalSent || item.totalRecipients || recipientItems.length || 1
-  const deliveryRate = metrics[0].value > 0 ? ((metrics[1].value / metrics[0].value) * 100).toFixed(1) : 0
-  const openRate = metrics[1].value > 0 ? ((metrics[2].value / metrics[1].value) * 100).toFixed(1) : 0
-  const clickRate = metrics[1].value > 0 ? ((metrics[3].value / metrics[1].value) * 100).toFixed(1) : 0
-
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0D1117] space-y-6 p-4 sm:p-6 lg:p-8">
-      {/* Header */}
-      <div className="space-y-4">
-        <Link to="/marketing/email-campaigns" className="inline-flex items-center gap-2 text-sm font-medium text-violet-600 hover:text-violet-700">
-          <ArrowLeft size={16} />Back to Email Campaigns
-        </Link>
-        
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-          <div className="flex-1 space-y-2">
-            <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">{item.name}</h1>
-              <CampaignStatusBadge status={item.status} />
-            </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">{item.description}</p>
-          </div>
-        </div>
-
-        {/* Campaign Subject Card */}
-        <div className="rounded-lg border border-gray-200 bg-white p-4 sm:p-5 dark:border-[#30363D] dark:bg-[#161B22]">
-          <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Subject</p>
-          <p className="mt-2 text-lg font-medium text-gray-900 dark:text-white break-words">{item.subject}</p>
-        </div>
-
-        {/* Campaign Metadata */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-[#30363D] dark:bg-[#161B22]">
-            <p className="text-xs text-gray-600 dark:text-gray-400">Campaign ID</p>
-            <p className="mt-2 font-mono text-sm font-semibold text-gray-900 dark:text-white">#{item.id}</p>
-          </div>
-          <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-[#30363D] dark:bg-[#161B22]">
-            <p className="text-xs text-gray-600 dark:text-gray-400">Created</p>
-            <p className="mt-2 text-sm font-medium text-gray-900 dark:text-white">{new Date(item.createdAt).toLocaleDateString()}</p>
-          </div>
-          <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-[#30363D] dark:bg-[#161B22]">
-            <p className="text-xs text-gray-600 dark:text-gray-400">Sent</p>
-            <p className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
-              {item.sendStartedAt ? new Date(item.sendStartedAt).toLocaleDateString() : '-'}
-            </p>
-          </div>
-          <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-[#30363D] dark:bg-[#161B22]">
-            <p className="text-xs text-gray-600 dark:text-gray-400">Type</p>
-            <p className="mt-2 text-sm font-medium text-gray-900 dark:text-white">{item.contentType || 'Template'}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Metrics */}
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Campaign Overview</h2>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {metrics.map(({ label, value, icon: Icon }) => (
-            <div key={label} className="rounded-lg border border-gray-200 bg-white p-4 dark:border-[#30363D] dark:bg-[#161B22]">
-              <Icon size={18} className="text-violet-600" />
-              <p className="mt-3 text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{value}</p>
-              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">{label}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Analytics Rates */}
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Email Analytics</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="rounded-lg border border-gray-200 bg-white p-4 sm:p-6 dark:border-[#30363D] dark:bg-[#161B22]">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Delivery Rate</p>
-                <p className="mt-2 text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">{deliveryRate}%</p>
-              </div>
-              <TrendingUp size={28} className="text-green-600" />
-            </div>
-            {/* Progress bar */}
-            <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-[#21262D]">
-              <div 
-                className="bg-green-600 h-2 rounded-full" 
-                style={{width: `${deliveryRate}%`}}
-              />
-            </div>
-          </div>
-
-          <div className="rounded-lg border border-gray-200 bg-white p-4 sm:p-6 dark:border-[#30363D] dark:bg-[#161B22]">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Open Rate</p>
-                <p className="mt-2 text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">{openRate}%</p>
-              </div>
-              <TrendingUp size={28} className="text-blue-600" />
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-[#21262D]">
-              <div 
-                className="bg-blue-600 h-2 rounded-full" 
-                style={{width: `${openRate}%`}}
-              />
-            </div>
-          </div>
-
-          <div className="rounded-lg border border-gray-200 bg-white p-4 sm:p-6 dark:border-[#30363D] dark:bg-[#161B22]">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Click Rate</p>
-                <p className="mt-2 text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">{clickRate}%</p>
-              </div>
-              <TrendingUp size={28} className="text-purple-600" />
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-[#21262D]">
-              <div 
-                className="bg-purple-600 h-2 rounded-full" 
-                style={{width: `${clickRate}%`}}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Tab Navigation */}
-      <div className="border-b border-gray-200 dark:border-[#30363D]">
-        <div className="flex gap-4 sm:gap-6 overflow-x-auto">
-          {[
-            { id: 'overview', label: 'Overview', icon: BarChart3 },
-            { id: 'recipients', label: 'Recipients', icon: Users },
-            { id: 'activity', label: 'Activity', icon: Activity }
-          ].map(tab => {
-            const Icon = tab.icon
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`py-4 px-2 sm:px-4 border-b-2 whitespace-nowrap flex items-center gap-2 transition-colors ${
-                  activeTab === tab.id
-                    ? 'border-violet-600 text-violet-600'
-                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
-                }`}
-              >
-                <Icon size={18} />
-                <span className="hidden sm:inline">{tab.label}</span>
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Tab Content */}
-      <div>
-        {activeTab === 'overview' && (
-          <div className="space-y-6">
-            <div className="rounded-lg border border-gray-200 bg-white p-4 sm:p-6 dark:border-[#30363D] dark:bg-[#161B22]">
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Events Breakdown</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center pb-3 border-b border-gray-100 dark:border-[#21262D]">
-                  <span className="text-gray-700 dark:text-gray-300">Delivered</span>
-                  <span className="font-semibold text-gray-900 dark:text-white">{metrics[1].value}</span>
-                </div>
-                <div className="flex justify-between items-center pb-3 border-b border-gray-100 dark:border-[#21262D]">
-                  <span className="text-gray-700 dark:text-gray-300">Opened</span>
-                  <span className="font-semibold text-gray-900 dark:text-white">{metrics[2].value}</span>
-                </div>
-                <div className="flex justify-between items-center pb-3 border-b border-gray-100 dark:border-[#21262D]">
-                  <span className="text-gray-700 dark:text-gray-300">Clicked</span>
-                  <span className="font-semibold text-gray-900 dark:text-white">{metrics[3].value}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-700 dark:text-gray-300">Bounced</span>
-                  <span className="font-semibold text-gray-900 dark:text-white">{analyticsData.totalBounced || 0}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'recipients' && (
-          <div className="rounded-lg border border-gray-200 bg-white dark:border-[#30363D] dark:bg-[#161B22] overflow-hidden">
-            <div className="border-b border-gray-200 px-4 sm:px-6 py-4 dark:border-[#30363D]">
-              <h3 className="font-semibold text-gray-900 dark:text-white">Recipient Activity</h3>
-            </div>
-            {recipients.isLoading ? (
-              <div className="p-6"><Spinner size="md" /></div>
-            ) : recipientItems.length === 0 ? (
-              <div className="p-6 text-sm text-gray-600 dark:text-gray-400">No recipients have been added.</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50 dark:bg-[#0D1117]">
-                    <tr>
-                      <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-400">Email</th>
-                      <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-400">Status</th>
-                      <th className="hidden sm:table-cell px-4 sm:px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-400">Delivered</th>
-                      <th className="hidden md:table-cell px-4 sm:px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-400">Opened</th>
-                      <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-400">Clicks</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-[#21262D]">
-                    {recipientItems.map((recipient) => (
-                      <tr key={recipient.id} className="hover:bg-gray-50 dark:hover:bg-[#21262D] transition-colors">
-                        <td className="px-4 sm:px-6 py-3 text-sm text-gray-900 dark:text-white break-all">{recipient.recipientEmail}</td>
-                        <td className="px-4 sm:px-6 py-3 text-sm">
-                          <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-                            recipient.status === 'DELIVERED' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' :
-                            recipient.status === 'OPENED' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' :
-                            recipient.status === 'CLICKED' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' :
-                            recipient.status === 'BOUNCED' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' :
-                            'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300'
-                          }`}>
-                            {recipient.status}
-                          </span>
-                        </td>
-                        <td className="hidden sm:table-cell px-4 sm:px-6 py-3 text-sm text-gray-600 dark:text-gray-400">
-                          {recipient.deliveredAt ? new Date(recipient.deliveredAt).toLocaleDateString() : '-'}
-                        </td>
-                        <td className="hidden md:table-cell px-4 sm:px-6 py-3 text-sm text-gray-600 dark:text-gray-400">
-                          {recipient.openedAt ? new Date(recipient.openedAt).toLocaleDateString() : '-'}
-                        </td>
-                        <td className="px-4 sm:px-6 py-3 text-sm font-semibold text-gray-900 dark:text-white">
-                          {recipient.clickCount || 0}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'activity' && (
-          <div className="rounded-lg border border-gray-200 bg-white p-4 sm:p-6 dark:border-[#30363D] dark:bg-[#161B22]">
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Campaign Timeline</h3>
-            <div className="space-y-4">
-              <div className="flex gap-4">
-                <div className="w-1 bg-violet-600 rounded-full" />
-                <div className="pb-4">
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white">Campaign Created</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{new Date(item.createdAt).toLocaleString()}</p>
-                </div>
-              </div>
-              {item.sendStartedAt && (
-                <div className="flex gap-4">
-                  <div className="w-1 bg-green-600 rounded-full" />
-                  <div className="pb-4">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">Campaign Sent</p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{new Date(item.sendStartedAt).toLocaleString()}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  )
+  const { id } = useParams(); const navigate = useNavigate(); const client = useQueryClient(); const { currentWorkspace } = useSelector(state => state.workspace)
+  const [tab, setTab] = useState('overview'); const [page, setPage] = useState(0); const [recipient, setRecipient] = useState(null)
+  const campaign = useQuery({ queryKey: ['email-campaign', currentWorkspace?.id, id], queryFn: () => emailCampaignService.getCampaign(currentWorkspace.id, id), enabled: !!currentWorkspace?.id && !!id, refetchInterval: 30000 })
+  const analytics = useQuery({ queryKey: ['email-campaign-analytics', currentWorkspace?.id, id], queryFn: () => emailCampaignService.getAnalytics(currentWorkspace.id, id), enabled: !!currentWorkspace?.id && !!id, refetchInterval: 30000 })
+  const events = useQuery({ queryKey: ['email-campaign-events', currentWorkspace?.id, id], queryFn: () => emailCampaignService.listEvents(currentWorkspace.id, id), enabled: !!currentWorkspace?.id && !!id, refetchInterval: 30000 })
+  const recipients = useQuery({ queryKey: ['email-campaign-recipients', currentWorkspace?.id, id, page], queryFn: () => emailCampaignService.listRecipients(currentWorkspace.id, id, { page, size: 10 }), enabled: !!currentWorkspace?.id && !!id, refetchInterval: 30000 })
+  const templates = useQuery({ queryKey: ['email-templates', currentWorkspace?.id], queryFn: () => emailCampaignService.listTemplates(currentWorkspace.id), enabled: !!currentWorkspace?.id && tab === 'content' })
+  const duplicate = useMutation({ mutationFn: () => emailCampaignService.createCampaign(currentWorkspace.id, { name: `${campaign.data.name} (Copy)`, subject: campaign.data.subject, description: campaign.data.description, templateId: campaign.data.templateId, contentType: campaign.data.contentType, recipientMode: campaign.data.recipientMode || 'MANUAL', recipientData: campaign.data.recipientData || '{}', ctaButtonText: campaign.data.ctaButtonText, ctaButtonUrl: campaign.data.ctaButtonUrl, status: 'DRAFT', isActive: true }), onSuccess: fresh => { client.invalidateQueries({ queryKey: ['email-campaigns'] }); toast.success('Draft duplicate created'); navigate(`/marketing/email-campaigns/${fresh.id}`) }, onError: () => toast.error('Could not duplicate campaign') })
+  const del = useMutation({ mutationFn: () => emailCampaignService.deleteCampaign(currentWorkspace.id, id), onSuccess: () => { toast.success('Campaign deleted'); navigate('/marketing/email-campaigns') }, onError: () => toast.error('Could not delete campaign') })
+  if (campaign.isLoading) return <div className="p-8"><Spinner size="md"/></div>; if (campaign.isError) return <div className="m-8 rounded-xl border border-rose-900 bg-rose-950/30 p-4 text-rose-200">Unable to load this campaign.</div>
+  const item = campaign.data, stats = analytics.data || {}, eventItems = events.data || [], total = stats.totalSent ?? item.totalRecipients ?? 0, delivered = stats.totalDelivered ?? 0, opened = stats.totalOpened ?? 0, clicked = stats.totalClicked ?? 0
+  const amounts = { DELIVERED: delivered, OPENED: opened, CLICKED: clicked, BOUNCED: stats.totalBounced ?? 0, UNSUBSCRIBED: stats.totalUnsubscribed ?? 0 }
+  const chartData = useMemo(() => { const groups = {}; eventItems.forEach(event => { const key = new Date(event.occurredAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); const kind = normalEvent(event.eventType); groups[key] ||= { date: key, Delivered: 0, Opened: 0, Clicked: 0 }; if (kind === 'DELIVERED') groups[key].Delivered++; if (kind === 'OPENED') groups[key].Opened++; if (kind === 'CLICKED') groups[key].Clicked++ }); return Object.values(groups) }, [eventItems])
+  const breakdown = Object.entries(amounts).map(([key, value]) => ({ name: key[0] + key.slice(1).toLowerCase(), value, color: colors[key] }))
+  const template = templates.data?.content?.find(x => x.id === item.templateId); const baseHtml = item.customHtmlContent || template?.htmlContent || '<p style="font-family:Arial;color:#475569">The original email template is no longer available.</p>'; const previewCta = item.ctaButtonUrl ? `<div style="text-align:center;margin:28px 0"><a href="${item.ctaButtonUrl}" style="display:inline-block;border-radius:7px;background:#3b82f6;color:#fff;padding:14px 30px;font:600 16px Arial;text-decoration:none">${item.ctaButtonText || 'Learn More'}</a></div>` : ''; const html = baseHtml.replace('</body>', `${previewCta}</body>`) + (baseHtml.includes('</body>') ? '' : previewCta)
+  const tabs = [['overview', 'Overview', Activity], ['recipients', 'Recipients', Users], ['content', 'Email Content', Mail], ['settings', 'Settings', Settings2], ['activity', 'Activity Log', FileText]]
+  return <div className="min-h-screen bg-[#080d19] p-4 text-slate-100 sm:p-6 lg:p-8"><main className="mx-auto max-w-7xl space-y-7"><header><div className="flex gap-2 text-xs text-slate-500"><Link to="/marketing" className="hover:text-slate-300">Marketing</Link><span>›</span><Link to="/marketing/email-campaigns" className="hover:text-slate-300">Email Campaigns</Link><span>›</span><span className="truncate text-slate-400">{item.name}</span></div><div className="mt-5 flex flex-col justify-between gap-5 xl:flex-row"><div><div className="flex flex-wrap items-center gap-3"><span className="rounded-xl border border-violet-500/20 bg-violet-500/10 p-2.5 text-violet-300"><Send size={20}/></span><h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">{item.name}</h1><CampaignStatusBadge status={item.status}/></div><p className="mt-3 text-sm text-slate-400">Subject: <span className="text-slate-300">{item.subject}</span></p><p className="mt-1 text-xs text-slate-500">Sent on {date(item.sendStartedAt || item.sendCompletedAt)}</p></div><div className="flex h-fit flex-wrap gap-2"><button onClick={() => setTab('settings')} className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-3.5 py-2 text-sm hover:bg-slate-800"><Pencil size={15}/>Edit</button><button onClick={() => duplicate.mutate()} disabled={duplicate.isPending} className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-3.5 py-2 text-sm hover:bg-slate-800 disabled:opacity-50"><Copy size={15}/>Duplicate</button><button onClick={() => window.confirm(`Delete ${item.name}?`) && del.mutate()} className="inline-flex items-center gap-2 rounded-lg border border-rose-900 bg-rose-950/30 px-3.5 py-2 text-sm text-rose-300"><Trash2 size={15}/>Delete</button></div></div></header>
+    <section className="grid gap-4 rounded-2xl border border-slate-800 bg-[#0d1526] p-5 sm:grid-cols-2"><div className="grid gap-4 sm:grid-cols-2"><div><p className="text-xs text-slate-500">Campaign ID</p><p className="mt-1 font-mono text-sm">#{item.id}</p></div><div><p className="text-xs text-slate-500">Workspace</p><p className="mt-1 text-sm">{currentWorkspace?.name || `Workspace #${currentWorkspace?.id}`}</p></div></div><div className="grid gap-4 sm:grid-cols-2"><div><p className="text-xs text-slate-500">Created at</p><p className="mt-1 text-sm">{date(item.createdAt)}</p></div><div><p className="text-xs text-slate-500">Sent at</p><p className="mt-1 text-sm">{date(item.sendStartedAt)}</p></div></div></section>
+    <nav className="overflow-x-auto border-b border-slate-800"><div className="flex min-w-max gap-6">{tabs.map(([key, label, Icon]) => <button key={key} onClick={() => setTab(key)} className={`flex items-center gap-2 border-b-2 px-1 py-3.5 text-sm font-medium ${tab === key ? 'border-violet-400 text-violet-300' : 'border-transparent text-slate-500 hover:text-slate-300'}`}><Icon size={16}/>{label}</button>)}</div></nav>
+    {tab === 'overview' && <div className="space-y-7"><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><Metric label="Recipients" value={total} subtext="Total recipients" Icon={Users}/><Metric label="Delivered" value={delivered} subtext={`${pct(delivered, total)}% of recipients`} Icon={CheckCircle2}/><Metric label="Opened" value={opened} subtext={`${pct(opened, delivered)}% of delivered`} Icon={Eye}/><Metric label="Clicked" value={clicked} subtext={`${pct(clicked, delivered)}% of delivered`} Icon={MousePointer2}/></div><section><h2 className="mb-4 text-lg font-semibold text-white">Email Analytics</h2><div className="grid gap-4 md:grid-cols-3"><RateCard title="Delivery Rate" value={pct(delivered,total)} detail={`${delivered} / ${total} Delivered`} Icon={CheckCircle2} color="#36d399"/><RateCard title="Open Rate" value={pct(opened,delivered)} detail={`${opened} / ${delivered} Opened`} Icon={Eye} color="#8b5cf6"/><RateCard title="Click Rate" value={pct(clicked,delivered)} detail={`${clicked} / ${delivered} Clicked`} Icon={MousePointer2} color="#fb923c"/></div></section><div className="grid gap-4 xl:grid-cols-5"><section className="min-h-[350px] rounded-2xl border border-slate-800 bg-[#111827] p-5 xl:col-span-3"><h2 className="font-semibold text-white">Engagement Over Time</h2><p className="mt-1 text-xs text-slate-500">Live persisted provider and tracking events.</p><div className="mt-5 h-[260px]">{chartData.length ? <ResponsiveContainer width="100%" height="100%"><AreaChart data={chartData}><XAxis dataKey="date" tick={{fill:'#64748b',fontSize:11}} axisLine={false} tickLine={false}/><YAxis allowDecimals={false} tick={{fill:'#64748b',fontSize:11}} axisLine={false} tickLine={false}/><Tooltip contentStyle={{background:'#0f172a',border:'1px solid #334155',borderRadius:10}}/><Legend/><Area type="monotone" dataKey="Delivered" stroke="#36d399" fill="#36d39922"/><Area type="monotone" dataKey="Opened" stroke="#8b5cf6" fill="#8b5cf622"/><Area type="monotone" dataKey="Clicked" stroke="#fb923c" fill="#fb923c22"/></AreaChart></ResponsiveContainer> : <div className="flex h-full items-center justify-center text-sm text-slate-500">No engagement events recorded yet.</div>}</div></section><section className="rounded-2xl border border-slate-800 bg-[#111827] p-5 xl:col-span-2"><h2 className="font-semibold text-white">Events Breakdown</h2><div className="flex h-[180px] items-center"><ResponsiveContainer width="48%" height="100%"><PieChart><Pie data={breakdown.filter(x=>x.value)} dataKey="value" innerRadius={45} outerRadius={67} paddingAngle={3}>{breakdown.filter(x=>x.value).map(row=><Cell key={row.name} fill={row.color}/>)}</Pie></PieChart></ResponsiveContainer><div className="w-[52%] space-y-2">{breakdown.map(row=><div key={row.name} className="flex justify-between text-xs"><span className="flex items-center gap-2 text-slate-400"><i className="h-2 w-2 rounded-full" style={{background:row.color}}/>{row.name}</span><span>{row.value} <em className="not-italic text-slate-600">({pct(row.value,total)}%)</em></span></div>)}</div></div></section></div></div>}
+    {tab === 'recipients' && <section className="overflow-hidden rounded-2xl border border-slate-800 bg-[#111827]"><div className="flex justify-between border-b border-slate-800 px-5 py-4"><div><h2 className="font-semibold">Recipient Activity</h2><p className="mt-1 text-xs text-slate-500">Individual delivery and engagement status.</p></div><span className="text-xs text-slate-500">{recipients.data?.totalElements ?? 0} recipients</span></div><div className="overflow-x-auto"><table className="w-full min-w-[900px] text-left text-sm"><thead className="bg-slate-900/50 text-xs uppercase text-slate-500"><tr>{['Email','Status','Sent At','Delivered At','Opened At','Clicked','Actions'].map(x=><th key={x} className="px-5 py-3 font-medium">{x}</th>)}</tr></thead><tbody className="divide-y divide-slate-800">{(recipients.data?.content || []).map(row=><tr key={row.id} className="hover:bg-slate-800/30"><td className="px-5 py-4 text-slate-200">{row.recipientEmail}</td><td className="px-5 py-4"><span className="rounded-md border border-emerald-900 bg-emerald-500/10 px-2 py-1 text-xs font-semibold text-emerald-300">{row.status}</span></td><td className="px-5 py-4 text-xs text-slate-400">{date(row.sentAt)}</td><td className="px-5 py-4 text-xs text-slate-400">{date(row.deliveredAt)}</td><td className="px-5 py-4 text-xs text-slate-400">{date(row.openedAt)}</td><td className="px-5 py-4">{row.clickCount || 0}</td><td className="px-5 py-4"><button onClick={()=>setRecipient(row)} className="text-xs font-medium text-violet-300">View details</button></td></tr>)}</tbody></table></div><div className="flex justify-between border-t border-slate-800 px-5 py-3 text-xs text-slate-500"><span>Page {page+1} of {Math.max(1,recipients.data?.totalPages || 1)}</span><span className="flex gap-2"><button disabled={!page} onClick={()=>setPage(x=>x-1)} className="rounded border border-slate-700 p-1 disabled:opacity-30"><ChevronLeft size={15}/></button><button disabled={recipients.data?.last} onClick={()=>setPage(x=>x+1)} className="rounded border border-slate-700 p-1 disabled:opacity-30"><ChevronRight size={15}/></button></span></div></section>}
+    {tab === 'content' && <section className="grid gap-5 xl:grid-cols-3"><div className="rounded-2xl border border-slate-800 bg-[#111827] p-5"><h2 className="font-semibold">Message details</h2><dl className="mt-5 space-y-5 text-sm"><div><dt className="text-xs text-slate-500">Subject</dt><dd className="mt-1">{item.subject}</dd></div><div><dt className="text-xs text-slate-500">From</dt><dd className="mt-1">{item.createdByName || 'Workspace sender'}</dd></div><div><dt className="text-xs text-slate-500">To</dt><dd className="mt-1">Campaign recipients ({total})</dd></div><div><dt className="text-xs text-slate-500">CTA URL</dt><dd className="mt-1 break-all text-violet-300">{item.ctaButtonUrl || 'No CTA configured'}</dd></div></dl></div><div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-200 xl:col-span-2"><div className="border-b border-slate-300 bg-white px-5 py-3 text-sm text-slate-600">Email preview — rendered campaign content</div><iframe title="Sent email preview" srcDoc={html} sandbox="allow-popups" className="h-[570px] w-full bg-white"/></div></section>}
+    {tab === 'settings' && <section className="max-w-3xl rounded-2xl border border-slate-800 bg-[#111827] p-6"><h2 className="text-lg font-semibold">Campaign Settings</h2><p className="mt-2 text-sm text-slate-400">Configuration retained with this campaign.</p><div className="mt-6 grid gap-5 sm:grid-cols-2">{[['Delivery mode',item.recipientMode || 'Manual'],['Content source',item.templateName || item.contentType || 'Custom content'],['CTA text',item.ctaButtonText || 'Not configured'],['Scheduled at',date(item.scheduledAt)]].map(([name,value])=><div key={name}><p className="text-xs text-slate-500">{name}</p><p className="mt-1 text-sm">{value}</p></div>)}</div><p className="mt-7 rounded-xl border border-slate-800 bg-slate-900/50 p-4 text-xs text-slate-400">Sent campaigns are immutable. Duplicate this campaign to create an editable draft without compromising its analytics.</p></section>}
+    {tab === 'activity' && <section className="rounded-2xl border border-slate-800 bg-[#111827] p-5"><h2 className="font-semibold">Activity Log</h2><div className="mt-5 space-y-4">{eventItems.length ? [...eventItems].reverse().map(event=><div key={event.id} className="flex gap-3 border-b border-slate-800 pb-4 last:border-0"><span className="rounded-full bg-slate-800 p-2" style={{color:colors[normalEvent(event.eventType)] || '#94a3b8'}}><Activity size={15}/></span><div><p className="text-sm"><b>{normalEvent(event.eventType)}</b> · {event.recipientEmail}</p><p className="mt-1 text-xs text-slate-500">{date(event.occurredAt)}</p></div></div>) : <p className="text-sm text-slate-500">No provider or tracking events received yet.</p>}</div></section>}
+  </main><RecipientDetails recipient={recipient} events={eventItems} close={()=>setRecipient(null)}/></div>
 }

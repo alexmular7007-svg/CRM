@@ -34,6 +34,12 @@ public class EmailCampaignResponse {
     private String templateName;
     
     private String contentType;
+
+    private String customHtmlContent;
+
+    private String ctaButtonText;
+
+    private String ctaButtonUrl;
     
     private String status;
     

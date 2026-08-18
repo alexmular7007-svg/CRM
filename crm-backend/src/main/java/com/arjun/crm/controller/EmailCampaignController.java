@@ -3,6 +3,9 @@ package com.arjun.crm.controller;
 import com.arjun.crm.dto.request.*;
 import com.arjun.crm.dto.response.ApiResponse;
 import com.arjun.crm.dto.response.EmailCampaignResponse;
+import com.arjun.crm.dto.response.EmailCampaignEventResponse;
+import com.arjun.crm.entity.EmailCampaignHistory;
+import com.arjun.crm.repository.EmailCampaignHistoryRepository;
 import com.arjun.crm.service.EmailAnalyticsService;
 import com.arjun.crm.service.EmailCampaignAnalyticsResponse;
 import com.arjun.crm.service.EmailCampaignService;
@@ -17,6 +20,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
 
 /**
  * EmailCampaignController - FEATURE #3
@@ -37,6 +41,7 @@ public class EmailCampaignController {
     
     private final EmailCampaignService emailCampaignService;
     private final EmailAnalyticsService emailAnalyticsService;
+    private final EmailCampaignHistoryRepository historyRepository;
     
     /**
      * CREATE: POST /api/workspaces/{workspaceId}/email-campaigns
@@ -236,6 +241,30 @@ public class EmailCampaignController {
         
         return ResponseEntity.ok()
                 .body(ApiResponse.success("Campaign analytics retrieved successfully", analytics));
+    }
+
+    /** Persisted webhook/tracking events for charts, audit history, and recipient detail. */
+    @GetMapping("/{campaignId}/events")
+    public ResponseEntity<ApiResponse<List<EmailCampaignEventResponse>>> getCampaignEvents(
+            @PathVariable Long workspaceId, @PathVariable Long campaignId) {
+        emailCampaignService.getCampaign(workspaceId, campaignId);
+        List<EmailCampaignEventResponse> events = historyRepository.getEventTimeline(campaignId,
+                        PageRequest.of(0, 2000, Sort.by("occurredAt").ascending()))
+                .stream().map(this::mapEvent).toList();
+        return ResponseEntity.ok(ApiResponse.success("Campaign events retrieved successfully", events));
+    }
+
+    private EmailCampaignEventResponse mapEvent(EmailCampaignHistory event) {
+        return EmailCampaignEventResponse.builder()
+                .id(event.getId())
+                .recipientId(event.getRecipient() == null ? null : event.getRecipient().getId())
+                .recipientEmail(event.getRecipientEmail())
+                .eventType(event.getEventType())
+                .occurredAt(event.getOccurredAt())
+                .linkUrl(event.getLinkUrl())
+                .bounceReason(event.getBounceReason())
+                .metadata(event.getMetadata())
+                .build();
     }
 }
 

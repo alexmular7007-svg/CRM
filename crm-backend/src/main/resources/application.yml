@@ -392,6 +392,7 @@ springdoc:
 # Email Configuration (Brevo HTTP API)
 # ───────────────────────────────────────────────────────────────────────────
 app:
+  campaign-tracking-base-url: ${CAMPAIGN_TRACKING_BASE_URL:http://localhost:8080}
   mail:
     from: ${APP_MAIL_FROM:xsde790@gmail.com}
     from-name: ${APP_MAIL_FROM_NAME:TaskFlow}

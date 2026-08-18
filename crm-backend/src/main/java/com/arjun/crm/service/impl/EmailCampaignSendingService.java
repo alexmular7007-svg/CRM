@@ -13,6 +13,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -49,6 +50,9 @@ public class EmailCampaignSendingService {
     private final EmailCampaignRecipientRepository recipientRepository;
     private final BrevoEmailService brevoEmailService;
     private final ObjectMapper objectMapper;
+
+    @Value("${app.campaign-tracking-base-url:http://localhost:8080}")
+    private String campaignTrackingBaseUrl;
     
     /**
      * Send campaign asynchronously.
@@ -132,9 +136,10 @@ public class EmailCampaignSendingService {
                                 : "Learn More";
                             
                             // Generate tracking URL for click tracking
-                            // Format: /api/campaigns/track/click?campaignId=X&recipientId=Y&redirect=ORIGINAL_URL
+                            // Emails execute outside our domain, so links must use the public absolute API origin.
                             String trackingUrl = String.format(
-                                "/api/campaigns/track/click?campaignId=%d&recipientId=%d&redirect=%s",
+                                "%s/api/campaigns/track/click?campaignId=%d&recipientId=%d&redirect=%s",
+                                campaignTrackingBaseUrl.replaceAll("/$", ""),
                                 campaign.getId(),
                                 recipient.getId(),
                                 java.net.URLEncoder.encode(campaign.getCtaButtonUrl(), "UTF-8")
@@ -184,7 +189,8 @@ public class EmailCampaignSendingService {
                         
                         // Add open tracking pixel to the end of the email
                         String trackingPixel = String.format(
-                            "<img src=\"/api/campaigns/track/open?campaignId=%d&recipientId=%d\" width=\"1\" height=\"1\" style=\"display:none;\" />",
+                            "<img src=\"%s/api/campaigns/track/open?campaignId=%d&recipientId=%d\" width=\"1\" height=\"1\" style=\"display:none;\" />",
+                            campaignTrackingBaseUrl.replaceAll("/$", ""),
                             campaign.getId(),
                             recipient.getId()
                         );

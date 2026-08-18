@@ -162,6 +162,8 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
         recipientData: JSON.stringify(getRecipientData(data)),
         status: data.deliveryMode === 'draft' ? 'DRAFT' : 'DRAFT',
         isActive: true,
+        ctaButtonText: data.ctaButtonText || null,
+        ctaButtonUrl: data.ctaButtonUrl || null,
       }
       
       const saved = await emailCampaignService.createCampaign(currentWorkspace.id, campaignPayload)
@@ -224,7 +226,7 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
     },
   })
   
-  // Helper function to build HTML email content with heading, body, and CTA button
+  // The tracked CTA is appended by the backend per recipient, so this stores the message shell once.
   const buildHtmlContent = (data) => {
     const heading = data.emailHeading
       ? `<h1 style="font-family: Arial, Helvetica, sans-serif; color: #1a1a2e; font-size: 24px; font-weight: 700; margin: 0 0 16px 0;">${data.emailHeading}</h1>`
@@ -232,10 +234,7 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
     const body = data.emailBody
       ? `<p style="font-family: Arial, Helvetica, sans-serif; color: #333333; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0;">${data.emailBody}</p>`
       : ''
-    const cta = data.ctaButtonText && data.ctaButtonUrl
-      ? `<div style="margin: 24px 0 0 0;"><a href="${data.ctaButtonUrl}" style="display: inline-block; background-color: #7C3AED; color: #ffffff; font-family: Arial, Helvetica, sans-serif; font-size: 16px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 8px;">${data.ctaButtonText}</a></div>`
-      : ''
-    return `<div style="background-color: #f8f9fa; padding: 32px;"><div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; padding: 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">${heading}${body}${cta}</div></div>`
+    return `<!doctype html><html><body style="margin:0;padding:32px 12px;background:#f1f5f9;"><div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:12px;padding:40px;box-sizing:border-box;box-shadow:0 2px 8px rgba(0,0,0,.08);">${heading}${body}<hr style="border:0;border-top:1px solid #e2e8f0;margin:32px 0 18px;"><p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#64748b;">Sent by your workspace. Please do not reply to this automated message.</p></div></body></html>`
   }
 
   // Helper function to get recipient data

@@ -102,6 +102,8 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
         recipientData: JSON.stringify(getRecipientData(data)),
         status: data.deliveryMode === 'draft' ? 'DRAFT' : 'DRAFT',
         isActive: true,
+        ctaButtonText: data.ctaButtonText || null,
+        ctaButtonUrl: data.ctaButtonUrl || null,
       }
       
       const saved = await emailCampaignService.createCampaign(currentWorkspace.id, campaignPayload)

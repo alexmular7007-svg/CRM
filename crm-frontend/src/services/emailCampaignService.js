@@ -48,4 +48,10 @@ export const emailCampaignService = {
   async getAnalytics(workspaceId, campaignId) {
     return unwrap(await api.get(`${campaignPath(workspaceId, campaignId)}/analytics`))
   },
+  async listEvents(workspaceId, campaignId) {
+    return unwrap(await api.get(`${campaignPath(workspaceId, campaignId)}/events`))
+  },
+  async listRecipientEvents(workspaceId, campaignId, recipientId) {
+    return unwrap(await api.get(`${campaignPath(workspaceId, campaignId)}/recipients/${recipientId}/events`))
+  },
 }
