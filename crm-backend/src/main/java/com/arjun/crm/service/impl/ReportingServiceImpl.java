@@ -86,9 +86,9 @@ public class ReportingServiceImpl implements ReportingService {
                 .completionRate(Math.round(completionRate * 100.0) / 100.0)
                 .build();
 
-        // Project Summary
-        Long projectsCreated = projectRepository.countProjectsCreatedBetween(startDate, endDate);
-        Long projectsCompleted = projectRepository.countProjectsCompletedBetween(startDate, endDate);
+        // Project Summary - convert to LocalDateTime for repository consistency
+        Long projectsCreated = projectRepository.countProjectsCreatedBetween(startDateTime, endDateTime);
+        Long projectsCompleted = projectRepository.countProjectsCompletedBetween(startDateTime, endDateTime);
         Long activeProjects = projectRepository.countByStatus(ProjectStatus.ACTIVE);
         Double averageProgress = activeProjects > 0 ? 75.0 : 0.0;
 

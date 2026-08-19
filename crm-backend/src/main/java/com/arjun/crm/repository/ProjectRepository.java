@@ -51,13 +51,13 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
      * Count projects created in date range
      */
     @Query("SELECT COUNT(p) FROM Project p WHERE p.createdAt BETWEEN :startDate AND :endDate")
-    Long countProjectsCreatedBetween(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+    Long countProjectsCreatedBetween(@Param("startDate") java.time.LocalDateTime startDate, @Param("endDate") java.time.LocalDateTime endDate);
     
     /**
      * Count projects completed in date range
      */
     @Query("SELECT COUNT(p) FROM Project p WHERE p.status = 'COMPLETED' AND p.updatedAt BETWEEN :startDate AND :endDate")
-    Long countProjectsCompletedBetween(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+    Long countProjectsCompletedBetween(@Param("startDate") java.time.LocalDateTime startDate, @Param("endDate") java.time.LocalDateTime endDate);
     
     /**
      * Delete all projects in a workspace
