@@ -29,6 +29,7 @@ const NAV = [
     children: [
       { path: '/marketing/lead-magnets', label: 'Lead Magnets' },
       { path: '/marketing/email-campaigns', label: 'Email Campaigns' },
+      { path: '/marketing/automations', label: 'Automations' },
     ]
   },
   { path: '/settings', icon: Settings, label: 'Settings' },
