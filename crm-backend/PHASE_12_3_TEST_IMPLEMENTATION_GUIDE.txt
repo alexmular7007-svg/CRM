@@ -1,0 +1,1233 @@
+═══════════════════════════════════════════════════════════════════════════════
+PHASE 12.3 — TEST IMPLEMENTATION & VERIFICATION GUIDE
+═══════════════════════════════════════════════════════════════════════════════
+
+This document provides step-by-step instructions to execute Phase 12.3 end-to-end
+workflow tests and verify Phase 12.2 CRITICAL fixes are working in production.
+
+═══════════════════════════════════════════════════════════════════════════════
+PREREQUISITE CHECKLIST
+═══════════════════════════════════════════════════════════════════════════════
+
+BEFORE STARTING TESTS:
+
+Environment Setup:
+  ☐ Backend deployed on http://localhost:8081 (dev) or production URL
+  ☐ Frontend deployed on http://localhost:5173 or production URL
+  ☐ Supabase PostgreSQL database accessible
+  ☐ SPRING_PROFILES_ACTIVE=dev or prod (confirmed in startup logs)
+  ☐ Redis cache running (if applicable)
+  ☐ Brevo API key configured (from .env or production secrets)
+  ☐ BREVO_WEBHOOK_SECRET configured
+  ☐ APP_MAIL_FROM verified in Brevo dashboard
+  ☐ JWT_SECRET configured (from .env or production secrets)
+
+Test Accounts:
+  ☐ Workspace owner account created: owner@testcompany.com / password123
+  ☐ Workspace created: "E2E Test Workspace"
+  ☐ Lead magnet created in workspace
+  ☐ Gmail account for testing: test-recipient@gmail.com (monitored inbox)
+  ☐ Brevo webhook URL configured in dashboard:
+      https://api.example.com/api/webhooks/brevo (or localhost for dev)
+
+Tools Ready:
+  ☐ Browser: Chrome/Firefox with Network Dev Tools
+  ☐ Postman or curl for API testing
+  ☐ Database client: psql, pgAdmin, or DBeaver
+  ☐ Gmail inbox access
+  ☐ Brevo dashboard access
+  ☐ Application logs streaming (tail backend logs)
+  ☐ Browser console monitoring (for frontend errors)
+
+Initial Database State:
+  ☐ Executed cleanup SQL (see PHASE_12_3_E2E_WORKFLOW_TEST_PROTOCOL.md)
+  ☐ Fresh workspace with no campaigns/templates/leads
+  ☐ No existing webhooks in processing queue
+
+═══════════════════════════════════════════════════════════════════════════════
+TEST 1: WORKFLOW 1 — LEAD MAGNET
+═══════════════════════════════════════════════════════════════════════════════
+
+Objective: Verify lead magnet form creates lead, database record, and UI update.
+Estimated Time: 5 minutes
+Phase 12.2 Features Tested:
+  - CRITICAL #7: Rate Limiting
+  - CRITICAL #8: Workspace Isolation
+
+STEP 1.1: Navigate to Public Lead Magnet Page
+────────────────────────────────────────────
+
+1. Open browser to: http://localhost:5173 (or production public page)
+2. Find "Lead Magnet" or "Get Started" form
+3. Verify form displays without errors (HTTP 200 in Network tab)
+
+Verify: ✓ Form loads, ✓ No console errors
+
+STEP 1.2: Submit Lead Magnet Form
+──────────────────────────────────
+
+1. Fill form with:
+   - Name: "Alice Johnson"
+   - Email: "alice.johnson@techcorp.com"
+   - Phone: "+1-555-888-1234"
+   - Company: "TechCorp Inc"
+
+2. Open Network tab in Browser Dev Tools
+3. Click "Submit" button
+4. Monitor Network tab for API request
+
+Expected Network Activity:
+  Request: POST /api/lead-magnets/submit
+  Status: 200 OK
+  Response Body:
+    {
+      "success": true,
+      "message": "Lead created successfully",
+      "leadId": <number>,
+      "email": "alice.johnson@techcorp.com"
+    }
+
+Verify: ✓ HTTP 200, ✓ leadId returned, ✓ Response time < 500ms
+
+STEP 1.3: Verify Database Record
+─────────────────────────────────
+
+1. Open database client (psql, pgAdmin, etc.)
+2. Execute query:
+   
+   SELECT 
+     id, 
+     name, 
+     email, 
+     phone, 
+     company,
+     workspace_id,
+     created_at,
+     deleted_at
+   FROM leads 
+   WHERE email = 'alice.johnson@techcorp.com' 
+   LIMIT 1;
+
+Expected Result:
+  id: <positive number>
+  name: "Alice Johnson"
+  email: "alice.johnson@techcorp.com"
+  phone: "+1-555-888-1234"
+  company: "TechCorp Inc"
+  workspace_id: 1 (or your test workspace ID)
+  created_at: <recent timestamp>
+  deleted_at: NULL ✓ (CRITICAL — must be NULL for active lead)
+
+Verify: ✓ All fields correct, ✓ deleted_at is NULL
+
+STEP 1.4: Verify N+1 Query Fix (CRITICAL #6)
+──────────────────────────────────────────────
+
+1. Check backend logs for query count
+2. Should see EXACTLY 1 query for lead creation (not multiple)
+
+Example Good Log:
+  [INFO] Executing SQL: INSERT INTO leads (...) VALUES (...)
+  [INFO] Lead created with ID: 42
+  (only 1 INSERT query)
+
+Example Bad Log (N+1):
+  [INFO] Query 1: INSERT INTO leads ...
+  [INFO] Query 2: SELECT * FROM workspaces ...
+  [INFO] Query 3: SELECT * FROM workspace_members ...
+  (multiple queries indicate N+1 issue)
+
+Verify: ✓ Only 1 database query, ✓ No N+1 pattern
+
+STEP 1.5: Verify Frontend UI Update
+────────────────────────────────────
+
+1. Login to workspace as owner: owner@testcompany.com
+2. Navigate to Leads page
+3. Check if new lead appears in the list
+
+Expected UI:
+  - Lead "Alice Johnson" appears in table/grid
+  - Email: alice.johnson@techcorp.com
+  - Company: TechCorp Inc
+  - Created: Today's date
+  - No "Loading..." spinner (data loaded)
+  - Lead count badge shows +1
+
+Verify: ✓ Lead appears in list, ✓ Data matches form input, ✓ UI responsive
+
+STEP 1.6: Verify Rate Limiting (CRITICAL #7)
+───────────────────────────────────────────────
+
+1. Open terminal/command line
+2. Run rate limit test:
+
+   # Test with curl (replace with your form data)
+   for i in {1..700}; do
+     curl -X POST http://localhost:8081/api/lead-magnets/submit \
+       -H "Content-Type: application/json" \
+       -d '{"name":"Lead'$i'","email":"lead'$i'@test.com","leadMagnetId":1}' \
+       --silent --write-out '%{http_code}\n' >> rate_limit_results.txt
+   done
+
+3. Check results file:
+   grep -c "200" rate_limit_results.txt  # Should show ~120
+   grep -c "429" rate_limit_results.txt  # Should show ~580 (rate limited)
+
+Expected Results:
+  - First ~120 requests return: 200 OK
+  - Requests #121+ return: 429 Too Many Requests
+  - Rate limit: 120 req/min POST (as configured)
+
+Verify: ✓ Requests 1-120 succeed, ✓ Requests 121+ get 429 status
+
+STEP 1.7: Verify Workspace Isolation (CRITICAL #8)
+─────────────────────────────────────────────────────
+
+1. Get JWT token for workspace 1 owner
+2. Try to access lead as different workspace owner:
+
+   # Get JWT for workspace 1
+   curl -X POST http://localhost:8081/api/auth/login \
+     -H "Content-Type: application/json" \
+     -d '{"email":"owner@testcompany.com","password":"password123"}' | jq '.token'
+
+3. Create second workspace/user (if not exists)
+4. Try to access workspace 1's lead with different token:
+
+   curl http://localhost:8081/api/leads/42 \
+     -H "Authorization: Bearer <workspace_2_token>"
+
+Expected Result:
+  Status: 403 Forbidden
+  Response:
+    {
+      "error": "Access denied",
+      "message": "User is not a member of this workspace"
+    }
+
+Verify: ✓ Other workspace users cannot access, ✓ 403 status returned
+
+STEP 1.8: Verification Summary
+───────────────────────────────
+
+TEST 1 PASSED IF:
+  ✓ Lead form submits successfully (HTTP 200)
+  ✓ Lead record created in database (deleted_at = NULL)
+  ✓ Lead appears in frontend UI within 2 seconds
+  ✓ Only 1 database query executed (N+1 fix verified)
+  ✓ Rate limiting works (429 after 120 req/min)
+  ✓ Workspace isolation enforced (403 for other workspaces)
+  ✓ No HTTP errors in logs
+  ✓ No console errors in browser
+
+If any step FAILS:
+  - Check backend logs for exceptions
+  - Verify database connectivity
+  - Check rate limiting configuration
+  - Verify workspace_id is set correctly
+  - Review Phase 12.2 CRITICAL #7, #8 implementations
+
+═══════════════════════════════════════════════════════════════════════════════
+TEST 2: WORKFLOW 2 — EMAIL CAMPAIGN
+═══════════════════════════════════════════════════════════════════════════════
+
+Objective: Verify email template, campaign, recipient creation, and sending.
+Estimated Time: 10 minutes
+Phase 12.2 Features Tested:
+  - CRITICAL #4: Webhook Signature Verification
+  - CRITICAL #11: Metadata Validation
+
+STEP 2.1: Login to Workspace
+────────────────────────────
+
+1. Open browser to: http://localhost:5173
+2. Login as workspace owner: owner@testcompany.com / password123
+3. Verify authenticated (JWT token in localStorage)
+
+Verify: ✓ Logged in, ✓ Dashboard loads, ✓ Workspace visible
+
+STEP 2.2: Create Email Template
+────────────────────────────────
+
+1. Navigate to: Templates or Email section
+2. Click "Create Template" button
+3. Fill in:
+   - Name: "Welcome Email"
+   - Subject: "Welcome to Our Platform"
+   - Body: "<h1>Hello {{name}}</h1><p>Welcome aboard!</p>"
+   - Variables: ["name"]
+
+4. Click "Save Template"
+5. Monitor Network tab
+
+Expected Network Activity:
+  Request: POST /api/email-templates
+  Headers: Authorization: Bearer <jwt_token>
+  Status: 201 Created
+  Response Body:
+    {
+      "id": <number>,
+      "name": "Welcome Email",
+      "subject": "Welcome to Our Platform",
+      "createdAt": "2026-08-24T..."
+    }
+
+Verify: ✓ HTTP 201, ✓ Template ID returned, ✓ UI shows success message
+
+STEP 2.3: Verify Database: Template Created
+─────────────────────────────────────────────
+
+Execute Query:
+  SELECT id, name, subject, workspace_id, created_by 
+  FROM email_templates 
+  WHERE name = 'Welcome Email' 
+  AND workspace_id = 1;
+
+Expected Result:
+  id: <positive number>
+  name: "Welcome Email"
+  subject: "Welcome to Our Platform"
+  workspace_id: 1
+  created_by: <owner user_id>
+
+Verify: ✓ Template in database, ✓ workspace_id correct
+
+STEP 2.4: Create Email Campaign
+────────────────────────────────
+
+1. Navigate to: Campaigns or Email section
+2. Click "Create Campaign" button
+3. Fill in:
+   - Name: "Welcome Campaign - Batch 1"
+   - Template: Select "Welcome Email"
+   - Description: "Initial welcome batch"
+
+4. Click "Create"
+5. Monitor Network tab
+
+Expected Network Activity:
+  Request: POST /api/email-campaigns
+  Status: 201 Created
+  Response Body:
+    {
+      "id": <number>,
+      "name": "Welcome Campaign - Batch 1",
+      "templateId": <template_id>,
+      "status": "DRAFT",
+      "recipientCount": 0
+    }
+
+Verify: ✓ HTTP 201, ✓ Campaign ID returned, ✓ Status is DRAFT
+
+STEP 2.5: Verify Database: Campaign Created
+──────────────────────────────────────────────
+
+Execute Query:
+  SELECT id, name, template_id, status, workspace_id 
+  FROM email_campaigns 
+  WHERE name = 'Welcome Campaign - Batch 1';
+
+Expected Result:
+  id: <positive number>
+  status: "DRAFT"
+  template_id: <template_id from Step 2.3>
+  workspace_id: 1
+
+Verify: ✓ Campaign in database, ✓ Status is DRAFT
+
+STEP 2.6: Add Recipients to Campaign
+─────────────────────────────────────
+
+1. Navigate to: Campaign Details → Recipients
+2. Click "Add Recipient" button
+3. Fill in:
+   - Email: alice.johnson@techcorp.com
+   - Name: Alice Johnson
+   - Variables: {"name": "Alice"}
+
+4. Click "Add"
+5. Monitor Network tab
+
+Expected Network Activity:
+  Request: POST /api/email-campaigns/<campaign_id>/recipients
+  Status: 201 Created
+  Response Body:
+    {
+      "id": <number>,
+      "campaignId": <campaign_id>,
+      "recipientEmail": "alice.johnson@techcorp.com",
+      "status": "PENDING"
+    }
+
+Verify: ✓ HTTP 201, ✓ Recipient ID returned, ✓ Status is PENDING
+
+STEP 2.7: Verify Database: Recipient Created
+──────────────────────────────────────────────
+
+Execute Query:
+  SELECT id, campaign_id, recipient_email, status 
+  FROM email_campaign_recipients 
+  WHERE campaign_id = <campaign_id>;
+
+Expected Result:
+  id: <positive number>
+  campaign_id: <campaign_id>
+  recipient_email: "alice.johnson@techcorp.com"
+  status: "PENDING"
+
+Verify: ✓ Recipient in database, ✓ Status is PENDING
+
+STEP 2.8: Send Campaign
+───────────────────────
+
+1. Navigate to: Campaign Details
+2. Click "Send Campaign" button
+3. Confirm "Are you sure?" dialog
+4. Monitor Network tab
+
+Expected Network Activity:
+  Request: POST /api/email-campaigns/<campaign_id>/send
+  Status: 200 OK
+  Response Body:
+    {
+      "id": <campaign_id>,
+      "status": "SENDING",
+      "recipientsSent": 1,
+      "message": "Campaign queued for sending"
+    }
+
+Verify: ✓ HTTP 200, ✓ Status changed to SENDING
+
+STEP 2.9: Verify Database: Campaign Sent
+──────────────────────────────────────────
+
+Execute Query (wait 5 seconds for async processing):
+  SELECT id, status, sent_at FROM email_campaigns 
+  WHERE id = <campaign_id>;
+  
+  SELECT id, status, sent_at FROM email_campaign_recipients 
+  WHERE campaign_id = <campaign_id>;
+
+Expected Result:
+  Campaign status: "SENT" (after async processing)
+  Recipient status: "SENT"
+  sent_at: <recent timestamp>
+
+Verify: ✓ Campaign status updated, ✓ Recipient status updated
+
+STEP 2.10: Verify Brevo Email Sent
+────────────────────────────────────
+
+1. Open browser to: https://dashboard.brevo.com
+2. Login with Brevo account
+3. Navigate to: Sent Messages or Campaign History
+4. Look for email sent to alice.johnson@techcorp.com
+
+Expected Brevo Results:
+  ✓ Email appears in sent list
+  ✓ To: alice.johnson@techcorp.com
+  ✓ Subject: "Welcome to Our Platform"
+  ✓ Status: "Sent" or "Delivered"
+  ✓ Time: Recent (within last minute)
+  ✓ Metadata contains: {"campaign_id": "xxx", "recipient_id": "xxx"}
+
+Verify: ✓ Email appears in Brevo, ✓ Metadata correct
+
+STEP 2.11: Verify Metadata Validation (CRITICAL #11)
+──────────────────────────────────────────────────────
+
+In Brevo dashboard, click on the sent email to view details:
+
+Expected Metadata Structure:
+  {
+    "campaign_id": <positive_number>,
+    "recipient_id": <positive_number>
+  }
+
+Verify:
+  ✓ campaign_id is positive integer (> 0)
+  ✓ recipient_id is positive integer (> 0)
+  ✓ No null values
+  ✓ No negative or zero values
+
+Verify: ✓ Metadata is valid, ✓ Types are correct
+
+STEP 2.12: Verify Gmail Delivery
+─────────────────────────────────
+
+1. Open Gmail inbox: test-recipient@gmail.com
+   (or check alice.johnson@techcorp.com if that's your test email)
+2. Wait up to 2 minutes for email arrival
+3. Look for email from: xsde790@gmail.com (or APP_MAIL_FROM)
+
+Expected Gmail Results:
+  ✓ Email received in Inbox
+  ✓ From: TaskFlow <xsde790@gmail.com>
+  ✓ Subject: "Welcome to Our Platform"
+  ✓ Body contains: "Hello Alice" (variable substitution)
+  ✓ Timestamp: Recent (within last 2 minutes)
+  ✓ No spam folder (check spam folder if not in inbox)
+
+Verify: ✓ Email in Gmail inbox, ✓ Subject/body correct, ✓ Variables substituted
+
+STEP 2.13: Verify Frontend UI Update
+──────────────────────────────────────
+
+1. Refresh browser (Campaigns page)
+2. Find "Welcome Campaign - Batch 1"
+3. Click to view details
+
+Expected UI:
+  ✓ Campaign status: "SENT"
+  ✓ Recipients list shows 1 recipient
+  ✓ Recipient status: "SENT"
+  ✓ "Send Campaign" button is disabled/gone
+  ✓ Sent timestamp visible
+
+Verify: ✓ UI reflects sent status, ✓ Button disabled
+
+STEP 2.14: Verification Summary
+────────────────────────────────
+
+TEST 2 PASSED IF:
+  ✓ Template created and saved to database
+  ✓ Campaign created in DRAFT status
+  ✓ Recipient added with PENDING status
+  ✓ Campaign sent successfully (HTTP 200)
+  ✓ Campaign status changed to SENT
+  ✓ Recipient status changed to SENT
+  ✓ Email appears in Brevo dashboard
+  ✓ Email received in Gmail inbox
+  ✓ Metadata valid (positive IDs only)
+  ✓ Variables substituted in email ({{name}} → Alice)
+  ✓ Frontend UI updated after send
+  ✓ No HTTP errors in logs
+
+If any step FAILS:
+  - Check backend logs for exceptions
+  - Verify Brevo API key is correct
+  - Verify BREVO_WEBHOOK_SECRET is set
+  - Check email delivery logs
+  - Verify Gmail has no email filters blocking sender
+  - Review Phase 12.2 CRITICAL #4, #11 implementations
+
+═══════════════════════════════════════════════════════════════════════════════
+TEST 3: WORKFLOW 3 — EMAIL ANALYTICS
+═══════════════════════════════════════════════════════════════════════════════
+
+Objective: Verify email open/click tracking and analytics updates.
+Estimated Time: 15 minutes
+Phase 12.2 Features Tested:
+  - CRITICAL #4: Webhook Signature Verification
+  - CRITICAL #5: Idempotency (Duplicate Prevention)
+  - CRITICAL #11: Metadata Validation
+
+STEP 3.1: Open Email in Gmail
+──────────────────────────────
+
+1. In Gmail inbox (test-recipient@gmail.com), find the email from Step 2
+2. Click to open the email
+3. Wait 3-5 seconds for open tracking pixel to fire
+
+Expected Gmail Behavior:
+  ✓ Email opens without errors
+  ✓ Opens tracking pixel fires (invisible, automatic)
+  ✓ Gmail notifies Brevo
+
+Verify: ✓ Email opened successfully
+
+STEP 3.2: Monitor Backend Webhook Reception
+─────────────────────────────────────────────
+
+1. In another terminal, monitor backend logs for webhook:
+
+   # For production logs
+   tail -f /var/log/application.log | grep -i "webhook\|brevo"
+   
+   # Or check specific webhook endpoint logs
+
+2. Expected log entries (within 10 seconds):
+   [INFO] 🟢 Processing webhook - Event: opened, Email: alice.johnson@techcorp.com
+   [INFO] ✓ Email sent successfully - Brevo HTTP 200
+
+Verify: ✓ Backend received webhook, ✓ No validation errors
+
+STEP 3.3: Verify Webhook Signature Validation (CRITICAL #4)
+─────────────────────────────────────────────────────────────
+
+1. In backend logs, look for signature validation:
+
+   Expected Log:
+   [INFO] Validating X-Brevo-Signature header
+   [INFO] ✓ Signature valid (HMAC-SHA256)
+   [INFO] Processing webhook event
+
+   Bad Log (would fail):
+   [ERROR] ✗ Invalid signature - rejecting webhook
+   [ERROR] Expected: sha256=abc123...
+   [ERROR] Received: sha256=xyz789...
+
+2. Test with invalid signature:
+   
+   curl -X POST http://localhost:8081/api/webhooks/brevo \
+     -H "X-Brevo-Signature: sha256=invalid_signature" \
+     -H "Content-Type: application/json" \
+     -d '{"event":"opened","email":"test@test.com",...}'
+
+   Expected Response: 403 Forbidden
+
+Verify: ✓ Valid signature accepted, ✓ Invalid signature rejected (403)
+
+STEP 3.4: Verify Database: Analytics Record Created
+──────────────────────────────────────────────────────
+
+Execute Query (wait 5 seconds after webhook):
+  SELECT 
+    id, 
+    campaign_id, 
+    recipient_id, 
+    event_type, 
+    event_timestamp,
+    idempotency_key
+  FROM email_campaign_analytics 
+  WHERE recipient_id = <recipient_id> 
+  ORDER BY event_timestamp DESC;
+
+Expected Result:
+  id: <positive number>
+  campaign_id: <campaign_id>
+  recipient_id: <recipient_id>
+  event_type: "OPENED"
+  event_timestamp: <recent timestamp>
+  idempotency_key: <unique key>
+
+Verify: ✓ Analytics record created, ✓ Event type is OPENED
+
+STEP 3.5: Test Idempotency (CRITICAL #5) — Duplicate Webhook
+──────────────────────────────────────────────────────────────
+
+1. Simulate Brevo sending the same webhook twice (can happen in production):
+
+   # First webhook (already processed)
+   curl -X POST http://localhost:8081/api/webhooks/brevo \
+     -H "X-Brevo-Signature: sha256=valid_sig_1" \
+     -H "Content-Type: application/json" \
+     -d '{"event":"opened","id":"12345","email":"alice@test.com",...}' \
+     --silent | jq .
+
+   # Wait 5 seconds
+
+   # Second identical webhook (duplicate)
+   curl -X POST http://localhost:8081/api/webhooks/brevo \
+     -H "X-Brevo-Signature: sha256=valid_sig_1" \
+     -H "Content-Type: application/json" \
+     -d '{"event":"opened","id":"12345","email":"alice@test.com",...}' \
+     --silent | jq .
+
+2. Check responses:
+   Response 1: {"success": true, "message": "Event processed"}
+   Response 2: {"success": true, "message": "Event already processed (duplicate)"}
+
+3. Verify database:
+   SELECT COUNT(*) FROM email_campaign_analytics 
+   WHERE idempotency_key = '<key>' 
+   AND event_type = 'OPENED';
+
+   Expected: 1 (only one record, duplicate rejected)
+
+Verify: ✓ Both webhooks return 200 OK (idempotent), ✓ Only 1 analytics record
+
+STEP 3.6: Verify Recipient Status Updated
+─────────────────────────────────────────────
+
+Execute Query:
+  SELECT id, status, opened_at FROM email_campaign_recipients 
+  WHERE id = <recipient_id>;
+
+Expected Result:
+  status: "OPENED"
+  opened_at: <timestamp of open event>
+
+Verify: ✓ Recipient status changed to OPENED
+
+STEP 3.7: Verify Frontend: Analytics Updated
+───────────────────────────────────────────────
+
+1. In workspace owner's browser, navigate to: Analytics page
+2. Find campaign: "Welcome Campaign - Batch 1"
+3. Click to view analytics
+
+Expected UI:
+  ✓ Campaign shows:
+    - Total Sent: 1
+    - Opened: 1
+    - Open Rate: 100%
+  ✓ Event timeline shows: "alice.johnson@techcorp.com opened at [time]"
+  ✓ Status badges show: SENT, OPENED
+
+Verify: ✓ Analytics UI updated, ✓ Open rate correct
+
+STEP 3.8: Click Email Link in Gmail
+─────────────────────────────────────
+
+1. In Gmail, find the email body and locate a CTA link
+   - If not present, add to email template:
+     `<a href="https://example.com?utm_campaign=welcome">Click Here</a>`
+   - Or use tracking URL if available
+
+2. Click the link in the email
+
+Expected Gmail Behavior:
+  ✓ Link click recorded
+  ✓ Browser navigates to target URL
+  ✓ Brevo notifies backend of click
+
+Verify: ✓ Link clicked, ✓ Navigation successful
+
+STEP 3.9: Verify Backend: Click Webhook Received
+──────────────────────────────────────────────────
+
+1. Monitor backend logs for click event:
+
+   Expected Log:
+   [INFO] 🟢 Processing webhook - Event: clicked, Email: alice.johnson@techcorp.com
+   [INFO] ✓ Email sent successfully - Brevo HTTP 200
+
+Verify: ✓ Backend received click webhook
+
+STEP 3.10: Verify Database: Click Analytics Recorded
+──────────────────────────────────────────────────────
+
+Execute Query:
+  SELECT event_type, COUNT(*) as count FROM email_campaign_analytics 
+  WHERE campaign_id = <campaign_id> 
+  GROUP BY event_type;
+
+Expected Result:
+  event_type | count
+  -----------+-------
+  OPENED     | 1
+  CLICKED    | 1
+
+Verify: ✓ Two separate analytics records, ✓ Click event recorded
+
+STEP 3.11: Verify Frontend: Click Analytics Updated
+─────────────────────────────────────────────────────
+
+1. Refresh Analytics page (Ctrl+R)
+
+Expected UI:
+  ✓ Campaign analytics updated:
+    - Opened: 1
+    - Clicked: 1
+    - Click Rate: 100%
+  ✓ Event timeline shows both events:
+    - "alice.johnson@techcorp.com opened at [time1]"
+    - "alice.johnson@techcorp.com clicked at [time2]"
+  ✓ Timeline sorted chronologically
+
+Verify: ✓ Analytics updated, ✓ Timeline accurate
+
+STEP 3.12: Verification Summary
+────────────────────────────────
+
+TEST 3 PASSED IF:
+  ✓ Email opened in Gmail (tracking pixel fired)
+  ✓ Webhook signature validated (CRITICAL #4)
+  ✓ Analytics record created for OPENED event
+  ✓ Duplicate webhooks rejected (idempotency works - CRITICAL #5)
+  ✓ Only 1 analytics record per event (no duplicates)
+  ✓ Recipient status changed to OPENED
+  ✓ Frontend analytics updated in real-time
+  ✓ Email link clicked (CTA working)
+  ✓ Click event recorded in analytics
+  ✓ Both OPENED and CLICKED events visible in analytics UI
+  ✓ Metadata validation passed (CRITICAL #11)
+  ✓ No HTTP errors in webhook processing
+  ✓ Event timestamps chronological
+
+If any step FAILS:
+  - Check Brevo webhook configuration (URL, signature key)
+  - Verify BREVO_WEBHOOK_SECRET matches Brevo dashboard
+  - Check backend logs for webhook errors
+  - Verify database migrations include idempotency_key column
+  - Review Phase 12.2 CRITICAL #4, #5, #11 implementations
+
+═══════════════════════════════════════════════════════════════════════════════
+TEST 4: WORKFLOW 4 — AUTOMATION
+═══════════════════════════════════════════════════════════════════════════════
+
+Objective: Verify lead magnet triggers automation → email sent → webhook processed.
+Estimated Time: 10 minutes
+Phase 12.2 Features Tested:
+  - CRITICAL #9: Async Transaction Handling
+
+STEP 4.1: Create Automation Rule
+─────────────────────────────────
+
+1. In workspace, navigate to: Automations → Create New
+2. Fill in:
+   - Name: "Welcome New Leads"
+   - Trigger: "Lead Magnet Submitted"
+   - Action: "Send Email"
+   - Template: "Welcome Email" (from Workflow 2)
+   - Delay: 0 seconds
+
+3. Click "Create Automation"
+4. Verify automation is ENABLED
+
+Expected UI:
+  ✓ Automation created
+  ✓ Status shows: ACTIVE/ENABLED
+  ✓ Trigger: Lead Magnet Submitted
+  ✓ Action: Send Email
+
+Verify: ✓ Automation created and enabled
+
+STEP 4.2: Verify Database: Automation Created
+───────────────────────────────────────────────
+
+Execute Query:
+  SELECT id, name, trigger_type, enabled FROM automations 
+  WHERE name = 'Welcome New Leads' AND workspace_id = 1;
+
+Expected Result:
+  id: <positive number>
+  trigger_type: "LEAD_MAGNET_SUBMITTED"
+  enabled: true
+
+Verify: ✓ Automation in database, ✓ Enabled is true
+
+STEP 4.3: Submit New Lead (Trigger Automation)
+────────────────────────────────────────────────
+
+1. Go to public lead magnet page (http://localhost:5173)
+2. Submit new lead form:
+   - Name: "Bob Smith"
+   - Email: "bob.smith@company.com"
+   - Phone: "+1-555-888-2222"
+   - Company: "SmithCo"
+
+3. Verify form submits (HTTP 200)
+
+Expected Response:
+  {
+    "success": true,
+    "message": "Lead created successfully",
+    "leadId": <number>
+  }
+
+Verify: ✓ Lead created, ✓ Automation should trigger automatically
+
+STEP 4.4: Monitor Backend: Automation Triggered
+──────────────────────────────────────────────────
+
+1. Check backend logs (within 5 seconds):
+
+   Expected Log Entries:
+   [INFO] 🔔 Lead magnet submitted: bob.smith@company.com (leadId: <id>)
+   [INFO] 🤖 Automation triggered: Welcome New Leads (automationId: 501)
+   [INFO] 📧 Automation action executing: SEND_EMAIL
+   [INFO] 📨 Sending email to: bob.smith@company.com
+
+Verify: ✓ Automation logs show trigger and execution
+
+STEP 4.5: Verify Database: Automation Execution Created
+─────────────────────────────────────────────────────────
+
+Execute Query (wait 5 seconds):
+  SELECT 
+    id, 
+    automation_id, 
+    trigger_id, 
+    status, 
+    executed_at,
+    completed_at
+  FROM automation_executions 
+  WHERE automation_id = <automation_id> 
+  ORDER BY executed_at DESC 
+  LIMIT 1;
+
+Expected Result:
+  automation_id: <automation_id>
+  trigger_id: <lead_id of Bob Smith>
+  status: "COMPLETED" (or "EXECUTING", then poll until COMPLETED)
+  executed_at: <recent timestamp>
+  completed_at: <recent timestamp>
+
+Verify: ✓ Execution record created, ✓ Status is COMPLETED
+
+STEP 4.6: Verify Async Transaction Safety (CRITICAL #9)
+────────────────────────────────────────────────────────
+
+1. Check backend logs for transaction confirmation:
+
+   Expected Log (indicating proper transaction handling):
+   [INFO] Starting async email task for automationId: 501
+   [INFO] Creating new transaction with REQUIRES_NEW propagation
+   [INFO] Saving recipient: bob.smith@company.com
+   [INFO] Transaction committed successfully
+   [INFO] Async task completed without data loss
+
+   Bad Log (transaction loss):
+   [ERROR] Transaction lost in async operation
+   [ERROR] Data not persisted to database
+
+2. Verify database shows complete email record:
+   
+   SELECT * FROM email_campaign_recipients 
+   WHERE recipient_email = 'bob.smith@company.com' 
+   AND campaign_id IN (
+     SELECT campaign_id FROM automation_executions 
+     WHERE automation_id = <automation_id>
+   );
+
+   Expected: Complete record (not partial/null fields)
+
+Verify: ✓ Async transaction completed, ✓ Data fully persisted
+
+STEP 4.7: Verify Email Sent to Lead
+─────────────────────────────────────
+
+1. Check Gmail inbox for automated email (bob.smith@company.com or test inbox)
+2. Wait up to 2 minutes for delivery
+
+Expected Gmail:
+  ✓ From: xsde790@gmail.com (TaskFlow)
+  ✓ To: bob.smith@company.com
+  ✓ Subject: "Welcome to Our Platform"
+  ✓ Body: "Hello Bob" (variable substitution)
+
+Verify: ✓ Email received from automation
+
+STEP 4.8: Verify Email Appears in Brevo
+──────────────────────────────────────────
+
+1. Check Brevo dashboard (https://dashboard.brevo.com)
+2. Find email sent to bob.smith@company.com
+
+Expected Brevo:
+  ✓ Email in sent list
+  ✓ To: bob.smith@company.com
+  ✓ Status: Sent/Delivered
+  ✓ Contains automation metadata
+
+Verify: ✓ Email in Brevo
+
+STEP 4.9: User Opens Automation Email
+──────────────────────────────────────
+
+1. In Gmail inbox, open the automation email
+2. Wait 3-5 seconds for tracking
+
+Expected Gmail:
+  ✓ Email opens without error
+  ✓ Tracking pixel fires (automatic)
+
+Verify: ✓ Email opened
+
+STEP 4.10: Monitor Webhook Reception
+──────────────────────────────────────
+
+1. Check backend logs for open webhook:
+
+   Expected Log:
+   [INFO] 🟢 Processing webhook - Event: opened, Email: bob.smith@company.com
+   [INFO] 🤖 Automation execution marked as opened
+   [INFO] ✓ Email sent successfully - Brevo HTTP 200
+
+Verify: ✓ Webhook received and processed
+
+STEP 4.11: Verify Automation Execution Completed
+──────────────────────────────────────────────────
+
+Execute Query:
+  SELECT 
+    status, 
+    executed_at, 
+    completed_at,
+    duration_seconds
+  FROM automation_executions 
+  WHERE automation_id = <automation_id> 
+  AND trigger_id = <lead_id>;
+
+Expected Result:
+  status: "COMPLETED"
+  executed_at: <timestamp of trigger>
+  completed_at: <timestamp of email open>
+  duration_seconds: ~30 (approximate)
+
+Verify: ✓ Execution marked complete
+
+STEP 4.12: Verify Frontend: Automation Execution History
+───────────────────────────────────────────────────────────
+
+1. Navigate to: Automations → Execution History
+2. Find "Welcome New Leads" automation
+3. Look for execution triggered by bob.smith@company.com
+
+Expected UI:
+  ✓ Execution listed with:
+    - Trigger: "Lead Magnet Submitted"
+    - Email: bob.smith@company.com
+    - Status: COMPLETED
+    - Duration: ~30 seconds
+    - Time: Recent
+
+Verify: ✓ Execution history visible, ✓ Status correct
+
+STEP 4.13: Verification Summary
+────────────────────────────────
+
+TEST 4 PASSED IF:
+  ✓ Automation created and enabled
+  ✓ Automation triggered on lead magnet submission
+  ✓ Automation execution recorded in database
+  ✓ Email sent automatically to lead
+  ✓ Email received in Gmail inbox
+  ✓ Async transaction completed without data loss (CRITICAL #9)
+  ✓ Email appears in Brevo
+  ✓ Webhook for email open processed
+  ✓ Automation execution marked complete
+  ✓ Frontend shows execution history
+  ✓ Variables substituted correctly
+  ✓ No HTTP errors in logs
+
+If any step FAILS:
+  - Check automation trigger configuration
+  - Verify email template is correct
+  - Check async task executor logs
+  - Verify transaction propagation (REQUIRES_NEW)
+  - Review Phase 12.2 CRITICAL #9 implementation
+  - Check lead creation logs for automation trigger
+
+═══════════════════════════════════════════════════════════════════════════════
+TEST 5: WORKFLOW 5 — AI EMAIL
+═══════════════════════════════════════════════════════════════════════════════
+
+Objective: Verify AI email generation, editing, template saving, and sending.
+Estimated Time: 10 minutes
+Phase 12.2 Features Tested:
+  - No specific Phase 12.2 fixes (general feature test)
+
+[ABBREVIATED — Full test in PHASE_12_3_E2E_WORKFLOW_TEST_PROTOCOL.md]
+
+STEP 5.1: Generate Email with AI
+─────────────────────────────────
+
+1. Navigate to: Email Generator or AI Tools
+2. Fill in:
+   - Subject type: "product_launch"
+   - Tone: "professional"
+   - Recipient name: "Charlie"
+   - Recipient company: "CompanyXYZ"
+
+3. Click "Generate"
+4. Monitor Network tab
+
+Expected Network:
+  Request: POST /api/ai/email-generate
+  Status: 200 OK
+  Response contains: subject, body (HTML), generatedAt
+
+Verify: ✓ HTTP 200, ✓ Response contains email content
+
+STEP 5.2-5.10: (See PHASE_12_3_E2E_WORKFLOW_TEST_PROTOCOL.md for full details)
+
+═══════════════════════════════════════════════════════════════════════════════
+TEST 6: WORKFLOW 6 — DELETE
+═══════════════════════════════════════════════════════════════════════════════
+
+Objective: Verify soft delete, data preservation, and 404 on access.
+Estimated Time: 5 minutes
+Phase 12.2 Features Tested:
+  - CRITICAL #8: Workspace Isolation
+
+STEP 6.1: Create Test Campaign
+───────────────────────────────
+
+1. Create a new campaign (use Workflow 2 steps)
+2. Campaign name: "Delete Test Campaign"
+3. Verify campaign created with HTTP 201
+
+Expected Response:
+  id: <positive number>
+  name: "Delete Test Campaign"
+  status: "DRAFT"
+
+Verify: ✓ Campaign created
+
+STEP 6.2: Verify Campaign in Frontend
+──────────────────────────────────────
+
+1. Navigate to: Campaigns page
+2. Verify new campaign appears in list
+3. Note the campaign count
+
+Verify: ✓ Campaign visible
+
+STEP 6.3: Delete Campaign
+──────────────────────────
+
+1. Click campaign to open
+2. Click "Delete Campaign" or three-dot menu → Delete
+3. Confirm "Are you sure?" dialog
+
+Expected Network:
+  Request: DELETE /api/email-campaigns/<campaign_id>
+  Status: 200 OK
+  Response: {"success": true, "message": "Campaign deleted successfully"}
+
+Verify: ✓ HTTP 200, ✓ Success response
+
+STEP 6.4: Verify Soft Delete in Database
+──────────────────────────────────────────
+
+Execute Query:
+  SELECT id, name, deleted_at FROM email_campaigns 
+  WHERE id = <campaign_id> 
+  AND workspace_id = 1;
+
+Expected Result:
+  deleted_at: <current timestamp> (NOT NULL)
+  (Record still exists, marked as deleted)
+
+Verify: ✓ Soft delete (record preserved), ✓ deleted_at populated
+
+STEP 6.5: Verify Campaign NOT in Active List
+──────────────────────────────────────────────
+
+Execute Query:
+  SELECT COUNT(*) FROM email_campaigns 
+  WHERE workspace_id = 1 AND deleted_at IS NULL;
+
+Compare count to before deletion (should be -1)
+
+Verify: ✓ Deleted campaign not in active list
+
+STEP 6.6: Verify Campaign Absent from Frontend
+────────────────────────────────────────────────
+
+1. Refresh Campaigns page (Ctrl+R)
+2. Search for "Delete Test Campaign"
+
+Expected UI:
+  ✓ Campaign NO LONGER appears in list
+  ✓ Campaign count decremented by 1
+  ✓ Search returns empty
+
+Verify: ✓ Campaign hidden after refresh
+
+STEP 6.7: Attempt to Access Deleted Campaign
+────────────────────────────────────────────────
+
+1. Try to access directly via API:
+
+   curl http://localhost:8081/api/email-campaigns/<campaign_id> \
+     -H "Authorization: Bearer <jwt_token>" \
+     --silent | jq .
+
+Expected Response (404 Not Found):
+  {
+    "error": "Campaign not found",
+    "message": "The requested campaign does not exist or has been deleted"
+  }
+
+Verify: ✓ HTTP 404, ✓ Cannot access deleted campaign
+
+STEP 6.8: Verify Workspace Isolation on Delete
+────────────────────────────────────────────────
+
+1. Try to access as different workspace user:
+
+   curl http://localhost:8081/api/email-campaigns/<campaign_id> \
+     -H "Authorization: Bearer <different_workspace_token>" \
+     --silent | jq .
+
+Expected Response (403 or 404):
+  Status: 403 Forbidden (if workspace isolation enforced first)
+  Or: 404 Not Found (if soft delete checked first)
+
+Either way: Access denied
+
+Verify: ✓ Other workspaces cannot access
+
+STEP 6.9: Verification Summary
+───────────────────────────────
+
+TEST 6 PASSED IF:
+  ✓ Campaign created successfully
+  ✓ Campaign visible in frontend before delete
+  ✓ Delete request succeeds (HTTP 200)
+  ✓ Campaign marked as deleted in database (soft delete)
+  ✓ deleted_at timestamp populated
+  ✓ Campaign hidden from frontend after refresh
+  ✓ Direct API access returns 404
+  ✓ Related records preserved (no orphaned data)
+  ✓ Other workspaces cannot access
+  ✓ No HTTP errors
+
+If any step FAILS:
+  - Check delete endpoint implementation
+  - Verify soft delete (deleted_at) is used, not hard delete
+  - Check workspace isolation in delete endpoint
+  - Verify 404 response for deleted campaign
+  - Review Phase 12.2 CRITICAL #8 implementation
+
+═══════════════════════════════════════════════════════════════════════════════
+COMPREHENSIVE TEST SUMMARY
+═══════════════════════════════════════════════════════════════════════════════
+
+After executing all 6 workflows, complete this checklist:
+
+WORKFLOW TEST STATUS:
+  [ ] WORKFLOW 1 (Lead Magnet): PASS / FAIL
+  [ ] WORKFLOW 2 (Email Campaign): PASS / FAIL
+  [ ] WORKFLOW 3 (Email Analytics): PASS / FAIL
+  [ ] WORKFLOW 4 (Automation): PASS / FAIL
+  [ ] WORKFLOW 5 (AI Email): PASS / FAIL
+  [ ] WORKFLOW 6 (Delete): PASS / FAIL
+
+PHASE 12.2 CRITICAL FIXES VERIFICATION:
+  [ ] CRITICAL #1 (.env): VERIFIED / NOT TESTED
+  [ ] CRITICAL #2 (@Email validation): VERIFIED / NOT TESTED
+  [ ] CRITICAL #3 (console.log removal): VERIFIED / NOT TESTED
+  [ ] CRITICAL #4 (Webhook signature): VERIFIED / FAILED / NOT TESTED
+  [ ] CRITICAL #5 (Idempotency): VERIFIED / FAILED / NOT TESTED
+  [ ] CRITICAL #6 (N+1 query): VERIFIED / FAILED / NOT TESTED
+  [ ] CRITICAL #7 (Rate limiting): VERIFIED / FAILED / NOT TESTED
+  [ ] CRITICAL #8 (Workspace isolation): VERIFIED / FAILED / NOT TESTED
+  [ ] CRITICAL #9 (Async transactions): VERIFIED / FAILED / NOT TESTED
+  [ ] CRITICAL #10 (API key logging): VERIFIED / NOT TESTED
+  [ ] CRITICAL #11 (Metadata validation): VERIFIED / FAILED / NOT TESTED
+  [ ] CRITICAL #12 (XSS security note): VERIFIED / NOT TESTED
+  [ ] CRITICAL #13 (HTTPS/HSTS): VERIFIED / NOT TESTED
+
+OVERALL RESULT:
+  [ ] ALL TESTS PASSED - READY FOR PRODUCTION
+  [ ] SOME TESTS FAILED - FIX ISSUES BEFORE PRODUCTION
+  [ ] TESTS INCOMPLETE - CONTINUE TESTING
+
+ISSUES FOUND:
+  (List any failures, HTTP errors, database issues, or unexpected behavior)
+
+═══════════════════════════════════════════════════════════════════════════════
+NEXT STEPS
+═══════════════════════════════════════════════════════════════════════════════
+
+If ALL TESTS PASSED:
+  ✓ Phase 12.3 Testing Complete
+  ✓ Phase 12.2 Fixes Verified in Production
+  ✓ Ready to deploy to live environment
+  ✓ Document results in PHASE_12_3_TEST_RESULTS.txt
+  ✓ Move to Phase 12.4 (HIGH-priority issues)
+
+If TESTS FAILED:
+  ✗ Do NOT deploy to production
+  ✗ Diagnose failures in logs
+  ✗ Review Phase 12.2 implementation for failing fix
+  ✗ Create bug report with reproduction steps
+  ✗ Fix and re-test
+  ✗ Return to Phase 12.3 with revised code
+
