@@ -4,11 +4,13 @@ import com.arjun.crm.dto.request.BrevoWebhookRequest;
 import com.arjun.crm.entity.EmailCampaign;
 import com.arjun.crm.entity.EmailCampaignHistory;
 import com.arjun.crm.entity.EmailCampaignRecipient;
+import com.arjun.crm.enums.AutomationTriggerType;
 import com.arjun.crm.repository.EmailCampaignHistoryRepository;
 import com.arjun.crm.repository.EmailCampaignRecipientRepository;
 import com.arjun.crm.repository.EmailCampaignRepository;
 import com.arjun.crm.service.EmailAnalyticsService;
 import com.arjun.crm.service.EmailCampaignAnalyticsResponse;
+import com.arjun.crm.service.automation.AutomationEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -37,6 +39,7 @@ public class EmailAnalyticsServiceImpl implements EmailAnalyticsService {
     private final EmailCampaignRecipientRepository recipientRepository;
     private final EmailCampaignHistoryRepository historyRepository;
     private final EmailCampaignRepository campaignRepository;
+    private final AutomationEventPublisher automationEventPublisher;
 
     /**
      * Process webhook event from Brevo
@@ -48,6 +51,7 @@ public class EmailAnalyticsServiceImpl implements EmailAnalyticsService {
      * 4. Update recipient status and timestamps
      * 5. Create history record
      * 6. Update campaign metrics
+     * 7. Publish automation event (PHASE 7.3)
      */
     @Override
     public void processWebhookEvent(BrevoWebhookRequest request) {
@@ -57,14 +61,16 @@ public class EmailAnalyticsServiceImpl implements EmailAnalyticsService {
             log.info("🟢 Processing webhook - Event: {}, Email: {}, MessageId: {}", 
                     request.getEvent(), request.getEmail(), request.getProviderEventId());
 
-            // Step 2: Check for duplicate events
-            String effectiveEventId = request.getEffectiveProviderEventId();
-            if (effectiveEventId != null) {
+            // Step 2: Check for duplicate events using idempotency key
+            // Generate idempotency key from provider event ID or webhook metadata
+            String idempotencyKey = request.getEffectiveProviderEventId();
+            if (idempotencyKey != null) {
+                // Check if this exact event has already been processed
                 Optional<EmailCampaignHistory> existing = historyRepository.findByProviderEventId(
-                        effectiveEventId);
+                        idempotencyKey);
                 if (existing.isPresent()) {
-                    log.warn("⚠️ Duplicate webhook event (providerEventId: {}). Ignoring.", 
-                            effectiveEventId);
+                    log.warn("⚠️ Duplicate webhook event detected (idempotencyKey: {}). Already processed. Rejecting.", 
+                            idempotencyKey);
                     return;
                 }
             }
@@ -113,10 +119,67 @@ public class EmailAnalyticsServiceImpl implements EmailAnalyticsService {
             campaignRepository.save(campaign);
             log.info("✓ Campaign metrics updated");
 
+            // Step 8: Publish automation event (PHASE 7.3)
+            publishAutomationEvent(request, campaign, recipient);
+
         } catch (IllegalArgumentException ex) {
             log.warn("⚠️ Validation error: {}", ex.getMessage());
         } catch (Exception ex) {
             log.error("❌ Error processing webhook: {}", ex.getMessage(), ex);
+        }
+    }
+
+    /**
+     * Publish automation event based on webhook event type (PHASE 7.3)
+     * This allows automations to be triggered by email events
+     *
+     * Supported automations:
+     * - EMAIL_DELIVERED: When email is successfully delivered
+     * - EMAIL_OPENED: When recipient opens the email
+     * - EMAIL_CLICKED: When recipient clicks a link
+     * - EMAIL_BOUNCED: When email bounces (hard or soft)
+     *
+     * Non-blocking: Publishing failures do not affect webhook processing
+     */
+    private void publishAutomationEvent(BrevoWebhookRequest request, EmailCampaign campaign, EmailCampaignRecipient recipient) {
+        try {
+            String eventType = request.getEvent().toUpperCase();
+            LocalDateTime eventTime = convertTimestamp(request.getTs());
+
+            switch (eventType) {
+                case "DELIVERED":
+                    log.debug("Publishing EMAIL_DELIVERED automation event");
+                    automationEventPublisher.publishEmailDelivered(
+                            campaign, recipient, request.getEmail(), eventTime);
+                    break;
+
+                case "OPENED":
+                    log.debug("Publishing EMAIL_OPENED automation event");
+                    automationEventPublisher.publishEmailOpened(
+                            campaign, recipient, request.getEmail(), eventTime);
+                    break;
+
+                case "CLICKED":
+                    log.debug("Publishing EMAIL_CLICKED automation event");
+                    automationEventPublisher.publishEmailClicked(
+                            campaign, recipient, request.getEmail(), eventTime);
+                    break;
+
+                case "HARD_BOUNCE":
+                case "SOFT_BOUNCE":
+                    log.debug("Publishing EMAIL_BOUNCED automation event");
+                    automationEventPublisher.publishEmailBounced(
+                            campaign, recipient, request.getEmail(), eventTime);
+                    break;
+
+                // Other events (SENT, SPAM, UNSUBSCRIBE, REPLY) do not trigger automations yet
+                default:
+                    log.debug("No automation event for webhook type: {}", eventType);
+            }
+
+        } catch (Exception e) {
+            log.error("Error publishing automation event: {}", e.getMessage(), e);
+            // Non-blocking: don't re-throw or fail webhook processing
         }
     }
 
@@ -259,23 +322,66 @@ public class EmailAnalyticsServiceImpl implements EmailAnalyticsService {
     }
 
     /**
-     * Extract Long value from metadata map
+     * Extract Long value from metadata map with validation
+     * 
+     * SECURITY:
+     * - Null-safe: returns null if metadata is null
+     * - Type-safe: only accepts Number or String types
+     * - Validates numeric strings before parsing
+     * - Logs warnings for invalid metadata
+     * 
+     * @param metadata Webhook metadata from Brevo
+     * @param key Key to extract
+     * @return Long value or null if not found or invalid
      */
     private Long extractLongFromMetadata(Map<String, Object> metadata, String key) {
         if (metadata == null) {
+            log.debug("Metadata is null, cannot extract {}", key);
             return null;
         }
+
         Object value = metadata.get(key);
-        if (value instanceof Number) {
-            return ((Number) value).longValue();
-        } else if (value instanceof String) {
-            try {
-                return Long.parseLong((String) value);
-            } catch (NumberFormatException ex) {
+        if (value == null) {
+            log.debug("Metadata key '{}' not found", key);
+            return null;
+        }
+
+        try {
+            if (value instanceof Number) {
+                Long longValue = ((Number) value).longValue();
+                // Validate that the value is positive (IDs should never be 0 or negative)
+                if (longValue <= 0) {
+                    log.warn("⚠️ Invalid metadata value for '{}': {} (must be positive)", key, longValue);
+                    return null;
+                }
+                return longValue;
+            } else if (value instanceof String) {
+                String stringValue = ((String) value).trim();
+                if (stringValue.isEmpty()) {
+                    log.warn("⚠️ Empty string value for metadata key '{}'", key);
+                    return null;
+                }
+                try {
+                    Long longValue = Long.parseLong(stringValue);
+                    // Validate that the value is positive
+                    if (longValue <= 0) {
+                        log.warn("⚠️ Invalid metadata value for '{}': {} (must be positive)", key, longValue);
+                        return null;
+                    }
+                    return longValue;
+                } catch (NumberFormatException ex) {
+                    log.warn("⚠️ Failed to parse metadata key '{}' as number: {}", key, stringValue);
+                    return null;
+                }
+            } else {
+                log.warn("⚠️ Unexpected metadata type for '{}': {} (expected Number or String)", 
+                        key, value.getClass().getSimpleName());
                 return null;
             }
+        } catch (Exception ex) {
+            log.error("❌ Error extracting metadata key '{}': {}", key, ex.getMessage());
+            return null;
         }
-        return null;
     }
 
     @Override

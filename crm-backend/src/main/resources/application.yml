@@ -405,3 +405,20 @@ app:
 brevo:
   api-key: ${BREVO_API_KEY}
   api-url: https://api.brevo.com/v3/smtp/email
+# ───────────────────────────────────────────────────────────────────────────
+# Automation Scheduler Configuration - PHASE 7.1
+# ───────────────────────────────────────────────────────────────────────────
+scheduler:
+  automation:
+    # Interval between scheduler checks for ready executions (in milliseconds)
+    # Default: 15000 (15 seconds)
+    # Min: 1000 (1 second) - for testing only
+    # Recommended: 10000-30000 (10-30 seconds) - production
+    # Higher values: less frequent checks, but lower database load
+    # Lower values: faster resumption, but more database queries
+    resumeInterval: ${AUTOMATION_RESUME_INTERVAL:15000}
+    
+    # Initial delay before first scheduler run (in milliseconds)
+    # Default: 5000 (5 seconds)
+    # Allows application time to initialize before scheduler starts
+    initialDelay: ${AUTOMATION_INITIAL_DELAY:5000}

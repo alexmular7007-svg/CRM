@@ -3,15 +3,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSelector } from 'react-redux'
 import toast from 'react-hot-toast'
 import { emailCampaignService } from '../../services/emailCampaignService'
+import aiEmailGenerationService from '../../services/aiEmailGenerationService'
+import AIEmailGenerationForm from './AIEmailGenerationForm'
+import GeneratedEmailPreview from './GeneratedEmailPreview'
 
-/**
- * Redesigned Email Campaign Form - Production Ready
- * 
- * SECTION 1: Campaign Information
- * SECTION 2: Email Content (Create New vs Use Existing)
- * SECTION 3: Audience (Manual vs Segment vs CRM Filter)
- * SECTION 4: Delivery (Send Now / Draft / Schedule)
- */
+
 
 const initialFormState = {
   // Section 1: Campaign Information
@@ -20,13 +16,16 @@ const initialFormState = {
   description: '',
   
   // Section 2: Email Content
-  contentMode: 'create', // 'create' or 'existing'
+  contentMode: 'create', // 'create', 'existing', or 'ai'
   templateName: '',
   emailHeading: '',
   emailBody: '',
   ctaButtonText: '',
   ctaButtonUrl: '',
   existingTemplateId: '',
+  aiGeneratedContent: null, // Stores AI-generated email data
+  aiGenerationInputs: null, // Stores the form inputs used for AI generation
+  aiGenerationLoading: false,
   
   // Section 3: Audience
   audienceMode: 'manual', // 'manual' or 'segment' or 'crmfilter'
@@ -100,7 +99,154 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
       }
     }
   }
+
+  // Handle AI email generation using Phase 11.3 service
+  const handleAIGenerate = async (aiFormData) => {
+    try {
+      setForm((prev) => ({
+        ...prev,
+        aiGenerationLoading: true,
+        aiGenerationInputs: aiFormData,
+      }))
+
+      // Call AI generation service with structured error handling
+      const response = await aiEmailGenerationService.generateEmail(aiFormData)
+
+      if (response?.success) {
+        setForm((prev) => ({
+          ...prev,
+          aiGeneratedContent: response,
+          aiGenerationLoading: false,
+        }))
+        toast.success('Email generated successfully')
+      } else {
+        throw response // Response has error message
+      }
+    } catch (error) {
+      setForm((prev) => ({ ...prev, aiGenerationLoading: false }))
+      const errorMessage = error?.message || error?.details || error?.error || 'Failed to generate email'
+      toast.error(errorMessage)
+    }
+  }
+
+  // Handle AI email regeneration using Phase 11.3 service
+  const handleAIRegenerate = async () => {
+    const inputs = form.aiGenerationInputs
+    if (!inputs) {
+      toast.error('No generation inputs found. Please generate again.')
+      return
+    }
+
+    try {
+      setForm((prev) => ({
+        ...prev,
+        aiGenerationLoading: true,
+      }))
+
+      // Call AI regeneration service
+      const response = await aiEmailGenerationService.regenerateEmail(inputs)
+
+      if (response?.success) {
+        setForm((prev) => ({
+          ...prev,
+          aiGeneratedContent: response,
+          aiGenerationLoading: false,
+        }))
+        toast.success('Email regenerated successfully')
+      } else {
+        throw response // Response has error message
+      }
+    } catch (error) {
+      setForm((prev) => ({ ...prev, aiGenerationLoading: false }))
+      const errorMessage = error?.message || error?.details || error?.error || 'Failed to regenerate email'
+      toast.error(errorMessage)
+    }
+  }
+
+  // Phase 11.4: Handle saving AI-generated email as template
+  const handleSaveAITemplate = async (editedContent, templateNameInput, options = {}) => {
+    if (options.useExisting) {
+      // User chose to use existing template instead of creating new one
+      await handleSwitchToExisting(templateNameInput)
+      return
+    }
+
+    if (!templateNameInput?.trim()) {
+      toast.error('Template name is required')
+      throw new Error('Template name required')
+    }
+
+    try {
+      // Build template payload from AI-generated content
+      // Map: subject → subjectTemplate, bodyHtml → htmlContent, bodyPlainText → plainTextContent
+      const templatePayload = {
+        name: templateNameInput.trim(),
+        description: `AI-generated email template from campaign setup`,
+        category: 'CAMPAIGN',
+        subjectTemplate: editedContent.subject || form.aiGenerationInputs?.campaignPurpose || 'Generated Email',
+        htmlContent: form.aiGeneratedContent?.bodyHtml || '',
+        plainTextContent: form.aiGeneratedContent?.bodyPlainText || '',
+        variables: [],
+        isPublic: false,
+      }
+
+      // Call createTemplate service - maps to POST /api/workspaces/{id}/email-templates
+      // This endpoint returns 201 CREATED on success or 409 CONFLICT on duplicate name
+      const result = await emailCampaignService.createTemplate(currentWorkspace.id, templatePayload)
+
+      // Task 3: Verify template was created by fetching it via GET endpoint
+      if (result?.id) {
+        const verification = await emailCampaignService.getTemplate(currentWorkspace.id, result.id)
+
+        if (verification?.id) {
+          // Success: invalidate templates list and switch to existing template mode
+          queryClient.invalidateQueries({ queryKey: ['email-templates', currentWorkspace?.id] })
+          setForm((prev) => ({
+            ...prev,
+            templateName: templateNameInput.trim(),
+            existingTemplateId: String(result.id),
+            contentMode: 'existing',
+          }))
+          toast.success(`Template "${templateNameInput}" created and verified successfully!`)
+          return
+        }
+      }
+
+      throw new Error('Template verification failed')
+    } catch (error) {
+      // Task 2: Handle 409 Conflict response
+      const status = error?.response?.status || error?.status
+      const errorMsg = error?.response?.data?.message || error?.message || ''
+      const isConflict = status === 409 || errorMsg.toLowerCase().includes('already exists')
+
+      if (isConflict) {
+        // 409 Conflict: Show conflict modal with [Rename Template] [Use Existing Template] options
+        // This preserves the generated content and allows user to choose action
+        toast.error(`Template "${templateNameInput}" already exists in this workspace.`, { id: 'conflict' })
+        // The conflict modal will be shown via state in GeneratedEmailPreview
+        // Re-throw so parent component can handle UI state
+      } else {
+        toast.error(errorMsg || 'Failed to save template')
+      }
+
+      throw error
+    }
+  }
+
+  // Handle using generated AI email in campaign
+  const handleUseAIEmail = (editedContent) => {
+    setForm((prev) => ({
+      ...prev,
+      emailHeading: editedContent.subject || '',
+      emailBody: prev.aiGeneratedContent?.bodyHtml || '',
+      ctaButtonText: editedContent.ctaText || '',
+      ctaButtonUrl: editedContent.ctaUrl || '',
+      contentMode: 'create', // Switch to create mode with AI content filled in
+    }))
+    toast.success('AI-generated email loaded into form')
+  }
   
+
   // Create/Send campaign mutation
   const mutation = useMutation({
     mutationFn: async (data) => {
@@ -282,6 +428,8 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
       if (!form.templateName.trim()) newErrors.templateName = 'Template name is required'
       if (!form.emailHeading.trim()) newErrors.emailHeading = 'Email heading is required'
       if (!form.emailBody.trim()) newErrors.emailBody = 'Email body is required'
+    } else if (form.contentMode === 'ai') {
+      if (!form.aiGeneratedContent) newErrors.aiGeneratedContent = 'Please generate an email with AI first'
     } else {
       if (!form.existingTemplateId) newErrors.existingTemplateId = 'Please select a template'
     }
@@ -387,6 +535,17 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
             />
             <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Use Existing Template</span>
           </label>
+          <label className="flex items-center cursor-pointer">
+            <input
+              type="radio"
+              name="contentMode"
+              value="ai"
+              checked={form.contentMode === 'ai'}
+              onChange={() => handleContentModeChange('ai')}
+              className="w-4 h-4 text-violet-600"
+            />
+            <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">🤖 Generate with AI</span>
+          </label>
         </div>
         
         {form.contentMode === 'create' ? (
@@ -479,6 +638,41 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
                 />
               </div>
             </div>
+          </div>
+        ) : form.contentMode === 'ai' ? (
+          <div className="mt-4 space-y-4">
+            {form.aiGeneratedContent ? (
+              <GeneratedEmailPreview
+                generated={form.aiGeneratedContent}
+                onRegenerate={handleAIRegenerate}
+                onSaveTemplate={(editedContent, templateName) => {
+                  handleSaveAITemplate(editedContent, templateName)
+                }}
+                onUseInCampaign={(editedContent) => {
+                  // Place generated content into campaign fields
+                  const html = form.aiGeneratedContent?.bodyHtml || ''
+                  
+                  setForm((prev) => ({
+                    ...prev,
+                    emailSubject: editedContent.subject || '',
+                    emailHeading: editedContent.subject || '',
+                    emailBody: html || '',
+                    ctaButtonText: editedContent.ctaText || '',
+                    ctaButtonUrl: editedContent.ctaUrl || '',
+                    contentMode: 'create', // Switch to create mode with AI content filled in
+                    templateName: `AI Generated Campaign - ${new Date().toLocaleDateString()}`,
+                  }))
+                  toast.success('Email content loaded into campaign form')
+                }}
+                isLoading={form.aiGenerationLoading}
+              />
+            ) : (
+              <AIEmailGenerationForm
+                onGenerate={handleAIGenerate}
+                onCancel={() => handleContentModeChange('create')}
+                isLoading={form.aiGenerationLoading}
+              />
+            )}
           </div>
         ) : (
           <div className="mt-4">

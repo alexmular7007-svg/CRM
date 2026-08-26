@@ -45,6 +45,9 @@ export const emailCampaignService = {
   async createTemplate(workspaceId, payload) {
     return unwrap(await api.post(`/workspaces/${workspaceId}/email-templates`, payload))
   },
+  async getTemplate(workspaceId, templateId) {
+    return unwrap(await api.get(`/workspaces/${workspaceId}/email-templates/${templateId}`))
+  },
   async getAnalytics(workspaceId, campaignId) {
     return unwrap(await api.get(`${campaignPath(workspaceId, campaignId)}/analytics`))
   },

@@ -2,6 +2,7 @@ package com.arjun.crm.controller;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import jakarta.validation.constraints.Email;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -40,7 +41,8 @@ public class TestEmailController {
      * No database, no tokens, no workspace logic
      */
     @PostMapping("/email")
-    public ResponseEntity<Map<String, Object>> sendTestEmail(@RequestParam String to) {
+    public ResponseEntity<Map<String, Object>> sendTestEmail(
+            @RequestParam @Email(message = "Valid email address is required") String to) {
         Map<String, Object> response = new HashMap<>();
         
         log.info("═══════════════════════════════════════════════════════════");

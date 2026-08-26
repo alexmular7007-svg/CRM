@@ -52,8 +52,8 @@ api.interceptors.response.use(
     if (response.config.__requestStartTime) {
       const duration = performance.now() - response.config.__requestStartTime
       const endpoint = response.config.__requestPath
-      console.log(`[API] ${response.config.method.toUpperCase()} ${endpoint}: ${duration.toFixed(2)}ms`)
       perfMonitor.mark(`api_response_complete_${endpoint}`)
+      // Debug logging removed for security - production builds should not log sensitive request info
     }
     return response.data
   },
@@ -62,8 +62,8 @@ api.interceptors.response.use(
     if (error.config?.__requestStartTime) {
       const duration = performance.now() - error.config.__requestStartTime
       const endpoint = error.config.__requestPath
-      console.log(`[API] ${error.config.method.toUpperCase()} ${endpoint}: FAILED ${duration.toFixed(2)}ms`)
       perfMonitor.mark(`api_response_error_${endpoint}`)
+      // Debug logging removed for security - production builds should not log sensitive request info
     }
     
     if (error.response) {

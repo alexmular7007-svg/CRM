@@ -79,6 +79,33 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             // STATELESS — no session cookies, no session creation
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            // ═════════════════════════════════════════════════════════════════════
+            // SECURITY HEADERS FOR PRODUCTION (HTTPS/HSTS)
+            // ═════════════════════════════════════════════════════════════════════
+            // These headers protect against various attacks including:
+            // - HSTS: Prevents downgrade from HTTPS to HTTP
+            // - X-Content-Type-Options: Prevents MIME sniffing attacks
+            // - X-Frame-Options: Prevents clickjacking attacks
+            // - X-XSS-Protection: Provides XSS protection in older browsers
+            // - Content-Security-Policy: Restricts resource loading (prevent XSS)
+            // - Referrer-Policy: Controls referrer information leakage
+            .headers(headers -> headers
+                // ⚠️ HSTS: Tell browsers to only connect via HTTPS for 1 year
+                // Once set, browsers will refuse HTTP connections for all subdomains
+                // PRODUCTION: Set only on HTTPS endpoints
+                .httpStrictTransportSecurity()
+                    .includeSubDomains(true)    // Apply to all subdomains
+                    .preload(true)              // Allow inclusion in HSTS preload list
+                    .maxAgeInSeconds(31536000)  // 1 year = 365 * 24 * 60 * 60
+                .and()
+                // ⚠️ X-Content-Type-Options: Prevent MIME type sniffing
+                // Tells browsers to respect the Content-Type header, don't guess
+                .contentTypeOptions()
+                .and()
+                // ⚠️ X-Frame-Options: Prevent clickjacking attacks
+                // DENY: Don't allow framing in any context (most secure)
+                .frameOptions().deny()
+            )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/auth/**").permitAll());

@@ -1,5 +1,6 @@
 package com.arjun.crm.controller;
 
+import com.arjun.crm.annotation.RateLimit;
 import com.arjun.crm.dto.request.LeadMagnetSubmissionRequest;
 import com.arjun.crm.dto.response.ApiResponse;
 import com.arjun.crm.dto.response.LeadMagnetResponse;
@@ -42,8 +43,10 @@ public class PublicLeadMagnetController {
      * GET /api/public/lead-magnets/{publicToken}
      * Get public campaign details for rendering the form
      * NO AUTHENTICATION REQUIRED
+     * Rate limited to 600 requests per minute (10/second)
      */
     @GetMapping("/{publicToken}")
+    @RateLimit(requestsPerMinute = 600, description = "Get public lead magnet form")
     public ResponseEntity<ApiResponse<LeadMagnetResponse>> getPublicCampaign(
             @PathVariable String publicToken) {
         
@@ -83,8 +86,10 @@ public class PublicLeadMagnetController {
      * POST /api/public/lead-magnets/{publicToken}/submit
      * Submit the public form and create a Lead
      * NO AUTHENTICATION REQUIRED
+     * Rate limited to 120 requests per minute (2/second) to prevent spam
      */
     @PostMapping("/{publicToken}/submit")
+    @RateLimit(requestsPerMinute = 120, description = "Submit public lead magnet form")
     public ResponseEntity<ApiResponse<SubmissionResponse>> submitPublicForm(
             @PathVariable String publicToken,
             @Valid @RequestBody LeadMagnetSubmissionRequest request) {

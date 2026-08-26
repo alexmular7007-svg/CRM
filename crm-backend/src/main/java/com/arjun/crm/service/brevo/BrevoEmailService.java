@@ -45,14 +45,8 @@ public class BrevoEmailService {
      * @param metadata e.g. {"campaign_id": 1, "recipient_id": 42}
      */
     public void sendEmail(String to, String subject, String html, Map<String, Object> metadata) {
-        log.info("Brevo Email Service - Sending email");
-        log.info("  API Key length: {}", apiKey == null ? "NULL" : apiKey.length());
-        log.info("  API Key starts with: {}", apiKey == null ? "NULL" : apiKey.substring(0, Math.min(20, apiKey.length())));
-        log.info("  API Key ends with: {}", apiKey == null ? "NULL" : apiKey.substring(Math.max(0, apiKey.length() - 10)));
-        log.info("  From Email: {}", fromEmail);
-        log.info("  From Name: {}", fromName);
-        log.info("  To: {}", to);
-        log.info("  Metadata: {}", metadata);
+        log.info("Brevo Email Service - Sending email to: {}", to);
+        // API key logging removed for security - never log credentials
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -74,7 +68,7 @@ public class BrevoEmailService {
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
 
-        log.info("Calling Brevo API: https://api.brevo.com/v3/smtp/email");
+        log.info("Calling Brevo API endpoint");
         try {
             var response = restTemplate.exchange(
                     "https://api.brevo.com/v3/smtp/email",
@@ -82,10 +76,10 @@ public class BrevoEmailService {
                     entity,
                     String.class
             );
-            log.info("✓ Brevo API Response: {}", response.getStatusCode());
+            log.info("✓ Email sent successfully - Brevo HTTP {}", response.getStatusCode());
         } catch (HttpStatusCodeException ex) {
-            log.error("STATUS = {}", ex.getStatusCode());
-            log.error("BODY = {}", ex.getResponseBodyAsString());
+            log.error("Brevo API error - STATUS: {}", ex.getStatusCode());
+            log.error("Brevo API error - BODY: {}", ex.getResponseBodyAsString());
             throw ex;
         }
     }

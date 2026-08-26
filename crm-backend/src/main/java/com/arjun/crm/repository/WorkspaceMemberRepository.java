@@ -138,6 +138,23 @@ public interface WorkspaceMemberRepository extends JpaRepository<WorkspaceMember
     long countActiveMembersWithRole(@Param("workspaceId") Long workspaceId, @Param("role") WorkspaceRole role);
 
     /**
+     * Check if user is member (not deleted) of workspace
+     */
+    @Query("SELECT CASE WHEN COUNT(wm) > 0 THEN true ELSE false END FROM WorkspaceMember wm " +
+           "WHERE wm.workspace.id = :workspaceId AND wm.user.id = :userId AND wm.deletedAt IS NULL")
+    boolean existsByWorkspaceIdAndUserIdAndDeletedAtIsNull(@Param("workspaceId") Long workspaceId,
+                                                            @Param("userId") Long userId);
+
+    /**
+     * Check if user has specific role in workspace
+     */
+    @Query("SELECT CASE WHEN COUNT(wm) > 0 THEN true ELSE false END FROM WorkspaceMember wm " +
+           "WHERE wm.workspace.id = :workspaceId AND wm.user.id = :userId AND wm.role = :role")
+    boolean existsByWorkspaceIdAndUserIdAndRole(@Param("workspaceId") Long workspaceId,
+                                                 @Param("userId") Long userId,
+                                                 @Param("role") WorkspaceRole role);
+
+    /**
      * Convenience method: Count active OWNER members in workspace
      * Includes original workspace.owner as implicit owner
      */

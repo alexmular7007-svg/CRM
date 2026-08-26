@@ -16,6 +16,7 @@ import com.arjun.crm.exception.AccessDeniedException;
 import com.arjun.crm.exception.DuplicateEmailException;
 import com.arjun.crm.exception.ResourceNotFoundException;
 import com.arjun.crm.event.LeadAssignedEvent;
+import com.arjun.crm.event.LeadCreatedEvent;
 import com.arjun.crm.event.LeadUpdatedEvent;
 import com.arjun.crm.repository.LeadActivityRepository;
 import com.arjun.crm.repository.LeadRepository;
@@ -100,6 +101,9 @@ public class LeadServiceImpl implements LeadService {
                 .build();
         
         lead = leadRepository.save(lead);
+        
+        // Publish LeadCreatedEvent for automation triggering (PHASE 3)
+        eventPublisher.publishEvent(new LeadCreatedEvent(this, lead, user));
         
         // Create activity
         createActivity(lead, user, "CREATED", "Lead created", null, null);

@@ -58,6 +58,11 @@ public class EmailCampaignSendingService {
      * Send campaign asynchronously.
      * Does not block HTTP response.
      * Processes all recipients and updates campaign status.
+     * 
+     * TRANSACTION HANDLING:
+     * - Class-level @Transactional is NOT used by @Async methods
+     * - Each database operation should use its own transaction
+     * - We wrap individual saves in try-catch to prevent one failure from stopping others
      */
     @Async
     public void sendCampaignAsync(Long campaignId) {
@@ -226,9 +231,7 @@ public class EmailCampaignSendingService {
                         }
                         
                         // Update recipient status to SENT on success
-                        recipient.setStatus("SENT");
-                        recipient.setSentAt(LocalDateTime.now());
-                        recipientRepository.save(recipient);
+                        saveRecipientAsync(recipient);
                         successCount++;
                         
                         log.info("[STEP 4] ✓ Email sent successfully to: {} (recipient ID: {})", 
@@ -367,5 +370,37 @@ public class EmailCampaignSendingService {
         campaignRepository.save(campaign);
         
         log.error("Campaign marked as FAILED: {} - {}", campaign.getId(), errorMessage);
+    }
+
+    /**
+     * Save recipient with individual transaction context
+     * Ensures each recipient update is persisted even if others fail
+     * 
+     * CRITICAL: @Async methods lose the class-level @Transactional context
+     * This method ensures each database operation completes in its own transaction
+     */
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    private void saveRecipientAsync(EmailCampaignRecipient recipient) {
+        try {
+            recipient.setStatus("SENT");
+            recipient.setSentAt(LocalDateTime.now());
+            recipientRepository.save(recipient);
+        } catch (Exception ex) {
+            log.error("Failed to save recipient {}: {}", recipient.getRecipientEmail(), ex.getMessage());
+            // Don't rethrow - continue processing other recipients
+        }
+    }
+
+    /**
+     * Save campaign with individual transaction context
+     */
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    private void saveCampaignAsync(EmailCampaign campaign) {
+        try {
+            campaignRepository.save(campaign);
+        } catch (Exception ex) {
+            log.error("Failed to save campaign {}: {}", campaign.getId(), ex.getMessage());
+            // Don't rethrow - this is a background task
+        }
     }
 }

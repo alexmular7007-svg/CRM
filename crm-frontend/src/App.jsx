@@ -37,6 +37,9 @@ const LeadMagnets = lazy(() => import('./pages/LeadMagnets'))
 const LeadMagnetDetails = lazy(() => import('./pages/LeadMagnetDetails'))
 const EmailCampaigns = lazy(() => import('./pages/EmailCampaigns'))
 const EmailCampaignDetails = lazy(() => import('./pages/EmailCampaignDetails'))
+const Automations = lazy(() => import('./pages/Automations'))
+const AutomationBuilder = lazy(() => import('./pages/AutomationBuilder'))
+const AutomationTriggerSelection = lazy(() => import('./components/automation/AutomationTriggerSelection'))
 const PublicFormPage = lazy(() => import('./pages/PublicFormPage'))
 
 const PageLoader = () => (
@@ -127,6 +130,11 @@ function AppContent() {
           <Route path="/marketing/lead-magnets/:id" element={<Suspense fallback={<PageLoader />}><LeadMagnetDetails /></Suspense>} />
           <Route path="/marketing/email-campaigns" element={<Suspense fallback={<PageLoader />}><EmailCampaigns /></Suspense>} />
           <Route path="/marketing/email-campaigns/:id" element={<Suspense fallback={<PageLoader />}><EmailCampaignDetails /></Suspense>} />
+          <Route path="/marketing/automations" element={<Suspense fallback={<PageLoader />}><Automations /></Suspense>} />
+          <Route path="/marketing/automations/select-trigger" element={<Suspense fallback={<PageLoader />}><AutomationTriggerSelection /></Suspense>} />
+          <Route path="/marketing/automations/create" element={<Suspense fallback={<PageLoader />}><AutomationBuilder /></Suspense>} />
+          <Route path="/marketing/automations/:id" element={<Suspense fallback={<PageLoader />}><AutomationBuilder /></Suspense>} />
+          <Route path="/marketing/automations/:id/edit" element={<Suspense fallback={<PageLoader />}><AutomationBuilder /></Suspense>} />
           <Route path="/profile" element={<Suspense fallback={<PageLoader />}><Profile /></Suspense>} />
           <Route path="/settings" element={<Suspense fallback={<PageLoader />}><Settings /></Suspense>} />
           <Route path="/workspaces/:workspaceId/settings" element={<Suspense fallback={<PageLoader />}><WorkspaceSettings /></Suspense>} />
