@@ -39,6 +39,7 @@ const MOBILE_NAV_ITEMS = [
     children: [
       { path: '/marketing/lead-magnets', label: 'Lead Magnets' },
       { path: '/marketing/email-campaigns', label: 'Email Campaigns' },
+      { path: '/marketing/automations', label: 'Automations' },
     ],
   },
 ]
@@ -242,6 +243,15 @@ const MobileNavigationDrawer = memo(({ isOpen, onClose, user, logout, unreadCoun
   const navigate = useNavigate()
   const location = useLocation()
   const [expandedMenu, setExpandedMenu] = useState(null)
+
+  useEffect(() => {
+    const activeGroup = MOBILE_NAV_ITEMS.find(
+      (item) => item.children && item.children.some((child) => location.pathname.startsWith(child.path))
+    )
+    if (activeGroup) {
+      setExpandedMenu(activeGroup.label)
+    }
+  }, [location.pathname])
 
   const handleNavigation = (path) => {
     navigate(path)

@@ -52,6 +52,16 @@ const AuthenticatedSidebar = memo(() => {
   const location = useLocation()
   const navigate = useNavigate()
 
+  // Auto-expand group containing active route
+  useEffect(() => {
+    const activeGroup = NAV.find(
+      (item) => item.children && item.children.some((child) => location.pathname.startsWith(child.path))
+    )
+    if (activeGroup) {
+      setExpandedMenu(activeGroup.label)
+    }
+  }, [location.pathname])
+
   // Handle resize
   useEffect(() => {
     const handleResize = () => {
@@ -182,6 +192,7 @@ const AuthenticatedSidebar = memo(() => {
             if (item.children) {
               const Icon = item.icon
               const isExpanded = expandedMenu === item.label
+              const hasActiveChild = item.children.some((child) => location.pathname.startsWith(child.path))
               
               return (
                 <div key={item.label}>
@@ -191,14 +202,14 @@ const AuthenticatedSidebar = memo(() => {
                     title={!showLabels ? item.label : ''}
                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors relative group"
                     style={{
-                      backgroundColor: isExpanded ? currentTheme.colors.surface : 'transparent',
-                      color: isExpanded ? currentTheme.colors.primary : currentTheme.colors.textSecondary,
+                      backgroundColor: isExpanded || hasActiveChild ? currentTheme.colors.surface : 'transparent',
+                      color: isExpanded || hasActiveChild ? currentTheme.colors.primary : currentTheme.colors.textSecondary,
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor = currentTheme.colors.surfaceSecondary
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = isExpanded ? currentTheme.colors.surface : 'transparent'
+                      e.currentTarget.style.backgroundColor = isExpanded || hasActiveChild ? currentTheme.colors.surface : 'transparent'
                     }}
                   >
                     <Icon size={18} className="flex-shrink-0" />

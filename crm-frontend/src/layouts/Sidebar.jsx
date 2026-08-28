@@ -1,7 +1,7 @@
 import { useDispatch, useSelector } from 'react-redux'
-import { NavLink } from 'react-router-dom'
+import { useLocation, NavLink } from 'react-router-dom'
 import { closeSidebar } from '../store/slices/sidebarSlice'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   LayoutDashboard, FolderOpen, CheckSquare, Users,
   MessageSquare, BarChart3, Zap, Settings, Megaphone, ChevronDown
@@ -28,8 +28,18 @@ const NAV = [
 
 const Sidebar = () => {
   const dispatch = useDispatch()
+  const location = useLocation()
   const { isOpen } = useSelector((state) => state.sidebar)
   const [expandedMenu, setExpandedMenu] = useState(null)
+
+  useEffect(() => {
+    const activeGroup = NAV.find(
+      (item) => item.children && item.children.some((child) => location.pathname.startsWith(child.path))
+    )
+    if (activeGroup) {
+      setExpandedMenu(activeGroup.label)
+    }
+  }, [location.pathname])
 
   const toggleMenu = (label) => {
     setExpandedMenu(expandedMenu === label ? null : label)
