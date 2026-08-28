@@ -252,7 +252,7 @@ const AuthenticatedSidebar = memo(() => {
                   </motion.button>
 
                   {/* Children items - only show in pinned or peek mode */}
-                  {isExpanded && showLabels && (
+                  {isExpanded && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
