@@ -31,8 +31,8 @@ public class BrevoEmailService {
     /**
      * Send email without campaign metadata (used for invitations, etc.)
      */
-    public void sendEmail(String to, String subject, String html) {
-        sendEmail(to, subject, html, null);
+    public String sendEmail(String to, String subject, String html) {
+        return sendEmail(to, subject, html, null);
     }
 
     /**
@@ -44,7 +44,7 @@ public class BrevoEmailService {
      *
      * @param metadata e.g. {"campaign_id": 1, "recipient_id": 42}
      */
-    public void sendEmail(String to, String subject, String html, Map<String, Object> metadata) {
+    public String sendEmail(String to, String subject, String html, Map<String, Object> metadata) {
         log.info("Brevo Email Service - Sending email to: {}", to);
         // API key logging removed for security - never log credentials
 
@@ -77,6 +77,7 @@ public class BrevoEmailService {
                     String.class
             );
             log.info("✓ Email sent successfully - Brevo HTTP {}", response.getStatusCode());
+            return response.getBody();
         } catch (HttpStatusCodeException ex) {
             log.error("Brevo API error - STATUS: {}", ex.getStatusCode());
             log.error("Brevo API error - BODY: {}", ex.getResponseBodyAsString());

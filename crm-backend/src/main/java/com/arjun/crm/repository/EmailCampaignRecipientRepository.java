@@ -3,11 +3,16 @@ package com.arjun.crm.repository;
 import com.arjun.crm.entity.EmailCampaignRecipient;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDateTime;
 
 /**
  * EmailCampaignRecipientRepository - FEATURE #3
@@ -26,6 +31,40 @@ public interface EmailCampaignRecipientRepository extends JpaRepository<EmailCam
      * Find recipient by campaign and email
      */
     Optional<EmailCampaignRecipient> findByCampaignIdAndRecipientEmail(Long campaignId, String email);
+
+    Optional<EmailCampaignRecipient> findByIdempotencyKey(String idempotencyKey);
+
+    @Query("SELECT r FROM EmailCampaignRecipient r " +
+           "WHERE r.automation.id = :automationId " +
+           "AND r.execution.id = :executionId " +
+           "AND r.automationStep.id = :automationStepId")
+    Optional<EmailCampaignRecipient> findByAutomationContext(
+            @Param("automationId") Long automationId,
+            @Param("executionId") Long executionId,
+            @Param("automationStepId") Long automationStepId);
+
+    @Query("SELECT r FROM EmailCampaignRecipient r " +
+           "WHERE r.id = :recipientId " +
+           "AND r.campaign.workspace.id = :workspaceId")
+    Optional<EmailCampaignRecipient> findByIdAndWorkspaceId(
+            @Param("recipientId") Long recipientId,
+            @Param("workspaceId") Long workspaceId);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE EmailCampaignRecipient r SET r.status = 'SENDING', " +
+           "r.deliveryAttempts = COALESCE(r.deliveryAttempts, 0) + 1 " +
+           "WHERE r.id = :recipientId AND r.status IN ('PENDING', 'FAILED')")
+    int claimForSending(@Param("recipientId") Long recipientId);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE EmailCampaignRecipient r SET r.status = 'SENDING', " +
+            "r.deliveryAttempts = COALESCE(r.deliveryAttempts, 0) + 1 " +
+            "WHERE r.id = :recipientId AND r.status = 'SENDING' " +
+            "AND r.updatedAt < :staleBefore")
+    int reclaimStaleSending(@Param("recipientId") Long recipientId,
+                                @Param("staleBefore") LocalDateTime staleBefore);
     
     /**
      * List all recipients for a campaign (paginated)

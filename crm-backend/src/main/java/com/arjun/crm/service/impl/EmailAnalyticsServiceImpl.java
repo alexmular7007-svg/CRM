@@ -40,6 +40,7 @@ public class EmailAnalyticsServiceImpl implements EmailAnalyticsService {
     private final EmailCampaignHistoryRepository historyRepository;
     private final EmailCampaignRepository campaignRepository;
     private final AutomationEventPublisher automationEventPublisher;
+    private final WebhookEventClaimService webhookEventClaimService;
 
     /**
      * Process webhook event from Brevo
@@ -79,8 +80,8 @@ public class EmailAnalyticsServiceImpl implements EmailAnalyticsService {
             Long campaignId = extractLongFromMetadata(request.getMetadata(), "campaign_id");
             Long recipientId = extractLongFromMetadata(request.getMetadata(), "recipient_id");
 
-            if (campaignId == null) {
-                log.warn("⚠️ Campaign ID not found in webhook metadata. Email: {}", request.getEmail());
+            if (campaignId == null || recipientId == null) {
+                log.warn("⚠️ Campaign ID and recipient ID are required in webhook metadata. Email: {}", request.getEmail());
                 return;
             }
 
@@ -92,29 +93,59 @@ public class EmailAnalyticsServiceImpl implements EmailAnalyticsService {
                 return;
             }
 
-            // Find recipient by campaign and email
+            // Recipient ID is authoritative. Email is only a consistency check.
             EmailCampaignRecipient recipient = recipientRepository
-                    .findByCampaignIdAndRecipientEmail(campaignId, request.getEmail())
+                    .findByIdAndWorkspaceId(recipientId, campaign.getWorkspace().getId())
                     .orElse(null);
 
             if (recipient == null) {
-                log.warn("⚠️ Recipient not found for campaign {} and email {}", campaignId, request.getEmail());
+                log.warn("⚠️ Recipient {} not found in campaign workspace {}", recipientId, campaign.getWorkspace().getId());
                 return;
             }
+            if (!recipient.getCampaign().getId().equals(campaignId)) {
+                log.warn("⚠️ Webhook recipient {} does not belong to campaign {}", recipientId, campaignId);
+                return;
+            }
+            if (request.getEmail() != null && !request.getEmail().equalsIgnoreCase(recipient.getRecipientEmail())) {
+                log.warn("⚠️ Webhook email does not match recipient {}", recipientId);
+                return;
+            }
+            Long automationId = extractLongFromMetadata(request.getMetadata(), "automation_id");
+            Long executionId = extractLongFromMetadata(request.getMetadata(), "execution_id");
+            Long automationStepId = extractLongFromMetadata(request.getMetadata(), "automation_step_id");
+            Long workspaceId = extractLongFromMetadata(request.getMetadata(), "workspace_id");
+            boolean hasAutomationMetadata = automationId != null || executionId != null ||
+                    automationStepId != null || workspaceId != null;
+            if (recipient.getAutomation() != null || hasAutomationMetadata) {
+                if (recipient.getAutomation() == null || workspaceId == null || automationId == null ||
+                        executionId == null || automationStepId == null ||
+                        !workspaceId.equals(campaign.getWorkspace().getId()) ||
+                        !workspaceId.equals(recipient.getAutomation().getWorkspace().getId()) ||
+                        !automationId.equals(recipient.getAutomation().getId()) ||
+                        recipient.getExecution() == null || !executionId.equals(recipient.getExecution().getId()) ||
+                        recipient.getAutomationStep() == null ||
+                        !automationStepId.equals(recipient.getAutomationStep().getId()) ||
+                        !automationId.equals(recipient.getExecution().getAutomation().getId()) ||
+                        !automationId.equals(recipient.getAutomationStep().getAutomation().getId())) {
+                    log.warn("⚠️ Inconsistent automation metadata for recipient {}", recipientId);
+                    return;
+                }
+            }
 
-            // Step 4: Update recipient based on event type
+            // Claim the provider event before mutating metrics. The unique database
+            // constraint makes concurrent duplicate deliveries harmless.
+            EmailCampaignHistory history = createHistoryRecord(campaign, recipient, request);
+            if (!webhookEventClaimService.claim(history)) {
+                log.warn("Duplicate webhook event ignored");
+                return;
+            }
+            log.info("✓ History record created - Event: {}", request.getEvent());
+
+            // Update recipient and metrics only after this request owns the event.
             updateRecipientFromEvent(recipient, request);
-
-            // Step 5: Save recipient
             recipientRepository.save(recipient);
             log.info("✓ Recipient updated - Event: {}, Status: {}", request.getEvent(), recipient.getStatus());
 
-            // Step 6: Create history record
-            EmailCampaignHistory history = createHistoryRecord(campaign, recipient, request);
-            historyRepository.save(history);
-            log.info("✓ History record created - Event: {}", request.getEvent());
-
-            // Step 7: Update campaign metrics
             updateCampaignMetrics(campaign);
             campaignRepository.save(campaign);
             log.info("✓ Campaign metrics updated");

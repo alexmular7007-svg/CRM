@@ -53,6 +53,83 @@ public class EmailCampaignSendingService {
 
     @Value("${app.campaign-tracking-base-url:http://localhost:8080}")
     private String campaignTrackingBaseUrl;
+
+    @Transactional(noRollbackFor = Exception.class)
+    public void sendSingleRecipient(Long campaignId, Long recipientId) {
+        EmailCampaign campaign = campaignRepository.findById(campaignId)
+                .orElseThrow(() -> new IllegalArgumentException("Campaign not found: " + campaignId));
+        EmailCampaignRecipient recipient = recipientRepository.findByIdAndCampaignId(recipientId, campaignId)
+                .orElseThrow(() -> new IllegalArgumentException("Recipient does not belong to campaign"));
+
+        if (recipient.getAutomation() == null || recipient.getExecution() == null ||
+            recipient.getAutomationStep() == null ||
+            !recipient.getCampaign().getWorkspace().getId().equals(recipient.getAutomation().getWorkspace().getId()) ||
+            !recipient.getAutomation().getId().equals(recipient.getExecution().getAutomation().getId()) ||
+            !recipient.getAutomation().getId().equals(recipient.getAutomationStep().getAutomation().getId())) {
+            throw new IllegalArgumentException("Recipient automation context does not match campaign ownership");
+        }
+
+        if ("SENT".equals(recipient.getStatus())) {
+            return;
+        }
+        try {
+            EmailTemplate template = campaign.getTemplate();
+            String emailContent = campaign.getCustomHtmlContent() != null && !campaign.getCustomHtmlContent().trim().isEmpty()
+                    ? campaign.getCustomHtmlContent()
+                    : (template != null ? template.getHtmlContent() : "");
+            if (emailContent.trim().isEmpty()) {
+                throw new IllegalArgumentException("Campaign has no email content");
+            }
+            String subject = campaign.getSubject() != null ? campaign.getSubject()
+                    : (template != null ? template.getSubjectTemplate() : "Your Email");
+            String renderedSubject = renderTemplate(subject, recipient);
+            String renderedHtml = renderTemplate(emailContent, recipient);
+            String baseUrl = campaignTrackingBaseUrl.replaceAll("/$", "");
+            if (campaign.getCtaButtonUrl() != null && !campaign.getCtaButtonUrl().isEmpty()) {
+                String ctaText = campaign.getCtaButtonText() != null && !campaign.getCtaButtonText().isEmpty()
+                        ? campaign.getCtaButtonText() : "Learn More";
+                String trackingUrl = String.format("%s/api/campaigns/track/click?campaignId=%d&recipientId=%d&redirect=%s",
+                        baseUrl, campaignId, recipientId,
+                        java.net.URLEncoder.encode(campaign.getCtaButtonUrl(), java.nio.charset.StandardCharsets.UTF_8));
+                renderedHtml += String.format("<div style=\"text-align: center; margin: 30px 0;\"><a href=\"%s\">%s</a></div>", trackingUrl, ctaText);
+            }
+            renderedHtml += String.format("\n<img src=\"%s/api/campaigns/track/open?campaignId=%d&recipientId=%d\" width=\"1\" height=\"1\" style=\"display:none;\" />",
+                    baseUrl, campaignId, recipientId);
+
+            Map<String, Object> metadata = new java.util.HashMap<>();
+            metadata.put("workspace_id", campaign.getWorkspace().getId());
+            metadata.put("campaign_id", campaignId);
+            metadata.put("recipient_id", recipientId);
+            metadata.put("automation_id", recipient.getAutomation().getId());
+            metadata.put("execution_id", recipient.getExecution().getId());
+            metadata.put("automation_step_id", recipient.getAutomationStep().getId());
+            String providerResponse = brevoEmailService.sendEmail(recipient.getRecipientEmail(), renderedSubject, renderedHtml, metadata);
+            recipient.setProviderMessageId(extractProviderMessageId(providerResponse));
+            recipient.setStatus("SENT");
+            recipient.setSentAt(LocalDateTime.now());
+            recipientRepository.save(recipient);
+        } catch (Exception ex) {
+            recipient.setStatus("FAILED");
+            recipient.setErrorMessage(sanitizeError(ex.getMessage()));
+            recipientRepository.save(recipient);
+            throw ex;
+        }
+    }
+
+    private String extractProviderMessageId(String response) {
+        if (response == null || response.isBlank()) return null;
+        try {
+            return objectMapper.readTree(response).path("messageId").asText(null);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private String sanitizeError(String message) {
+        if (message == null) return "Email delivery failed";
+        return message.replaceAll("(?i)(api-key|authorization|token)[^,; ]*", "$1=[REDACTED]")
+                .substring(0, Math.min(message.length(), 1000));
+    }
     
     /**
      * Send campaign asynchronously.

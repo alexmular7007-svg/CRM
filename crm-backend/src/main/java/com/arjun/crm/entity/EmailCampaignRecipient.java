@@ -26,7 +26,11 @@ import java.time.LocalDateTime;
         @Index(name = "idx_recipient_status", columnList = "status"),
         @Index(name = "idx_recipient_email", columnList = "recipient_email"),
         @Index(name = "idx_recipient_opened_at", columnList = "opened_at"),
-        @Index(name = "idx_recipient_campaign_status", columnList = "campaign_id, status")
+        @Index(name = "idx_recipient_campaign_status", columnList = "campaign_id, status"),
+        @Index(name = "idx_recipient_automation_id", columnList = "automation_id"),
+        @Index(name = "idx_recipient_execution_id", columnList = "execution_id"),
+        @Index(name = "idx_recipient_automation_step_id", columnList = "automation_step_id"),
+        @Index(name = "idx_recipient_idempotency_key", columnList = "idempotency_key")
     }
 )
 @Data
@@ -46,6 +50,21 @@ public class EmailCampaignRecipient {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "lead_id")
     private Lead lead;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "automation_id")
+    private Automation automation;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "execution_id")
+    private AutomationExecution execution;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "automation_step_id")
+    private AutomationStep automationStep;
+
+    @Column(name = "idempotency_key", length = 255)
+    private String idempotencyKey;
     
     @Column(nullable = false, length = 255)
     private String recipientEmail;
