@@ -1,6 +1,8 @@
 package com.arjun.crm.controller;
 
 import com.arjun.crm.dto.request.BrevoWebhookRequest;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.arjun.crm.service.EmailAnalyticsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +15,7 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.security.MessageDigest;
 
 /**
  * BrevoWebhookController - FEATURE #3 ANALYTICS
@@ -35,6 +38,7 @@ import java.util.Base64;
 public class BrevoWebhookController {
 
     private final EmailAnalyticsService emailAnalyticsService;
+    private final ObjectMapper objectMapper;
     
     @Value("${brevo.webhook.secret:}")
     private String brevoWebhookSecret;
@@ -50,17 +54,16 @@ public class BrevoWebhookController {
      */
     @PostMapping
     public ResponseEntity<Void> handleBrevoWebhook(
-            @RequestBody BrevoWebhookRequest request,
+            @RequestBody String rawBody,
             @RequestHeader(value = "X-Brevo-Signature", required = false) String brevoSignature) {
         try {
-            log.info("🟢 [BrevoWebhookController] Received webhook event - Event: {}", request.getEvent());
-            
-            // Verify webhook signature for security
-            if (!verifyWebhookSignature(brevoSignature, request)) {
+            if (!verifyWebhookSignature(brevoSignature, rawBody)) {
                 log.warn("❌ Webhook signature verification failed - rejecting request");
-                // Return 401 Unauthorized for failed signature verification
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
             }
+
+            BrevoWebhookRequest request = objectMapper.readValue(rawBody, BrevoWebhookRequest.class);
+            log.info("🟢 [BrevoWebhookController] Received webhook event - Event: {}", request.getEvent());
             
             // Validate and process the webhook
             emailAnalyticsService.processWebhookEvent(request);
@@ -68,10 +71,9 @@ public class BrevoWebhookController {
             log.info("✓ Webhook processed successfully");
             return ResponseEntity.ok().build();
             
-        } catch (IllegalArgumentException ex) {
+        } catch (JsonProcessingException | IllegalArgumentException ex) {
             log.warn("⚠️ Invalid webhook payload: {}", ex.getMessage());
-            // Return 200 OK to Brevo (acknowledge receipt even if invalid)
-            return ResponseEntity.ok().build();
+            return ResponseEntity.badRequest().build();
             
         } catch (Exception ex) {
             log.error("❌ Error processing webhook: {}", ex.getMessage(), ex);
@@ -88,14 +90,18 @@ public class BrevoWebhookController {
      * and sends it in X-Brevo-Signature header
      * 
      * @param signature X-Brevo-Signature header value
-     * @param request Webhook request body
+    * @param rawBody Exact raw webhook request body
      * @return true if signature is valid, false otherwise
      */
-    private boolean verifyWebhookSignature(String signature, BrevoWebhookRequest request) {
-        // If webhook secret is not configured, log warning but allow (development only)
+    private boolean verifyWebhookSignature(String signature, String rawBody) {
+        if (rawBody == null) {
+            log.warn("Webhook request body is missing");
+            return false;
+        }
+
         if (brevoWebhookSecret == null || brevoWebhookSecret.isEmpty()) {
-            log.warn("⚠️ Brevo webhook secret not configured - skipping signature verification");
-            return true; // Allow in dev, but this should never happen in production
+            log.error("Brevo webhook secret is not configured");
+            return false;
         }
         
         if (signature == null || signature.isEmpty()) {
@@ -112,19 +118,15 @@ public class BrevoWebhookController {
             );
             mac.init(secretKeySpec);
             
-            // Convert request object to JSON string for hashing (exact format Brevo uses)
-            String requestBody = convertRequestToJsonString(request);
-            byte[] hash = mac.doFinal(requestBody.getBytes(StandardCharsets.UTF_8));
+            byte[] hash = mac.doFinal(rawBody.getBytes(StandardCharsets.UTF_8));
             String computedSignature = Base64.getEncoder().encodeToString(hash);
             
             // Compare signatures (constant-time comparison to prevent timing attacks)
-            boolean isValid = constantTimeEquals(signature, computedSignature);
-            
-            if (!isValid) {
-                log.warn("❌ Webhook signature mismatch - expected: {}, got: {}", 
-                    signature.substring(0, 10) + "...", 
-                    computedSignature.substring(0, 10) + "...");
-            } else {
+            boolean isValid = MessageDigest.isEqual(
+                    signature.getBytes(StandardCharsets.UTF_8),
+                    computedSignature.getBytes(StandardCharsets.UTF_8));
+
+            if (isValid) {
                 log.info("✓ Webhook signature verified successfully");
             }
             
@@ -158,14 +160,4 @@ public class BrevoWebhookController {
         return result == 0;
     }
     
-    /**
-     * Convert BrevoWebhookRequest to JSON string representation
-     * This should match the exact JSON format sent by Brevo
-     */
-    private String convertRequestToJsonString(BrevoWebhookRequest request) {
-        // For production, use a proper JSON serializer (Jackson, Gson, etc.)
-        // For now, we rely on the request.toString() or implement proper JSON serialization
-        // This is a simplified version - in production, use ObjectMapper
-        return request.toString();
-    }
 }
