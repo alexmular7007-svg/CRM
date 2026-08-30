@@ -123,7 +123,13 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
         throw response // Response has error message
       }
     } catch (error) {
-      setForm((prev) => ({ ...prev, aiGenerationLoading: false }))
+      // CRITICAL FIX: Reset aiGeneratedContent BEFORE setting aiGenerationLoading to false
+      // This ensures conditional rendering keeps the form visible during error
+      setForm((prev) => ({
+        ...prev,
+        aiGeneratedContent: null,
+        aiGenerationLoading: false,
+      }))
       const errorMessage = error?.message || error?.details || error?.error || 'Failed to generate email'
       toast.error(errorMessage)
     }
@@ -157,7 +163,13 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
         throw response // Response has error message
       }
     } catch (error) {
-      setForm((prev) => ({ ...prev, aiGenerationLoading: false }))
+      // CRITICAL FIX: Reset aiGeneratedContent BEFORE setting aiGenerationLoading to false
+      // This mirrors the fix in handleAIGenerate for consistency
+      setForm((prev) => ({
+        ...prev,
+        aiGeneratedContent: null,
+        aiGenerationLoading: false,
+      }))
       const errorMessage = error?.message || error?.details || error?.error || 'Failed to regenerate email'
       toast.error(errorMessage)
     }
@@ -641,7 +653,41 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
           </div>
         ) : form.contentMode === 'ai' ? (
           <div className="mt-4 space-y-4">
-            {form.aiGeneratedContent ? (
+            {form.aiGenerationLoading ? (
+              // Show form with loading overlay when generating
+              <AIEmailGenerationForm
+                onGenerate={handleAIGenerate}
+                onCancel={() => handleContentModeChange('create')}
+                isLoading={form.aiGenerationLoading}
+              />
+            ) : form.aiGeneratedContent?.success ? (
+              // Show preview when generation succeeded
+              <GeneratedEmailPreview
+                generated={form.aiGeneratedContent}
+                onRegenerate={handleAIRegenerate}
+                onSaveTemplate={(editedContent, templateName) => {
+                  handleSaveAITemplate(editedContent, templateName)
+                }}
+                onUseInCampaign={(editedContent) => {
+                  // Place generated content into campaign fields
+                  const html = form.aiGeneratedContent?.bodyHtml || ''
+                  
+                  setForm((prev) => ({
+                    ...prev,
+                    emailSubject: editedContent.subject || '',
+                    emailHeading: editedContent.subject || '',
+                    emailBody: html || '',
+                    ctaButtonText: editedContent.ctaText || '',
+                    ctaButtonUrl: editedContent.ctaUrl || '',
+                    contentMode: 'create', // Switch to create mode with AI content filled in
+                    templateName: `AI Generated Campaign - ${new Date().toLocaleDateString()}`,
+                  }))
+                  toast.success('Email content loaded into campaign form')
+                }}
+                isLoading={form.aiGenerationLoading}
+              />
+            ) : form.aiGeneratedContent?.success === false ? (
+              // Show preview with error message when generation failed
               <GeneratedEmailPreview
                 generated={form.aiGeneratedContent}
                 onRegenerate={handleAIRegenerate}
@@ -667,6 +713,7 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
                 isLoading={form.aiGenerationLoading}
               />
             ) : (
+              // Show form when no generation attempted yet
               <AIEmailGenerationForm
                 onGenerate={handleAIGenerate}
                 onCancel={() => handleContentModeChange('create')}

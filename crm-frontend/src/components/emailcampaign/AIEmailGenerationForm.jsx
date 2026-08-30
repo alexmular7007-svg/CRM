@@ -282,8 +282,10 @@ export default function AIEmailGenerationForm({
           </div>
         </div>
 
-        {/* Two-column layout for desktop, single for mobile */}
-        <div className="grid gap-6 lg:grid-cols-2">
+        {/* FORM CONTAINER WITH LOADING OVERLAY */}
+        <div className="relative">
+          {/* Two-column layout for desktop, single for mobile */}
+          <div className={`grid gap-6 lg:grid-cols-2 ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}>
           {/* Left column */}
           <div className="space-y-5">
             {/* Campaign Purpose */}
@@ -522,6 +524,21 @@ export default function AIEmailGenerationForm({
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">Optional • {form.companyName.length}/200</p>
             </div>
           </div>
+        </div>
+
+          {/* LOADING OVERLAY - NEW */}
+          {isLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-[#0d1117]/80 rounded-lg backdrop-blur-sm">
+              <div className="flex flex-col items-center gap-3">
+                {/* Spinner */}
+                <div className="w-8 h-8 border-4 border-gray-200 dark:border-[#30363D] border-t-blue-500 rounded-full animate-spin"></div>
+                {/* Loading Text */}
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Generating email...
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Action Buttons */}
