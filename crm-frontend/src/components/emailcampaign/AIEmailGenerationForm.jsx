@@ -266,7 +266,7 @@ export default function AIEmailGenerationForm({
 
   return (
     <div className="w-full">
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-6">
         {/* Header */}
         <div className="border-b border-gray-200 pb-6 dark:border-[#30363D]">
           <div className="flex items-center gap-3">
@@ -552,7 +552,8 @@ export default function AIEmailGenerationForm({
             Cancel
           </button>
           <button
-            type="submit"
+            type="button"
+            onClick={() => handleSubmit({ preventDefault: () => {} })}
             disabled={isLoading}
             className="inline-flex items-center justify-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -574,7 +575,8 @@ export default function AIEmailGenerationForm({
         <p className="text-xs text-gray-500 dark:text-gray-500">
           * Required fields. AI will generate a professional marketing email based on your inputs within seconds.
         </p>
-      </form>
+      </div>
     </div>
   )
 }
+
