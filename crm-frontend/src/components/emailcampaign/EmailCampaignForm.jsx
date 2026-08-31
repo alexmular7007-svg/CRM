@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSelector } from 'react-redux'
 import toast from 'react-hot-toast'
@@ -49,6 +49,11 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
   const queryClient = useQueryClient()
   const [form, setForm] = useState(initialFormState)
   const [errors, setErrors] = useState({})
+  
+  useEffect(() => {
+    console.log('ðŸ“‹ CAMPAIGN FORM MOUNT')
+    return () => console.log('ðŸ“‹ CAMPAIGN FORM UNMOUNT')
+  }, [])
   
   // Fetch templates
   const { data: templatesResponse, isLoading: templatesLoading, refetch: refetchTemplates } = useQuery({
@@ -102,6 +107,8 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
 
   // Handle AI email generation using Phase 11.3 service
   const handleAIGenerate = async (aiFormData) => {
+    console.log("DEBUG_AI_GENERATE_START", aiFormData);
+    console.log('1ï¸âƒ£ HANDLE_AI_GENERATE START', aiFormData)
     try {
       setForm((prev) => ({
         ...prev,
@@ -111,6 +118,7 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
 
       // Call AI generation service with structured error handling
       const response = await aiEmailGenerationService.generateEmail(aiFormData)
+      console.log('2ï¸âƒ£ API_RESPONSE_SUCCESS', response)
 
       if (response?.success) {
         setForm((prev) => ({
@@ -123,6 +131,7 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
         throw response // Response has error message
       }
     } catch (error) {
+      console.log('âŒ API_RESPONSE_ERROR', error)
       // CRITICAL FIX: Reset aiGeneratedContent BEFORE setting aiGenerationLoading to false
       // This ensures conditional rendering keeps the form visible during error
       setForm((prev) => ({
@@ -133,6 +142,7 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
       const errorMessage = error?.message || error?.details || error?.error || 'Failed to generate email'
       toast.error(errorMessage)
     }
+    console.log('3ï¸âƒ£ HANDLE_AI_GENERATE END')
   }
 
   // Handle AI email regeneration using Phase 11.3 service
@@ -190,7 +200,7 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
 
     try {
       // Build template payload from AI-generated content
-      // Map: subject → subjectTemplate, bodyHtml → htmlContent, bodyPlainText → plainTextContent
+      // Map: subject â†’ subjectTemplate, bodyHtml â†’ htmlContent, bodyPlainText â†’ plainTextContent
       const templatePayload = {
         name: templateNameInput.trim(),
         description: `AI-generated email template from campaign setup`,
@@ -360,6 +370,8 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
       return saved
     },
     onSuccess: (saved) => {
+      console.log('ðŸŽ‰ MUTATION_ON_SUCCESS')
+      console.log('ðŸš¨ CALLING_ON_SUCCESS_CALLBACK')
       toast.success(
         form.deliveryMode === 'draft' 
           ? 'Campaign saved as draft' 
@@ -369,6 +381,7 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
       )
       queryClient.invalidateQueries({ queryKey: ['email-campaigns'] })
       onSuccess()
+      console.log('ðŸš¨ ON_SUCCESS_CALLBACK_RETURNED')
     },
     onError: (error) => {
       if (error?.isConflict || error?.message === 'TEMPLATE_CONFLICT') {
@@ -426,6 +439,8 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
   
   const handleSubmit = (e) => {
     e.preventDefault()
+    console.log("DEBUG_CAMPAIGN_FORM_SUBMIT");
+    console.log('ðŸ“ FORM_SUBMIT_CLICKED')
     
     // Prevent submission if mutation is already running
     if (mutation.isPending) return;
@@ -461,6 +476,7 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
     }
     
     setErrors({})
+    console.log('4ï¸âƒ£ MUTATION_MUTATE_CALLED')
     mutation.mutate(form)
   }
   
@@ -497,7 +513,7 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
               name="emailSubject"
               value={form.emailSubject}
               onChange={handleChange}
-              placeholder="e.g., 🎉 Get 30% OFF This Week"
+              placeholder="e.g., ðŸŽ‰ Get 30% OFF This Week"
               maxLength="255"
               className={fieldClass}
             />
@@ -556,7 +572,7 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
               onChange={() => handleContentModeChange('ai')}
               className="w-4 h-4 text-violet-600"
             />
-            <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">🤖 Generate with AI</span>
+            <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">ðŸ¤– Generate with AI</span>
           </label>
         </div>
         
@@ -1010,3 +1026,8 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
     </form>
   )
 }
+
+
+
+
+

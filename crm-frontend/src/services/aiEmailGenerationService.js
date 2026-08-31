@@ -59,10 +59,17 @@ export const aiEmailGenerationService = {
    */
   async generateEmail(request) {
     try {
+      console.log('🌐 API_REQUEST_START: POST /emails/generate', request)
       const response = await api.post('/emails/generate', request)
-      return unwrap(response)
+      console.log('🌐 API_RESPONSE_RECEIVED:', { status: 200, body: response })
+      const unwrappedResponse = unwrap(response)
+      console.log('🌐 API_RESPONSE_UNWRAPPED:', unwrappedResponse)
+      return unwrappedResponse
     } catch (error) {
-      throw parseError(error, 'email generation')
+      console.log('🌐 API_REQUEST_ERROR:', error)
+      const parsedError = parseError(error, 'email generation')
+      console.log('🌐 API_ERROR_PARSED:', parsedError)
+      throw parsedError
     }
   },
 

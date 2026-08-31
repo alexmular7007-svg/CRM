@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { AlertCircle, Zap } from 'lucide-react'
 import toast from 'react-hot-toast'
+import aiEmailGenerationService from '../../services/aiEmailGenerationService'
 
 /**
  * AIEmailGenerationForm - Phase 11.3: Production-Ready AI Email Generation UI
@@ -39,6 +40,8 @@ export default function AIEmailGenerationForm({
   onCancel = () => {},
   isLoading = false,
 }) {
+  console.log('ðŸŽ¨ AIEmailGenerationForm RENDERED', { isLoading })
+
   const [form, setForm] = useState({
     purpose: '',
     targetAudience: '',
@@ -70,12 +73,10 @@ export default function AIEmailGenerationForm({
   useEffect(() => {
     const loadTones = async () => {
       try {
-        const response = await fetch('/api/emails/tones')
-        const data = await response.json()
-        if (data.data && Array.isArray(data.data)) {
-          setTones(data.data)
+        const tones = await aiEmailGenerationService.getTones()
+        if (Array.isArray(tones)) {
+          setTones(tones)
         }
-      } catch (error) {
         console.error('Error loading tones:', error)
         // Fallback tones already set in state initialization
       }
@@ -232,6 +233,7 @@ export default function AIEmailGenerationForm({
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    console.log('5ï¸âƒ£ AIEmailGenerationForm.handleSubmit() CALLED')
 
     // Mark all fields as touched for validation display
     const allFields = Object.keys(form)
@@ -243,15 +245,19 @@ export default function AIEmailGenerationForm({
       return
     }
 
+    console.log('6ï¸âƒ£ AIEmailGenerationForm VALIDATION PASSED, calling onGenerate')
+
     setIsGenerating(true)
 
     // Call parent handler
     try {
+      console.log('7ï¸âƒ£ AIEmailGenerationForm onGenerate CALLBACK INVOKED')
       onGenerate(form)
     } catch (error) {
       console.error('Error in onGenerate callback:', error)
       toast.error('An error occurred during generation')
     } finally {
+      console.log('8ï¸âƒ£ AIEmailGenerationForm handleSubmit FINALLY BLOCK')
       setIsGenerating(false)
     }
   }
@@ -408,7 +414,7 @@ export default function AIEmailGenerationForm({
                 } disabled:opacity-50 disabled:cursor-not-allowed`}
               />
               {errors.offer && <p className={errorTextClass}>{errors.offer}</p>}
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">Optional • {form.offer.length}/500</p>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">Optional â€¢ {form.offer.length}/500</p>
             </div>
           </div>
 
@@ -434,7 +440,7 @@ export default function AIEmailGenerationForm({
                 } disabled:opacity-50 disabled:cursor-not-allowed`}
               />
               {errors.keyPoints && <p className={errorTextClass}>{errors.keyPoints}</p>}
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">Optional • {form.keyPoints.length}/500</p>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">Optional â€¢ {form.keyPoints.length}/500</p>
             </div>
 
             {/* CTA Text */}
@@ -521,7 +527,7 @@ export default function AIEmailGenerationForm({
                 className={`${fieldClass} ${fieldNormalClass} disabled:opacity-50 disabled:cursor-not-allowed`}
               />
               {errors.companyName && <p className={errorTextClass}>{errors.companyName}</p>}
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">Optional • {form.companyName.length}/200</p>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">Optional â€¢ {form.companyName.length}/200</p>
             </div>
           </div>
         </div>
@@ -579,4 +585,8 @@ export default function AIEmailGenerationForm({
     </div>
   )
 }
+
+
+
+
 
