@@ -61,7 +61,7 @@ export const aiEmailGenerationService = {
     try {
       console.log('🌐 API_REQUEST_START: POST /emails/generate', request)
       const response = await api.post('/emails/generate', request)
-      console.log('🌐 API_RESPONSE_RECEIVED:', { status: 200, body: response })
+      console.log('🌐 API_RESPONSE_RECEIVED:', { status: response.status, body: response })
       const unwrappedResponse = unwrap(response)
       console.log('🌐 API_RESPONSE_UNWRAPPED:', unwrappedResponse)
       return unwrappedResponse

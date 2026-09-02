@@ -128,7 +128,7 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
         }))
         toast.success('Email generated successfully')
       } else {
-        throw response // Response has error message
+        throw response
       }
     } catch (error) {
       console.log('âŒ API_RESPONSE_ERROR', error)
@@ -136,7 +136,11 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
       // This ensures conditional rendering keeps the form visible during error
       setForm((prev) => ({
         ...prev,
-        aiGeneratedContent: null,
+        aiGeneratedContent: {
+          ...(error?.data || {}),
+          success: false,
+          error: error?.data?.error || error?.message || error?.details || error?.error || 'Failed to generate email',
+        },
         aiGenerationLoading: false,
       }))
       const errorMessage = error?.message || error?.details || error?.error || 'Failed to generate email'
@@ -177,7 +181,11 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
       // This mirrors the fix in handleAIGenerate for consistency
       setForm((prev) => ({
         ...prev,
-        aiGeneratedContent: null,
+        aiGeneratedContent: {
+          ...(error?.data || {}),
+          success: false,
+          error: error?.data?.error || error?.message || error?.details || error?.error || 'Failed to regenerate email',
+        },
         aiGenerationLoading: false,
       }))
       const errorMessage = error?.message || error?.details || error?.error || 'Failed to regenerate email'
@@ -259,8 +267,9 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
   const handleUseAIEmail = (editedContent) => {
     setForm((prev) => ({
       ...prev,
+      emailSubject: editedContent.subject || '',
       emailHeading: editedContent.subject || '',
-      emailBody: prev.aiGeneratedContent?.bodyHtml || '',
+      emailBody: editedContent.bodyHtml || prev.aiGeneratedContent?.bodyHtml || '',
       ctaButtonText: editedContent.ctaText || '',
       ctaButtonUrl: editedContent.ctaUrl || '',
       contentMode: 'create', // Switch to create mode with AI content filled in
@@ -684,22 +693,7 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
                 onSaveTemplate={(editedContent, templateName) => {
                   handleSaveAITemplate(editedContent, templateName)
                 }}
-                onUseInCampaign={(editedContent) => {
-                  // Place generated content into campaign fields
-                  const html = form.aiGeneratedContent?.bodyHtml || ''
-                  
-                  setForm((prev) => ({
-                    ...prev,
-                    emailSubject: editedContent.subject || '',
-                    emailHeading: editedContent.subject || '',
-                    emailBody: html || '',
-                    ctaButtonText: editedContent.ctaText || '',
-                    ctaButtonUrl: editedContent.ctaUrl || '',
-                    contentMode: 'create', // Switch to create mode with AI content filled in
-                    templateName: `AI Generated Campaign - ${new Date().toLocaleDateString()}`,
-                  }))
-                  toast.success('Email content loaded into campaign form')
-                }}
+                onUseInCampaign={handleUseAIEmail}
                 isLoading={form.aiGenerationLoading}
               />
             ) : form.aiGeneratedContent?.success === false ? (
@@ -710,22 +704,7 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
                 onSaveTemplate={(editedContent, templateName) => {
                   handleSaveAITemplate(editedContent, templateName)
                 }}
-                onUseInCampaign={(editedContent) => {
-                  // Place generated content into campaign fields
-                  const html = form.aiGeneratedContent?.bodyHtml || ''
-                  
-                  setForm((prev) => ({
-                    ...prev,
-                    emailSubject: editedContent.subject || '',
-                    emailHeading: editedContent.subject || '',
-                    emailBody: html || '',
-                    ctaButtonText: editedContent.ctaText || '',
-                    ctaButtonUrl: editedContent.ctaUrl || '',
-                    contentMode: 'create', // Switch to create mode with AI content filled in
-                    templateName: `AI Generated Campaign - ${new Date().toLocaleDateString()}`,
-                  }))
-                  toast.success('Email content loaded into campaign form')
-                }}
+                onUseInCampaign={handleUseAIEmail}
                 isLoading={form.aiGenerationLoading}
               />
             ) : (

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { RefreshCw, Edit2, Save, X, Copy, Mail, Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
 import TemplateConflictModal from './TemplateConflictModal'
@@ -51,6 +51,7 @@ export default function GeneratedEmailPreview({
   const [viewMode, setViewMode] = useState('html') // 'html' or 'plaintext'
   const [editedContent, setEditedContent] = useState({
     subject: generated?.subject || '',
+    bodyHtml: generated?.bodyHtml || '',
     ctaText: generated?.ctaText || '',
     ctaUrl: generated?.ctaUrl || '',
   })
@@ -61,6 +62,17 @@ export default function GeneratedEmailPreview({
     isOpen: false,
     templateName: '',
   })
+
+  useEffect(() => {
+    setEditedContent({
+      subject: generated?.subject || '',
+      bodyHtml: generated?.bodyHtml || '',
+      ctaText: generated?.ctaText || '',
+      ctaUrl: generated?.ctaUrl || '',
+    })
+    setEditMode(false)
+    setErrors({})
+  }, [generated])
 
   if (!generated) {
     return (
@@ -82,6 +94,7 @@ export default function GeneratedEmailPreview({
             <h3 className="text-sm font-semibold text-red-900 dark:text-red-200">Generation Failed</h3>
             <p className="mt-1 text-sm text-red-800 dark:text-red-300">{generated.error || 'Unknown error occurred'}</p>
             <button
+              type="button"
               onClick={onRegenerate}
               disabled={isLoading}
               className="mt-4 inline-flex items-center gap-2 rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -167,6 +180,7 @@ export default function GeneratedEmailPreview({
   const handleCancelEdit = () => {
     setEditedContent({
       subject: generated?.subject || '',
+      bodyHtml: generated?.bodyHtml || '',
       ctaText: generated?.ctaText || '',
       ctaUrl: generated?.ctaUrl || '',
     })
@@ -219,6 +233,7 @@ export default function GeneratedEmailPreview({
   }
 
   const displayContent = editMode ? editedContent : generated
+  const previewText = generated.bodyPlainText?.replace(/\s+/g, ' ').trim().slice(0, 160)
 
   return (
     <div className="space-y-6">
@@ -235,6 +250,7 @@ export default function GeneratedEmailPreview({
             {editMode ? (
               <>
                 <button
+                  type="button"
                   onClick={handleCancelEdit}
                   disabled={isLoading}
                   title="Cancel edits"
@@ -243,6 +259,7 @@ export default function GeneratedEmailPreview({
                   <X size={18} />
                 </button>
                 <button
+                  type="button"
                   onClick={handleSaveEdits}
                   disabled={isLoading}
                   title="Save edits"
@@ -253,6 +270,7 @@ export default function GeneratedEmailPreview({
               </>
             ) : (
               <button
+                type="button"
                 onClick={() => setEditMode(true)}
                 disabled={isLoading}
                 title="Edit email"
@@ -321,6 +339,13 @@ export default function GeneratedEmailPreview({
             )}
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Preview text</label>
+            <p className="mt-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 dark:border-[#30363D] dark:bg-[#0D1117] dark:text-gray-300">
+              {previewText || 'No preview text returned'}
+            </p>
+          </div>
+
           {/* CTA URL */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">CTA URL</label>
@@ -352,9 +377,22 @@ export default function GeneratedEmailPreview({
 
         {/* Right column: Email preview */}
         <div className="lg:col-span-2">
+          {editMode && (
+            <div className="mb-4">
+              <label htmlFor="generated-body" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email body</label>
+              <textarea
+                id="generated-body"
+                value={editedContent.bodyHtml}
+                onChange={(e) => handleEditChange('bodyHtml', e.target.value)}
+                rows="12"
+                className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 font-mono text-xs text-gray-900 dark:border-[#30363D] dark:bg-[#0D1117] dark:text-white"
+              />
+            </div>
+          )}
           {/* View mode toggle */}
           <div className="mb-4 flex gap-2 border-b border-gray-200 dark:border-[#30363D]">
             <button
+              type="button"
               onClick={() => setViewMode('html')}
               disabled={editMode}
               className={`inline-flex items-center gap-2 border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
@@ -367,6 +405,7 @@ export default function GeneratedEmailPreview({
               Email Preview
             </button>
             <button
+              type="button"
               onClick={() => setViewMode('plaintext')}
               disabled={editMode}
               className={`inline-flex items-center gap-2 border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
@@ -384,7 +423,7 @@ export default function GeneratedEmailPreview({
           {viewMode === 'html' ? (
             <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-[#30363D] dark:bg-[#0D1117]">
               <iframe
-                srcDoc={generated.bodyHtml}
+                srcDoc={displayContent.bodyHtml}
                 title="Email Preview"
                 className="h-[500px] w-full border-0"
                 sandbox="allow-same-origin"
@@ -403,6 +442,7 @@ export default function GeneratedEmailPreview({
       {/* Action Buttons */}
       <div className="flex flex-col gap-3 border-t border-gray-200 pt-6 dark:border-[#30363D] sm:flex-row sm:justify-between">
         <button
+          type="button"
           onClick={onRegenerate}
           disabled={isLoading || editMode || isSaving}
           className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-[#30363D] dark:bg-[#0D1117] dark:text-gray-300 dark:hover:bg-[#161B22]"
@@ -433,6 +473,7 @@ export default function GeneratedEmailPreview({
               className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 transition-colors dark:border-[#30363D] dark:bg-[#0D1117] dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500 disabled:opacity-50"
             />
             <button
+              type="button"
               onClick={handleSaveTemplateClick}
               disabled={isLoading || editMode || isSaving}
               className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-[#30363D] dark:bg-[#0D1117] dark:text-gray-300 dark:hover:bg-[#161B22]"
@@ -452,14 +493,18 @@ export default function GeneratedEmailPreview({
           </div>
 
           <button
+            type="button"
             onClick={() => {
-              onUseInCampaign(editedContent)
+              onUseInCampaign({
+                ...editedContent,
+                bodyPlainText: generated.bodyPlainText,
+              })
             }}
             disabled={isLoading || editMode || isSaving}
             className="inline-flex items-center justify-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Mail size={16} />
-            Use in Campaign
+            Use This Email
           </button>
         </div>
       </div>

@@ -3,6 +3,8 @@ import { AlertCircle, Zap } from 'lucide-react'
 import toast from 'react-hot-toast'
 import aiEmailGenerationService from '../../services/aiEmailGenerationService'
 
+const TEMPLATE_TYPES = ['PROMOTION', 'WELCOME', 'GREETING', 'ACCEPTANCE', 'FOLLOW_UP', 'ANNOUNCEMENT', 'THANK_YOU', 'REMINDER']
+
 /**
  * AIEmailGenerationForm - Phase 11.3: Production-Ready AI Email Generation UI
  *
@@ -43,6 +45,9 @@ export default function AIEmailGenerationForm({
   console.log('ðŸŽ¨ AIEmailGenerationForm RENDERED', { isLoading })
 
   const [form, setForm] = useState({
+    mode: 'PROMPT',
+    prompt: '',
+    templateType: 'WELCOME',
     purpose: '',
     targetAudience: '',
     productService: '',
@@ -67,22 +72,22 @@ export default function AIEmailGenerationForm({
   const [languages] = useState(['English', 'Spanish', 'French', 'German', 'Portuguese', 'Italian', 'Dutch'])
   const [errors, setErrors] = useState({})
   const [touched, setTouched] = useState({})
-  const [isGenerating, setIsGenerating] = useState(false)
-
   // Load available tones from backend if not already set
   useEffect(() => {
+    let mounted = true
     const loadTones = async () => {
       try {
         const tones = await aiEmailGenerationService.getTones()
-        if (Array.isArray(tones)) {
+        if (mounted && Array.isArray(tones)) {
           setTones(tones)
         }
+      } catch (error) {
         console.error('Error loading tones:', error)
-        // Fallback tones already set in state initialization
       }
     }
 
     loadTones()
+    return () => { mounted = false }
   }, [])
 
   const validateField = (name, value) => {
@@ -179,7 +184,14 @@ export default function AIEmailGenerationForm({
   const validateForm = () => {
     const newErrors = {}
 
-    // Validate all required fields
+    if (form.mode === 'PROMPT') {
+      if (!form.prompt.trim()) newErrors.prompt = 'Write a prompt for the email you want to generate'
+      if (form.prompt.length > 3000) newErrors.prompt = 'Prompt must be 3000 characters or fewer'
+      if (!form.tone) newErrors.tone = 'Tone is required'
+      setErrors(newErrors)
+      return Object.keys(newErrors).length === 0
+    }
+
     const requiredFields = ['purpose', 'targetAudience', 'productService', 'tone', 'ctaText', 'ctaUrl']
     requiredFields.forEach((field) => {
       const fieldErrors = validateField(field, form[field])
@@ -231,35 +243,16 @@ export default function AIEmailGenerationForm({
     }))
   }
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    console.log('5ï¸âƒ£ AIEmailGenerationForm.handleSubmit() CALLED')
-
-    // Mark all fields as touched for validation display
-    const allFields = Object.keys(form)
-    const touchedAll = allFields.reduce((acc, field) => ({ ...acc, [field]: true }), {})
-    setTouched(touchedAll)
-
+  const handleSubmit = () => {
     if (!validateForm()) {
       toast.error('Please fix the errors above')
       return
     }
 
-    console.log('6ï¸âƒ£ AIEmailGenerationForm VALIDATION PASSED, calling onGenerate')
-
-    setIsGenerating(true)
-
-    // Call parent handler
-    try {
-      console.log('7ï¸âƒ£ AIEmailGenerationForm onGenerate CALLBACK INVOKED')
-      onGenerate(form)
-    } catch (error) {
-      console.error('Error in onGenerate callback:', error)
-      toast.error('An error occurred during generation')
-    } finally {
-      console.log('8ï¸âƒ£ AIEmailGenerationForm handleSubmit FINALLY BLOCK')
-      setIsGenerating(false)
-    }
+    const request = form.mode === 'PROMPT'
+      ? { mode: 'PROMPT', prompt: form.prompt, tone: form.tone, language: form.language, companyName: form.companyName }
+      : form
+    onGenerate(request)
   }
 
   const fieldClass =
@@ -288,12 +281,54 @@ export default function AIEmailGenerationForm({
           </div>
         </div>
 
+        <div>
+          <p className={labelClass}>Generation mode</p>
+          <div className="flex gap-2" role="group" aria-label="Generation mode">
+            {['PROMPT', 'TEMPLATE'].map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setForm((prev) => ({ ...prev, mode }))}
+                disabled={isLoading}
+                aria-pressed={form.mode === mode}
+                className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50 ${form.mode === mode ? 'border-violet-600 bg-violet-600 text-white' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-[#30363D] dark:bg-[#0D1117] dark:text-gray-300'}`}
+              >
+                {mode === 'PROMPT' ? 'Prompt' : 'Template'}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* FORM CONTAINER WITH LOADING OVERLAY */}
         <div className="relative">
+          {form.mode === 'PROMPT' && (
+            <div className="mb-6">
+              <label htmlFor="prompt" className={labelClass}>Write your email</label>
+              <textarea
+                id="prompt"
+                name="prompt"
+                value={form.prompt}
+                onChange={handleChange}
+                placeholder="Write a short promotional email for our CRM launch. Target audience: small businesses. Tone: professional but friendly. CTA: Start Free Trial."
+                rows="7"
+                maxLength="3000"
+                disabled={isLoading}
+                className={`${fieldClass} resize-y ${errors.prompt ? fieldErrorClass : fieldNormalClass}`}
+              />
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">{form.prompt.length}/3000</p>
+              {errors.prompt && <p className={errorTextClass}>{errors.prompt}</p>}
+            </div>
+          )}
           {/* Two-column layout for desktop, single for mobile */}
-          <div className={`grid gap-6 lg:grid-cols-2 ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}>
+          {form.mode === 'TEMPLATE' && <div className={`grid gap-6 lg:grid-cols-2 ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}>
           {/* Left column */}
           <div className="space-y-5">
+            <div>
+              <label htmlFor="templateType" className={labelClass}>Template *</label>
+              <select id="templateType" name="templateType" value={form.templateType} onChange={handleChange} disabled={isLoading} className={`${fieldClass} ${fieldNormalClass}`}>
+                {TEMPLATE_TYPES.map((template) => <option key={template} value={template}>{template.replace('_', ' ')}</option>)}
+              </select>
+            </div>
             {/* Campaign Purpose */}
             <div>
               <label htmlFor="purpose" className={labelClass}>
@@ -530,7 +565,7 @@ export default function AIEmailGenerationForm({
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">Optional â€¢ {form.companyName.length}/200</p>
             </div>
           </div>
-        </div>
+        </div>}
 
           {/* LOADING OVERLAY - NEW */}
           {isLoading && (

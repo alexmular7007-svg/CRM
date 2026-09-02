@@ -47,13 +47,20 @@ public class AIEmailGenerationServiceImpl implements AIEmailGenerationService {
     @Override
     public AIEmailGenerationResponse generateEmail(AIEmailGenerationRequest request) {
         try {
-            log.info("Generating email with purpose: {}, tone: {}, audience: {}", 
-                request.getPurpose(), request.getTone(), request.getTargetAudience());
+            if (request == null) {
+                return buildErrorResponse("Email generation request is required.", "unknown");
+            }
 
-            // Step 1: Construct detailed prompt for AI
-            String prompt = constructEmailGenerationPrompt(request);
+            AIEmailGenerationRequest.GenerationMode mode = request.getMode() != null ? request.getMode() : (
+                request.getPrompt() != null && !request.getPrompt().isBlank() ? AIEmailGenerationRequest.GenerationMode.PROMPT : AIEmailGenerationRequest.GenerationMode.TEMPLATE
+            );
 
-            // Step 2: Call AI provider with timeout/error handling
+            log.info("Generating email in {} mode", mode);
+
+            String prompt = mode == AIEmailGenerationRequest.GenerationMode.PROMPT
+                ? constructPromptModePrompt(request)
+                : constructEmailGenerationPrompt(request);
+
             AIResponse aiResponse = callAIProviderWithErrorHandling(prompt);
 
             if (!aiResponse.isSuccess() || aiResponse.getContent() == null) {
@@ -284,6 +291,33 @@ public class AIEmailGenerationServiceImpl implements AIEmailGenerationService {
      * Construct a detailed prompt for AI to generate professional email content
      * Supports: purpose, audience, product, tone, offer, keyPoints, language
      */
+    private String constructPromptModePrompt(AIEmailGenerationRequest request) {
+        String prompt = request.getPrompt() == null ? "" : request.getPrompt().trim();
+        String tone = request.getTone() != null && !request.getTone().isBlank() ? request.getTone() : "Professional";
+        String ctaText = request.getCtaText() != null && !request.getCtaText().isBlank() ? request.getCtaText() : "Learn More";
+        String ctaUrl = request.getCtaUrl() != null && !request.getCtaUrl().isBlank() ? request.getCtaUrl() : "https://example.com";
+
+        return String.format("""
+            Generate a professional marketing email in %s tone.
+
+            User prompt:
+            %s
+
+            Requirements:
+            - Write a compelling subject line (max 60 chars)
+            - Produce a polished email body with natural flow and clear CTA
+            - Keep the CTA text exactly as: %s
+            - Keep the CTA URL exactly as: %s
+            - Return only valid JSON with fields: {"subject":"...","body":"..."}
+            - Do not include markdown fences or explanations.
+            """,
+            tone,
+            prompt,
+            ctaText,
+            ctaUrl
+        );
+    }
+
     private String constructEmailGenerationPrompt(AIEmailGenerationRequest request) {
         String offerText = request.getOffer() != null && !request.getOffer().isEmpty() 
             ? "SPECIAL OFFER: " + request.getOffer() + "\n" 
