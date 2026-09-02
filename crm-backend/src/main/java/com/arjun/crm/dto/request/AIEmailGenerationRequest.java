@@ -1,6 +1,6 @@
 package com.arjun.crm.dto.request;
 
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -26,11 +26,34 @@ import lombok.NoArgsConstructor;
 @Builder
 public class AIEmailGenerationRequest {
 
+    public enum GenerationMode {
+        TEMPLATE,
+        PROMPT
+    }
+
+    /**
+     * Generation mode. TEMPLATE uses structured fields; PROMPT uses a direct prompt.
+     * Defaults to TEMPLATE for backward compatibility with existing UI and API clients.
+     */
+    @Builder.Default
+    private GenerationMode mode = GenerationMode.TEMPLATE;
+
+    /**
+     * Optional template category/type used in TEMPLATE mode.
+     */
+    @Size(max = 100, message = "Template type must not exceed 100 characters")
+    private String templateType;
+
+    /**
+     * Direct prompt content used in PROMPT mode.
+     */
+    @Size(max = 3000, message = "Prompt must not exceed 3000 characters")
+    private String prompt;
+
     /**
      * Email subject purpose (what the email is about)
      * Examples: "Product launch announcement", "Customer onboarding", "Re-engagement offer"
      */
-    @NotBlank(message = "Purpose is required")
     @Size(min = 3, max = 200, message = "Purpose must be between 3 and 200 characters")
     private String purpose;
 
@@ -38,7 +61,6 @@ public class AIEmailGenerationRequest {
      * Target audience description
      * Examples: "New leads", "High-value customers", "Inactive users"
      */
-    @NotBlank(message = "Target audience is required")
     @Size(min = 3, max = 150, message = "Target audience must be between 3 and 150 characters")
     private String targetAudience;
 
@@ -46,7 +68,6 @@ public class AIEmailGenerationRequest {
      * Product or service being promoted/described
      * Examples: "Cloud storage service", "SaaS analytics platform", "Mobile app"
      */
-    @NotBlank(message = "Product/service description is required")
     @Size(min = 3, max = 200, message = "Product/service must be between 3 and 200 characters")
     private String productService;
 
@@ -54,7 +75,6 @@ public class AIEmailGenerationRequest {
      * Email tone/style
      * Examples: "Professional", "Friendly", "Urgent", "Casual", "Formal"
      */
-    @NotBlank(message = "Tone is required")
     @Pattern(
         regexp = "^(Professional|Friendly|Urgent|Casual|Formal|Persuasive|Humorous)$",
         message = "Tone must be one of: Professional, Friendly, Urgent, Casual, Formal, Persuasive, Humorous"
@@ -80,7 +100,6 @@ public class AIEmailGenerationRequest {
      * Call-to-action button text
      * Examples: "Get Started", "Learn More", "Claim Offer", "Sign Up"
      */
-    @NotBlank(message = "CTA text is required")
     @Size(min = 2, max = 50, message = "CTA text must be between 2 and 50 characters")
     private String ctaText;
 
@@ -89,7 +108,6 @@ public class AIEmailGenerationRequest {
      * Examples: "https://example.com/signup", "https://example.com/demo"
      * Must be valid HTTP or HTTPS URL
      */
-    @NotBlank(message = "CTA URL is required")
     @Size(min = 10, max = 2048, message = "CTA URL must be between 10 and 2048 characters")
     @Pattern(
         regexp = "^https?://[a-zA-Z0-9\\-._~:/?#\\[\\]@!$&'()*+,;=%]*$",
@@ -110,4 +128,23 @@ public class AIEmailGenerationRequest {
      */
     @Size(max = 100, message = "Company name must not exceed 100 characters")
     private String companyName;
+
+    @AssertTrue(message = "TEMPLATE mode requires purpose, targetAudience, productService, and CTA details; PROMPT mode requires a non-empty prompt.")
+    public boolean isGenerationRequestValid() {
+        GenerationMode effectiveMode = mode != null ? mode : (prompt != null && !prompt.isBlank() ? GenerationMode.PROMPT : GenerationMode.TEMPLATE);
+
+        if (effectiveMode == GenerationMode.PROMPT) {
+            return prompt != null && !prompt.isBlank();
+        }
+
+        return hasText(purpose)
+            && hasText(targetAudience)
+            && hasText(productService)
+            && hasText(ctaText)
+            && hasText(ctaUrl);
+    }
+
+    public boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
+    }
 }
