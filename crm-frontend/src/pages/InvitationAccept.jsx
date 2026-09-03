@@ -40,7 +40,7 @@ const InvitationAccept = () => {
 
     // User is logged in - accept the invitation
     acceptInvitation(invitationToken, authToken)
-  }, [authToken]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [authToken])
 
   const acceptInvitation = async (invitationToken, jwtToken) => {
     try {

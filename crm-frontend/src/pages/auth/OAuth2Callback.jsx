@@ -76,7 +76,7 @@ const OAuth2Callback = () => {
         toast.error('Failed to load your profile. Please try signing in again.')
         navigate('/login', { replace: true })
       })
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
 
       const acceptInvitationAndRedirect = async (jwtToken, invToken, apiBase) => {
     try {
