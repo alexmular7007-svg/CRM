@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSelector } from 'react-redux'
 import toast from 'react-hot-toast'
@@ -26,6 +26,7 @@ const initialFormState = {
   aiGeneratedContent: null, // Stores AI-generated email data
   aiGenerationInputs: null, // Stores the form inputs used for AI generation
   aiGenerationLoading: false,
+  aiError: null,
   
   // Section 3: Audience
   audienceMode: 'manual', // 'manual' or 'segment' or 'crmfilter'
@@ -108,45 +109,42 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
   // Handle AI email generation using Phase 11.3 service
   const handleAIGenerate = async (aiFormData) => {
     console.log("DEBUG_AI_GENERATE_START", aiFormData);
-    console.log('1ï¸âƒ£ HANDLE_AI_GENERATE START', aiFormData)
+    console.log('1️⃣ HANDLE_AI_GENERATE START', aiFormData)
     try {
       setForm((prev) => ({
         ...prev,
         aiGenerationLoading: true,
         aiGenerationInputs: aiFormData,
+        aiError: null,
       }))
 
       // Call AI generation service with structured error handling
       const response = await aiEmailGenerationService.generateEmail(aiFormData)
-      console.log('2ï¸âƒ£ API_RESPONSE_SUCCESS', response)
+      console.log('2️⃣ API_RESPONSE_SUCCESS', response)
 
       if (response?.success) {
         setForm((prev) => ({
           ...prev,
           aiGeneratedContent: response,
           aiGenerationLoading: false,
+          aiError: null,
         }))
         toast.success('Email generated successfully')
       } else {
         throw response
       }
     } catch (error) {
-      console.log('âŒ API_RESPONSE_ERROR', error)
-      // CRITICAL FIX: Reset aiGeneratedContent BEFORE setting aiGenerationLoading to false
-      // This ensures conditional rendering keeps the form visible during error
+      console.log('❌ API_RESPONSE_ERROR', error)
+      const errorMessage = error?.data?.error || error?.message || error?.details || error?.error || 'Failed to generate email'
       setForm((prev) => ({
         ...prev,
-        aiGeneratedContent: {
-          ...(error?.data || {}),
-          success: false,
-          error: error?.data?.error || error?.message || error?.details || error?.error || 'Failed to generate email',
-        },
+        aiGeneratedContent: null,
         aiGenerationLoading: false,
+        aiError: errorMessage,
       }))
-      const errorMessage = error?.message || error?.details || error?.error || 'Failed to generate email'
       toast.error(errorMessage)
     }
-    console.log('3ï¸âƒ£ HANDLE_AI_GENERATE END')
+    console.log('3️⃣ HANDLE_AI_GENERATE END')
   }
 
   // Handle AI email regeneration using Phase 11.3 service
@@ -161,6 +159,7 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
       setForm((prev) => ({
         ...prev,
         aiGenerationLoading: true,
+        aiError: null,
       }))
 
       // Call AI regeneration service
@@ -171,24 +170,19 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
           ...prev,
           aiGeneratedContent: response,
           aiGenerationLoading: false,
+          aiError: null,
         }))
         toast.success('Email regenerated successfully')
       } else {
         throw response // Response has error message
       }
     } catch (error) {
-      // CRITICAL FIX: Reset aiGeneratedContent BEFORE setting aiGenerationLoading to false
-      // This mirrors the fix in handleAIGenerate for consistency
+      const errorMessage = error?.data?.error || error?.message || error?.details || error?.error || 'Failed to regenerate email'
       setForm((prev) => ({
         ...prev,
-        aiGeneratedContent: {
-          ...(error?.data || {}),
-          success: false,
-          error: error?.data?.error || error?.message || error?.details || error?.error || 'Failed to regenerate email',
-        },
         aiGenerationLoading: false,
+        aiError: errorMessage,
       }))
-      const errorMessage = error?.message || error?.details || error?.error || 'Failed to regenerate email'
       toast.error(errorMessage)
     }
   }
@@ -678,14 +672,7 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
           </div>
         ) : form.contentMode === 'ai' ? (
           <div className="mt-4 space-y-4">
-            {form.aiGenerationLoading ? (
-              // Show form with loading overlay when generating
-              <AIEmailGenerationForm
-                onGenerate={handleAIGenerate}
-                onCancel={() => handleContentModeChange('create')}
-                isLoading={form.aiGenerationLoading}
-              />
-            ) : form.aiGeneratedContent?.success ? (
+            {form.aiGeneratedContent?.success ? (
               // Show preview when generation succeeded
               <GeneratedEmailPreview
                 generated={form.aiGeneratedContent}
@@ -696,20 +683,11 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
                 onUseInCampaign={handleUseAIEmail}
                 isLoading={form.aiGenerationLoading}
               />
-            ) : form.aiGeneratedContent?.success === false ? (
-              // Show preview with error message when generation failed
-              <GeneratedEmailPreview
-                generated={form.aiGeneratedContent}
-                onRegenerate={handleAIRegenerate}
-                onSaveTemplate={(editedContent, templateName) => {
-                  handleSaveAITemplate(editedContent, templateName)
-                }}
-                onUseInCampaign={handleUseAIEmail}
-                isLoading={form.aiGenerationLoading}
-              />
             ) : (
-              // Show form when no generation attempted yet
+              // Show form with preserved inputs, loading overlay if generating, or inline error if failed
               <AIEmailGenerationForm
+                initialValues={form.aiGenerationInputs}
+                error={form.aiError}
                 onGenerate={handleAIGenerate}
                 onCancel={() => handleContentModeChange('create')}
                 isLoading={form.aiGenerationLoading}

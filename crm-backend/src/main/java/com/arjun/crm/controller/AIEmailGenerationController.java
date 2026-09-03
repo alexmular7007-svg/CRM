@@ -100,7 +100,7 @@ public class AIEmailGenerationController {
             @Valid @RequestBody AIEmailGenerationRequest request
     ) {
         try {
-            log.info("Generating email with purpose: {}, tone: {}", request.getPurpose(), request.getTone());
+            log.info("Generating email in mode: {}, purpose: {}, tone: {}", request.getMode(), request.getPurpose(), request.getTone());
 
             // Call service to generate email
             AIEmailGenerationResponse response = emailGenerationService.generateEmail(request);

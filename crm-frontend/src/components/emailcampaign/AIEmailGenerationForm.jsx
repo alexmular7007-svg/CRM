@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { AlertCircle, Zap } from 'lucide-react'
 import toast from 'react-hot-toast'
 import aiEmailGenerationService from '../../services/aiEmailGenerationService'
@@ -41,10 +41,12 @@ export default function AIEmailGenerationForm({
   onGenerate = () => {},
   onCancel = () => {},
   isLoading = false,
+  initialValues = null,
+  error = null,
 }) {
-  console.log('ðŸŽ¨ AIEmailGenerationForm RENDERED', { isLoading })
+  console.log('🎨 AIEmailGenerationForm RENDERED', { isLoading })
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState(() => ({
     mode: 'PROMPT',
     prompt: '',
     templateType: 'WELCOME',
@@ -58,7 +60,14 @@ export default function AIEmailGenerationForm({
     ctaUrl: '',
     language: 'English',
     companyName: '',
-  })
+    ...(initialValues || {}),
+  }))
+
+  useEffect(() => {
+    if (initialValues) {
+      setForm((prev) => ({ ...prev, ...initialValues }))
+    }
+  }, [initialValues])
 
   const [tones, setTones] = useState([
     'Professional',
@@ -280,6 +289,15 @@ export default function AIEmailGenerationForm({
             </div>
           </div>
         </div>
+
+        {error && (
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-200">
+            <div className="flex items-center gap-2">
+              <AlertCircle size={18} className="flex-shrink-0 text-red-600 dark:text-red-400" />
+              <span>{error}</span>
+            </div>
+          </div>
+        )}
 
         <div>
           <p className={labelClass}>Generation mode</p>
@@ -594,7 +612,7 @@ export default function AIEmailGenerationForm({
           </button>
           <button
             type="button"
-            onClick={() => handleSubmit({ preventDefault: () => {} })}
+            onClick={handleSubmit}
             disabled={isLoading}
             className="inline-flex items-center justify-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >

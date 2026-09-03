@@ -51,10 +51,18 @@ public class AIEmailGenerationServiceImpl implements AIEmailGenerationService {
                 return buildErrorResponse("Email generation request is required.", "unknown");
             }
 
-            log.info("DEBUG_AI_GENERATE_START");
-            
-            // Step 1: Construct prompt using template mode (only supported approach)
-            String prompt = constructEmailGenerationPrompt(request);
+            AIEmailGenerationRequest.GenerationMode mode = request.getMode() != null
+                ? request.getMode()
+                : (request.getPrompt() != null && !request.getPrompt().isBlank()
+                    ? AIEmailGenerationRequest.GenerationMode.PROMPT
+                    : AIEmailGenerationRequest.GenerationMode.TEMPLATE);
+
+            log.info("Generating email in {} mode", mode);
+
+            // Step 1: Construct prompt based on mode
+            String prompt = mode == AIEmailGenerationRequest.GenerationMode.PROMPT
+                ? constructPromptModePrompt(request)
+                : constructEmailGenerationPrompt(request);
 
             // Step 2: Call AI provider
             AIResponse aiResponse = callAIProviderWithErrorHandling(prompt);
@@ -81,13 +89,20 @@ public class AIEmailGenerationServiceImpl implements AIEmailGenerationService {
             // Step 5: Generate HTML version
             String bodyHtml = generateHtmlEmail(bodyPlainText, request);
 
+            String effectiveCtaText = request.getCtaText() != null && !request.getCtaText().isBlank()
+                ? request.getCtaText()
+                : "Learn More";
+            String effectiveCtaUrl = request.getCtaUrl() != null && !request.getCtaUrl().isBlank()
+                ? request.getCtaUrl()
+                : "https://example.com";
+
             // Step 6: Build successful response
             return AIEmailGenerationResponse.builder()
                     .subject(subject)
                     .bodyPlainText(bodyPlainText)
                     .bodyHtml(bodyHtml)
-                    .ctaText(request.getCtaText())
-                    .ctaUrl(request.getCtaUrl())
+                    .ctaText(effectiveCtaText)
+                    .ctaUrl(effectiveCtaUrl)
                     .success(true)
                     .model(aiResponse.getModel())
                     .generatedAt(System.currentTimeMillis())
@@ -284,6 +299,61 @@ public class AIEmailGenerationServiceImpl implements AIEmailGenerationService {
     }
 
     /**
+     * Construct a prompt for PROMPT mode using natural-language instruction
+     */
+    private String constructPromptModePrompt(AIEmailGenerationRequest request) {
+        String prompt = request.getPrompt() != null ? request.getPrompt().trim() : "";
+        String tone = request.getTone() != null && !request.getTone().isBlank() ? request.getTone() : "Professional";
+        String language = request.getLanguage() != null && !request.getLanguage().isBlank() ? request.getLanguage() : "English";
+        String companySignature = request.getCompanyName() != null && !request.getCompanyName().isBlank()
+            ? "COMPANY: " + request.getCompanyName() + "\n"
+            : "";
+        String ctaText = request.getCtaText() != null && !request.getCtaText().isBlank() ? request.getCtaText() : "Learn More";
+        String ctaUrl = request.getCtaUrl() != null && !request.getCtaUrl().isBlank() ? request.getCtaUrl() : "https://example.com";
+
+        return String.format("""
+            Generate a professional email marketing message in %s with a %s tone based on the following instruction:
+            
+            USER INSTRUCTION:
+            %s
+            
+            %sCTA TEXT: %s
+            CTA URL: %s
+            
+            REQUIREMENTS:
+            - Generate a compelling email subject line (max 60 characters)
+            - Write the email body in a clear, engaging manner (150-250 words)
+            - Include the company signature if provided
+            - End with a strong call-to-action using the CTA text
+            - DO NOT modify the CTA URL
+            - Make it persuasive but not pushy
+            - Include spacing and line breaks for readability
+            - Avoid HTML, JavaScript, or unsupported markup
+            - Use plain text formatting only
+            
+            RESPONSE FORMAT (STRICT JSON):
+            {
+              "subject": "Email subject line here",
+              "body": "Email body text here with natural line breaks for readability"
+            }
+            
+            IMPORTANT:
+            - Respond ONLY with the JSON object above. No additional text or explanation.
+            - Preserve the exact CTA URL provided: %s
+            - Use %s for the entire email
+            """,
+            language,
+            tone,
+            prompt,
+            companySignature,
+            ctaText,
+            ctaUrl,
+            ctaUrl,
+            language
+        );
+    }
+
+    /**
      * Construct a detailed prompt for AI to generate professional email content
      * Supports: purpose, audience, product, tone, offer, keyPoints, language
      */
@@ -366,11 +436,18 @@ public class AIEmailGenerationServiceImpl implements AIEmailGenerationService {
         // Convert line breaks to <br> tags
         String htmlBody = safeBody.replace("\n\n", "</p><p>").replace("\n", "<br>");
 
+        String effectiveCtaUrl = request.getCtaUrl() != null && !request.getCtaUrl().isBlank()
+            ? request.getCtaUrl()
+            : "https://example.com";
+        String effectiveCtaText = request.getCtaText() != null && !request.getCtaText().isBlank()
+            ? request.getCtaText()
+            : "Learn More";
+
         // Build CTA button HTML
         String ctaButton = String.format(
             "<a href=\"%s\" style=\"background-color: #3b82f6; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; display: inline-block; margin-top: 20px;\">%s</a>",
-            escapeHtml(request.getCtaUrl()),
-            escapeHtml(request.getCtaText())
+            escapeHtml(effectiveCtaUrl),
+            escapeHtml(effectiveCtaText)
         );
 
         // Build complete HTML email

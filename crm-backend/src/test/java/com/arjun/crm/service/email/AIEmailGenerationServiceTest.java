@@ -14,7 +14,9 @@ import org.mockito.MockitoAnnotations;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import org.mockito.ArgumentCaptor;
 
 /**
  * Unit tests for AIEmailGenerationService
@@ -199,6 +201,39 @@ class AIEmailGenerationServiceTest {
         // Assert
         // Should fail validation for missing required field
         assertFalse(response.isSuccess());
+    }
+
+    @Test
+    @DisplayName("Should generate email from a direct prompt in PROMPT mode")
+    void testGenerateEmailPromptModeSuccess() {
+        AIEmailGenerationRequest request = AIEmailGenerationRequest.builder()
+                .mode(AIEmailGenerationRequest.GenerationMode.PROMPT)
+                .prompt("Write a friendly product announcement for our AI CRM to startup founders. Include a strong CTA to https://example.com/demo.")
+                .tone("Friendly")
+                .build();
+
+        String mockAiResponse = "{\n  \"subject\": \"Meet the AI CRM Built for Founders\",\n  \"body\": \"Hello team,\\n\\nWe built an AI CRM that helps startup teams move faster...\"\n}";
+
+        when(xaiProvider.generateResponseNoCache(anyString()))
+                .thenReturn(AIResponse.builder()
+                        .content(mockAiResponse)
+                        .success(true)
+                        .model("grok-2")
+                        .build());
+
+        AIEmailGenerationResponse response = service.generateEmail(request);
+
+        assertTrue(response.isSuccess());
+        assertEquals("Meet the AI CRM Built for Founders", response.getSubject());
+        assertNotNull(response.getBodyPlainText());
+        assertNotNull(response.getBodyHtml());
+        assertEquals("grok-2", response.getModel());
+
+        ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
+        verify(xaiProvider).generateResponseNoCache(promptCaptor.capture());
+        String capturedPrompt = promptCaptor.getValue();
+        assertTrue(capturedPrompt.contains("Write a friendly product announcement for our AI CRM to startup founders"));
+        assertTrue(capturedPrompt.contains("Friendly"));
     }
 
     @Test
