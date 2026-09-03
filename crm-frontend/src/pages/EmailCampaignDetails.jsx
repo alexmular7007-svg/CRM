@@ -22,10 +22,10 @@ function CircularProgress({ value, color, size = 120 }) {
   return (
     <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="transform -rotate-90">
-        <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke="#1e293b" strokeWidth="4"/>
+        <circle cx={size/2} cy={size/2} r={radius} fill="none" className="stroke-slate-200 dark:stroke-slate-700" strokeWidth="4"/>
         <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke={color} strokeWidth="4" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.5s ease' }}/>
       </svg>
-      <span className="absolute text-2xl font-bold text-white">{value}%</span>
+      <span className="absolute text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">{value}%</span>
     </div>
   )
 }
