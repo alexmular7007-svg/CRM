@@ -323,8 +323,8 @@ cloudinary:
 ai:
   xai:
     api-key: ${XAI_API_KEY:}
-    model: ${XAI_MODEL:grok-4.20-reasoning}
-    base-url: ${XAI_BASE_URL:https://api.x.ai/v1/chat/completions}
+    model: ${XAI_MODEL:openai/gpt-oss-120b}
+    base-url: ${XAI_BASE_URL:https://api.groq.com/openai/v1/chat/completions}
     temperature: ${AI_TEMPERATURE:0.7}
     max-tokens: ${AI_MAX_TOKENS:1000}
     timeout: ${AI_TIMEOUT:30000}  # 30 seconds

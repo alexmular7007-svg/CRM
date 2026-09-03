@@ -11,6 +11,7 @@ import org.springframework.http.*;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
@@ -61,7 +62,7 @@ public class XAIProvider {
     )
     public AIResponse generateResponseNoCache(String prompt) {
         try {
-            log.info("Sending request to xAI API (no cache)");
+            log.info("PROVIDER_REQUEST:\nbaseUrl={}\nmodel={}", baseUrl, model);
             
             Map<String, Object> requestBody = buildRequestBody(prompt);
             HttpHeaders headers = new HttpHeaders();
@@ -76,17 +77,37 @@ public class XAIProvider {
                 String.class
             );
             
+            log.info("PROVIDER_RESPONSE:\nHTTP status={}", response.getStatusCode());
+
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 return parseXAIResponse(response.getBody());
             } else {
-                throw new AIServiceException("Failed to get response from xAI API: " + response.getStatusCode());
+                String errorMsg = "Failed to get response from AI provider: " + response.getStatusCode();
+                log.error("PROVIDER_ERROR:\nstatus={}\nmessage={}", response.getStatusCode(), errorMsg);
+                return AIResponse.builder()
+                    .error(errorMsg)
+                    .content(errorMsg)
+                    .success(false)
+                    .model(model)
+                    .build();
             }
             
-        } catch (Exception e) {
-            log.error("Error calling xAI API: {}", e.getMessage(), e);
-            // Graceful fallback
+        } catch (HttpStatusCodeException e) {
+            String sanitizedError = extractErrorMessage(e.getResponseBodyAsString());
+            String errorMsg = "AI provider HTTP " + e.getStatusCode().value() + ": " + sanitizedError;
+            log.error("PROVIDER_ERROR:\nstatus={}\nmessage={}", e.getStatusCode().value(), sanitizedError);
             return AIResponse.builder()
-                .content("AI service is temporarily unavailable. Please try again shortly.")
+                .error(errorMsg)
+                .content(errorMsg)
+                .success(false)
+                .model(model)
+                .build();
+        } catch (Exception e) {
+            String errorMsg = maskSecrets(e.getMessage() != null ? e.getMessage() : "Unknown error");
+            log.error("PROVIDER_ERROR:\nstatus=UNKNOWN\nmessage={}", errorMsg, e);
+            return AIResponse.builder()
+                .error("AI provider error: " + errorMsg)
+                .content("AI service is temporarily unavailable: " + errorMsg)
                 .success(false)
                 .model(model)
                 .build();
@@ -157,9 +178,10 @@ public class XAIProvider {
             // Log the actual response for debugging
             log.warn("Unexpected xAI response format: {}", responseBody);
             
-            // Fallback if no valid content found
+            String emptyError = "AI service returned an empty response from provider. Please try again.";
             return AIResponse.builder()
-                .content("AI service returned an empty response. Please try again.")
+                .content(emptyError)
+                .error(emptyError)
                 .success(false)
                 .model(model)
                 .build();
@@ -167,11 +189,43 @@ public class XAIProvider {
         } catch (Exception e) {
             log.error("Error parsing xAI response: {}", e.getMessage(), e);
             log.error("Response body was: {}", responseBody);
+            String parseError = "Failed to parse AI response: " + e.getMessage();
             return AIResponse.builder()
-                .content("AI service is temporarily unavailable. Please try again shortly.")
+                .content(parseError)
+                .error(parseError)
                 .success(false)
                 .model(model)
                 .build();
         }
+    }
+
+    private String extractErrorMessage(String responseBody) {
+        if (responseBody == null || responseBody.isBlank()) {
+            return "Empty response body from provider";
+        }
+        try {
+            JsonNode root = objectMapper.readTree(responseBody);
+            if (root.has("error")) {
+                JsonNode errNode = root.path("error");
+                if (errNode.isTextual()) {
+                    return maskSecrets(errNode.asText());
+                } else if (errNode.has("message")) {
+                    return maskSecrets(errNode.path("message").asText());
+                }
+            } else if (root.has("message")) {
+                return maskSecrets(root.path("message").asText());
+            }
+        } catch (Exception ignored) {
+            // Non-JSON response
+        }
+        String sanitized = maskSecrets(responseBody.trim());
+        return sanitized.length() > 200 ? sanitized.substring(0, 200) + "..." : sanitized;
+    }
+
+    private String maskSecrets(String text) {
+        if (text == null) return "";
+        return text.replaceAll("gsk_[a-zA-Z0-9]+", "gsk_***")
+                   .replaceAll("xai-[a-zA-Z0-9]+", "xai-***")
+                   .replaceAll("Bearer\\s+[a-zA-Z0-9_.-]+", "Bearer ***");
     }
 }
