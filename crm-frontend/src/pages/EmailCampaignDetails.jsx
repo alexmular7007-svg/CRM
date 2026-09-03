@@ -44,12 +44,26 @@ export default function EmailCampaignDetails() {
   const templates = useQuery({ queryKey: ['email-templates', currentWorkspace?.id], queryFn: () => emailCampaignService.listTemplates(currentWorkspace.id), enabled: !!currentWorkspace?.id && tab === 'content' })
   const duplicate = useMutation({ mutationFn: () => emailCampaignService.createCampaign(currentWorkspace.id, { name: `${campaign.data.name} (Copy)`, subject: campaign.data.subject, description: campaign.data.description, templateId: campaign.data.templateId, contentType: campaign.data.contentType, recipientMode: campaign.data.recipientMode || 'MANUAL', recipientData: campaign.data.recipientData || '{}', ctaButtonText: campaign.data.ctaButtonText, ctaButtonUrl: campaign.data.ctaButtonUrl, status: 'DRAFT', isActive: true }), onSuccess: fresh => { client.invalidateQueries({ queryKey: ['email-campaigns'] }); toast.success('Draft duplicate created'); navigate(`/marketing/email-campaigns/${fresh.id}`) }, onError: () => toast.error('Could not duplicate campaign') })
   const del = useMutation({ mutationFn: () => emailCampaignService.deleteCampaign(currentWorkspace.id, id), onSuccess: () => { toast.success('Campaign deleted'); navigate('/marketing/email-campaigns') }, onError: () => toast.error('Could not delete campaign') })
+
+  const eventItems = events.data || []
+  const chartData = useMemo(() => {
+    const groups = {}
+    eventItems.forEach(event => {
+      const key = new Date(event.occurredAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+      const kind = normalEvent(event.eventType)
+      groups[key] ||= { date: key, Delivered: 0, Opened: 0, Clicked: 0 }
+      if (kind === 'DELIVERED') groups[key].Delivered++
+      if (kind === 'OPENED') groups[key].Opened++
+      if (kind === 'CLICKED') groups[key].Clicked++
+    })
+    return Object.values(groups)
+  }, [eventItems])
+
   if (campaign.isLoading) return <div className="p-8"><Spinner size="md"/></div>
   if (campaign.isError || !campaign.data) return <div className="m-8 rounded-xl border border-rose-900 bg-rose-950/30 p-4 text-rose-200">Unable to load this campaign.</div>
-  const item = campaign.data, stats = analytics.data || {}, eventItems = events.data || [], total = stats.totalSent ?? item.totalRecipients ?? 0, delivered = stats.totalDelivered ?? 0, opened = stats.totalOpened ?? 0, clicked = stats.totalClicked ?? 0
+
+  const item = campaign.data, stats = analytics.data || {}, total = stats.totalSent ?? item.totalRecipients ?? 0, delivered = stats.totalDelivered ?? 0, opened = stats.totalOpened ?? 0, clicked = stats.totalClicked ?? 0
   const amounts = { DELIVERED: delivered, OPENED: opened, CLICKED: clicked, BOUNCED: stats.totalBounced ?? 0, UNSUBSCRIBED: stats.totalUnsubscribed ?? 0 }
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const chartData = useMemo(() => { const groups = {}; eventItems.forEach(event => { const key = new Date(event.occurredAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); const kind = normalEvent(event.eventType); groups[key] ||= { date: key, Delivered: 0, Opened: 0, Clicked: 0 }; if (kind === 'DELIVERED') groups[key].Delivered++; if (kind === 'OPENED') groups[key].Opened++; if (kind === 'CLICKED') groups[key].Clicked++ }); return Object.values(groups) }, [eventItems])
   const breakdown = Object.entries(amounts).map(([key, value]) => ({ name: key[0] + key.slice(1).toLowerCase(), value, color: colors[key] }))
   const template = templates.data?.content?.find(x => x.id === item.templateId); const baseHtml = item.customHtmlContent || template?.htmlContent || '<p style="font-family:Arial;color:#475569">The original email template is no longer available.</p>'; const previewCta = item.ctaButtonUrl ? `<div style="text-align:center;margin:28px 0"><a href="${item.ctaButtonUrl}" style="display:inline-block;border-radius:7px;background:#3b82f6;color:#fff;padding:14px 30px;font:600 16px Arial;text-decoration:none">${item.ctaButtonText || 'Learn More'}</a></div>` : ''; const html = baseHtml.replace('</body>', `${previewCta}</body>`) + (baseHtml.includes('</body>') ? '' : previewCta)
   const tabs = [['overview', 'Overview', Activity], ['recipients', 'Recipients', Users], ['content', 'Email Content', Mail], ['settings', 'Settings', Settings2], ['activity', 'Activity Log', FileText]]
