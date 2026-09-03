@@ -67,6 +67,10 @@ public class AIEmailGenerationServiceImpl implements AIEmailGenerationService {
             // Step 2: Call AI provider
             AIResponse aiResponse = callAIProviderWithErrorHandling(prompt);
 
+            log.info("AI_RESPONSE_RECEIVED: success={}, model={}, contentLength={}",
+                aiResponse.isSuccess(), aiResponse.getModel(),
+                aiResponse.getContent() != null ? aiResponse.getContent().length() : 0);
+
             if (!aiResponse.isSuccess() || aiResponse.getContent() == null) {
                 String errorMessage = aiResponse.getError() != null ? aiResponse.getError() : AI_EMPTY_RESPONSE_ERROR;
                 log.error("AI generation failed: {}", errorMessage);
@@ -74,6 +78,12 @@ public class AIEmailGenerationServiceImpl implements AIEmailGenerationService {
             }
 
             // Step 3: Validate and parse AI response
+            log.info("AI_RAW_CONTENT_PRE_PARSE: length={}, preview={}",
+                aiResponse.getContent().length(),
+                aiResponse.getContent().length() > 200
+                    ? aiResponse.getContent().substring(0, 200) + "..."
+                    : aiResponse.getContent());
+
             JsonNode parsedContent = parseAIResponseWithValidation(aiResponse.getContent());
 
             // Step 4: Extract email components with defaults
@@ -177,9 +187,18 @@ public class AIEmailGenerationServiceImpl implements AIEmailGenerationService {
             return objectMapper.createObjectNode();
         }
 
+        // Clean response content (strip markdown fences, <think> tags)
+        String cleaned = responseContent.trim();
+        cleaned = cleaned.replaceAll("(?s)<think>.*?</think>", "").trim();
+        if (cleaned.startsWith("```")) {
+            cleaned = cleaned.replaceFirst("^```(?:json)?\\s*", "");
+            cleaned = cleaned.replaceFirst("\\s*```\\s*$", "");
+            cleaned = cleaned.trim();
+        }
+
         try {
             // Try to parse as JSON
-            JsonNode parsed = objectMapper.readTree(responseContent);
+            JsonNode parsed = objectMapper.readTree(cleaned);
             
             // Validate that parsed content is an object (not array or primitive)
             if (!parsed.isObject()) {
@@ -190,20 +209,12 @@ public class AIEmailGenerationServiceImpl implements AIEmailGenerationService {
             
             return parsed;
         } catch (com.fasterxml.jackson.core.JsonParseException e) {
-            log.warn("Failed to parse AI response as JSON: {}", e.getMessage());
+            log.warn("Failed to parse AI response as JSON directly: {}", e.getMessage());
             // Try to extract JSON from response (might be wrapped in text)
-            return extractJsonFromText(responseContent);
+            return extractJsonFromText(cleaned);
         } catch (Exception e) {
             log.warn("Failed to parse AI response: {}", e.getMessage());
-            // Fallback: wrap response as plain text
-            try {
-                return objectMapper.createObjectNode()
-                        .put("subject", "Generated Email")
-                        .put("body", responseContent);
-            } catch (Exception ex) {
-                log.error("Failed to create fallback response: {}", ex.getMessage());
-                return objectMapper.createObjectNode();
-            }
+            return extractJsonFromText(cleaned);
         }
     }
 
@@ -224,10 +235,36 @@ public class AIEmailGenerationServiceImpl implements AIEmailGenerationService {
      * Extract JSON from text response (might have markdown or extra formatting)
      */
     private JsonNode extractJsonFromText(String responseContent) {
+        if (responseContent == null || responseContent.isBlank()) {
+            return objectMapper.createObjectNode();
+        }
+
+        String cleaned = responseContent.trim();
+        if (cleaned.startsWith("```")) {
+            cleaned = cleaned.replaceFirst("^```(?:json)?\\s*", "");
+            cleaned = cleaned.replaceFirst("\\s*```\\s*$", "");
+            cleaned = cleaned.trim();
+        }
+
+        try {
+            // Find outermost { ... }
+            int firstBrace = cleaned.indexOf('{');
+            int lastBrace = cleaned.lastIndexOf('}');
+            if (firstBrace != -1 && lastBrace > firstBrace) {
+                String jsonSub = cleaned.substring(firstBrace, lastBrace + 1);
+                JsonNode parsed = objectMapper.readTree(jsonSub);
+                if (parsed.isObject()) {
+                    return parsed;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to extract JSON from substring: {}", e.getMessage());
+        }
+
         try {
             // Look for JSON block: {...}
             Pattern jsonPattern = Pattern.compile("\\{[^{}]*(?:\\{[^{}]*\\}[^{}]*)*\\}");
-            java.util.regex.Matcher matcher = jsonPattern.matcher(responseContent);
+            java.util.regex.Matcher matcher = jsonPattern.matcher(cleaned);
             
             if (matcher.find()) {
                 String jsonStr = matcher.group();
@@ -256,7 +293,16 @@ public class AIEmailGenerationServiceImpl implements AIEmailGenerationService {
             return "";
         }
         
-        String subject = parsedContent.path("subject").asText("");
+        String subject = "";
+        if (parsedContent.has("subject")) {
+            subject = parsedContent.path("subject").asText("");
+        } else if (parsedContent.has("Subject")) {
+            subject = parsedContent.path("Subject").asText("");
+        } else if (parsedContent.has("title")) {
+            subject = parsedContent.path("title").asText("");
+        } else if (parsedContent.has("email_subject")) {
+            subject = parsedContent.path("email_subject").asText("");
+        }
         
         // Validate subject length and content
         if (subject.length() > 255) {
@@ -275,7 +321,18 @@ public class AIEmailGenerationServiceImpl implements AIEmailGenerationService {
             return "";
         }
         
-        String body = parsedContent.path("body").asText("");
+        String body = "";
+        if (parsedContent.has("body")) {
+            body = parsedContent.path("body").asText("");
+        } else if (parsedContent.has("Body")) {
+            body = parsedContent.path("Body").asText("");
+        } else if (parsedContent.has("content")) {
+            body = parsedContent.path("content").asText("");
+        } else if (parsedContent.has("email_body")) {
+            body = parsedContent.path("email_body").asText("");
+        } else if (parsedContent.has("text")) {
+            body = parsedContent.path("text").asText("");
+        }
         
         // Validate body content
         if (body.length() > 5000) {

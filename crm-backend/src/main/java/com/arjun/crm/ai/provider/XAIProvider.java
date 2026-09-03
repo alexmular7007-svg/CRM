@@ -121,7 +121,7 @@ public class XAIProvider {
                 String.class
             );
             
-            log.info("PROVIDER_RESPONSE:\nHTTP status={}", response.getStatusCode());
+            log.info("PROVIDER_RESPONSE_STATUS={}", response.getStatusCode().value());
 
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 return parseXAIResponse(response.getBody(), effectiveModel);
@@ -177,7 +177,13 @@ public class XAIProvider {
         requestBody.put("messages", messages);
 
         requestBody.put("temperature", 0.7);
-        requestBody.put("max_tokens", 1000);
+        // Sufficient tokens for reasoning + JSON output
+        requestBody.put("max_tokens", 4096);
+
+        // For Groq reasoning models (e.g. gpt-oss-120b), request parsed reasoning so content is not empty
+        if (effectiveModel != null && (effectiveModel.contains("oss") || effectiveModel.contains("reasoning"))) {
+            requestBody.put("reasoning_format", "parsed");
+        }
 
         return requestBody;
     }
@@ -189,38 +195,91 @@ public class XAIProvider {
         try {
             JsonNode root = objectMapper.readTree(responseBody);
             
+            int choicesCount = 0;
+            boolean messagePresent = false;
+            boolean contentPresent = false;
+            int contentLength = 0;
             String content = null;
             
             // Try OpenAI-compatible format (choices[0].message.content)
             if (root.has("choices")) {
                 JsonNode choices = root.path("choices");
-                if (choices.isArray() && choices.size() > 0) {
-                    JsonNode firstChoice = choices.get(0);
-                    JsonNode message = firstChoice.path("message");
-                    content = message.path("content").asText();
+                if (choices.isArray()) {
+                    choicesCount = choices.size();
+                    if (choicesCount > 0) {
+                        JsonNode firstChoice = choices.get(0);
+                        JsonNode message = firstChoice.path("message");
+                        messagePresent = !message.isMissingNode() && !message.isNull();
+                        if (messagePresent) {
+                            if (message.has("content") && !message.path("content").isNull()) {
+                                String raw = message.path("content").asText();
+                                if (!raw.isBlank()) {
+                                    content = raw;
+                                }
+                            }
+                            // Fallback: Check reasoning / reasoning_content fields if content is blank
+                            if ((content == null || content.isBlank())) {
+                                if (message.has("reasoning") && !message.path("reasoning").isNull()) {
+                                    String rawReasoning = message.path("reasoning").asText();
+                                    if (!rawReasoning.isBlank()) {
+                                        log.info("PROVIDER_FALLBACK_FIELD=message.reasoning");
+                                        content = rawReasoning;
+                                    }
+                                } else if (message.has("reasoning_content") && !message.path("reasoning_content").isNull()) {
+                                    String rawReasoning = message.path("reasoning_content").asText();
+                                    if (!rawReasoning.isBlank()) {
+                                        log.info("PROVIDER_FALLBACK_FIELD=message.reasoning_content");
+                                        content = rawReasoning;
+                                    }
+                                }
+                            }
+                        }
+                        if ((content == null || content.isBlank()) && firstChoice.has("text") && !firstChoice.path("text").isNull()) {
+                            String rawText = firstChoice.path("text").asText();
+                            if (!rawText.isBlank()) {
+                                log.info("PROVIDER_FALLBACK_FIELD=choices[0].text");
+                                content = rawText;
+                            }
+                        }
+                    }
                 }
             }
             // Fallbacks for other formats
-            else if (root.has("response")) {
-                content = root.path("response").asText();
+            if (content == null || content.isBlank()) {
+                if (root.has("response") && !root.path("response").isNull()) {
+                    content = root.path("response").asText();
+                    log.info("PROVIDER_FALLBACK_FIELD=root.response");
+                } else if (root.has("output") && !root.path("output").isNull()) {
+                    content = root.path("output").asText();
+                    log.info("PROVIDER_FALLBACK_FIELD=root.output");
+                } else if (root.has("text") && !root.path("text").isNull()) {
+                    content = root.path("text").asText();
+                    log.info("PROVIDER_FALLBACK_FIELD=root.text");
+                }
             }
-            else if (root.has("output")) {
-                content = root.path("output").asText();
+
+            if (content != null && !content.isBlank()) {
+                contentPresent = true;
+                contentLength = content.length();
             }
-            else if (root.has("text")) {
-                content = root.path("text").asText();
-            }
-            
+
+            // Safe diagnostics logging (strictly non-sensitive)
+            log.info("PROVIDER_CHOICES_COUNT={}", choicesCount);
+            log.info("PROVIDER_MESSAGE_PRESENT={}", messagePresent);
+            log.info("PROVIDER_CONTENT_PRESENT={}", contentPresent);
+            log.info("PROVIDER_CONTENT_LENGTH={}", contentLength);
+
             if (content != null && !content.trim().isEmpty()) {
+                String cleaned = cleanContent(content);
                 return AIResponse.builder()
-                    .content(content.trim())
+                    .content(cleaned)
                     .success(true)
                     .model(effectiveModel)
                     .build();
             }
             
             // Log the actual response for debugging
-            log.warn("Unexpected xAI response format: {}", responseBody);
+            log.warn("Unexpected AI response format or empty content: {}", maskSecrets(responseBody));
             
             String emptyError = "AI service returned an empty response from provider. Please try again.";
             return AIResponse.builder()
@@ -231,8 +290,8 @@ public class XAIProvider {
                 .build();
             
         } catch (Exception e) {
-            log.error("Error parsing xAI response: {}", e.getMessage(), e);
-            log.error("Response body was: {}", responseBody);
+            log.error("Error parsing AI response: {}", e.getMessage(), e);
+            log.error("Response body was: {}", maskSecrets(responseBody));
             String parseError = "Failed to parse AI response: " + e.getMessage();
             return AIResponse.builder()
                 .content(parseError)
@@ -241,6 +300,20 @@ public class XAIProvider {
                 .model(effectiveModel)
                 .build();
         }
+    }
+
+    /**
+     * Clean markdown code fences (```json ... ```) and raw <think>...</think> tags if present
+     */
+    private String cleanContent(String raw) {
+        if (raw == null) return null;
+        String cleaned = raw.trim();
+        cleaned = cleaned.replaceAll("(?s)<think>.*?</think>", "").trim();
+        if (cleaned.startsWith("```")) {
+            cleaned = cleaned.replaceFirst("^```(?:json)?\\s*", "");
+            cleaned = cleaned.replaceFirst("\\s*```\\s*$", "");
+        }
+        return cleaned.trim();
     }
 
     private String extractErrorMessage(String responseBody) {
