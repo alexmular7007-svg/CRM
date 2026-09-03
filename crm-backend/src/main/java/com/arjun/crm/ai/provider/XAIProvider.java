@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.retry.annotation.Backoff;
@@ -20,7 +21,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * xAI (Grok) Provider for AI-powered features
+ * xAI / Groq Provider for AI-powered features
  */
 @Component
 @RequiredArgsConstructor
@@ -38,6 +39,47 @@ public class XAIProvider {
 
     @Value("${ai.xai.base-url}")
     private String baseUrl;
+
+    @PostConstruct
+    public void logConfiguration() {
+        boolean configured = apiKey != null && !apiKey.isBlank();
+        String keyPrefix = configured ? (apiKey.length() >= 4 ? apiKey.substring(0, 4) + "****" : "****") : "NONE";
+        String provider = configured && apiKey.startsWith("gsk_") ? "Groq" : (configured && apiKey.startsWith("xai-") ? "xAI" : "unknown");
+        log.info("AI_PROVIDER_CONFIG:\nbaseUrl={}\nmodel={}\napiKeyConfigured={}\napiKeyProvider={}\nkeyPrefix={}",
+                resolveEffectiveBaseUrl(), resolveEffectiveModel(), configured, provider, keyPrefix);
+    }
+
+    public String getEffectiveBaseUrl() { return resolveEffectiveBaseUrl(); }
+    public String getEffectiveModel() { return resolveEffectiveModel(); }
+    public String getConfiguredBaseUrl() { return baseUrl; }
+    public String getConfiguredModel() { return model; }
+    public boolean isApiKeyConfigured() { return apiKey != null && !apiKey.isBlank(); }
+    public String getApiKeyProvider() {
+        if (apiKey == null || apiKey.isBlank()) return "none";
+        if (apiKey.startsWith("gsk_")) return "Groq";
+        if (apiKey.startsWith("xai-")) return "xAI";
+        return "unknown";
+    }
+    public String getApiKeyPrefix() {
+        if (apiKey == null || apiKey.isBlank()) return "NONE";
+        return apiKey.length() >= 4 ? apiKey.substring(0, 4) + "****" : "****";
+    }
+
+    private String resolveEffectiveBaseUrl() {
+        if (apiKey != null && apiKey.startsWith("gsk_") && baseUrl != null && baseUrl.contains("api.x.ai")) {
+            log.warn("DETECTED CONFIGURATION MISMATCH: Groq API key (gsk_...) configured with x.ai baseUrl ({}). Auto-routing to Groq endpoint: https://api.groq.com/openai/v1/chat/completions", baseUrl);
+            return "https://api.groq.com/openai/v1/chat/completions";
+        }
+        return baseUrl;
+    }
+
+    private String resolveEffectiveModel() {
+        if (apiKey != null && apiKey.startsWith("gsk_") && (model == null || model.contains("grok"))) {
+            log.warn("DETECTED CONFIGURATION MISMATCH: Groq API key (gsk_...) configured with x.ai model ({}). Auto-routing to Groq model: openai/gpt-oss-120b", model);
+            return "openai/gpt-oss-120b";
+        }
+        return model;
+    }
 
     /**
      * Generate AI response (delegates to generateResponseNoCache — caching is
@@ -61,17 +103,19 @@ public class XAIProvider {
         backoff = @Backoff(delay = 1000, multiplier = 2)
     )
     public AIResponse generateResponseNoCache(String prompt) {
+        String effectiveUrl = resolveEffectiveBaseUrl();
+        String effectiveModel = resolveEffectiveModel();
         try {
-            log.info("PROVIDER_REQUEST:\nbaseUrl={}\nmodel={}", baseUrl, model);
+            log.info("PROVIDER_REQUEST:\nbaseUrl={}\nmodel={}", effectiveUrl, effectiveModel);
             
-            Map<String, Object> requestBody = buildRequestBody(prompt);
+            Map<String, Object> requestBody = buildRequestBody(prompt, effectiveModel);
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.setBearerAuth(apiKey);
             
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
             ResponseEntity<String> response = restTemplate.exchange(
-                baseUrl,
+                effectiveUrl,
                 HttpMethod.POST,
                 entity,
                 String.class
@@ -80,7 +124,7 @@ public class XAIProvider {
             log.info("PROVIDER_RESPONSE:\nHTTP status={}", response.getStatusCode());
 
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
-                return parseXAIResponse(response.getBody());
+                return parseXAIResponse(response.getBody(), effectiveModel);
             } else {
                 String errorMsg = "Failed to get response from AI provider: " + response.getStatusCode();
                 log.error("PROVIDER_ERROR:\nstatus={}\nmessage={}", response.getStatusCode(), errorMsg);
@@ -88,7 +132,7 @@ public class XAIProvider {
                     .error(errorMsg)
                     .content(errorMsg)
                     .success(false)
-                    .model(model)
+                    .model(effectiveModel)
                     .build();
             }
             
@@ -100,7 +144,7 @@ public class XAIProvider {
                 .error(errorMsg)
                 .content(errorMsg)
                 .success(false)
-                .model(model)
+                .model(effectiveModel)
                 .build();
         } catch (Exception e) {
             String errorMsg = maskSecrets(e.getMessage() != null ? e.getMessage() : "Unknown error");
@@ -109,7 +153,7 @@ public class XAIProvider {
                 .error("AI provider error: " + errorMsg)
                 .content("AI service is temporarily unavailable: " + errorMsg)
                 .success(false)
-                .model(model)
+                .model(effectiveModel)
                 .build();
         }
     }
@@ -118,10 +162,10 @@ public class XAIProvider {
      * Build xAI/Groq API request body using the OpenAI-compatible /v1/chat/completions format.
      * A system message enforces pure JSON output so the parser never gets prose.
      */
-    private Map<String, Object> buildRequestBody(String prompt) {
+    private Map<String, Object> buildRequestBody(String prompt, String effectiveModel) {
         Map<String, Object> requestBody = new HashMap<>();
 
-        requestBody.put("model", model);
+        requestBody.put("model", effectiveModel);
 
         List<Map<String, String>> messages = new ArrayList<>();
         // System message: force strict JSON-only output
@@ -141,7 +185,7 @@ public class XAIProvider {
     /**
      * Parse xAI API response (OpenAI-compatible format)
      */
-    private AIResponse parseXAIResponse(String responseBody) {
+    private AIResponse parseXAIResponse(String responseBody, String effectiveModel) {
         try {
             JsonNode root = objectMapper.readTree(responseBody);
             
@@ -171,7 +215,7 @@ public class XAIProvider {
                 return AIResponse.builder()
                     .content(content.trim())
                     .success(true)
-                    .model(model)
+                    .model(effectiveModel)
                     .build();
             }
             
@@ -183,7 +227,7 @@ public class XAIProvider {
                 .content(emptyError)
                 .error(emptyError)
                 .success(false)
-                .model(model)
+                .model(effectiveModel)
                 .build();
             
         } catch (Exception e) {
@@ -194,7 +238,7 @@ public class XAIProvider {
                 .content(parseError)
                 .error(parseError)
                 .success(false)
-                .model(model)
+                .model(effectiveModel)
                 .build();
         }
     }

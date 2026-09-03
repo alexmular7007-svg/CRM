@@ -4,12 +4,16 @@ import com.arjun.crm.dto.request.AIEmailGenerationRequest;
 import com.arjun.crm.dto.response.AIEmailGenerationResponse;
 import com.arjun.crm.dto.response.ApiResponse;
 import com.arjun.crm.service.email.AIEmailGenerationService;
+import com.arjun.crm.ai.provider.XAIProvider;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * AIEmailGenerationController - PHASE 10: AI Email Generation
@@ -39,6 +43,7 @@ import org.springframework.web.bind.annotation.*;
 public class AIEmailGenerationController {
 
     private final AIEmailGenerationService emailGenerationService;
+    private final XAIProvider xaiProvider;
 
     /**
      * POST /api/emails/generate
@@ -200,6 +205,26 @@ public class AIEmailGenerationController {
 
         return ResponseEntity.ok(
             ApiResponse.success("Tones retrieved successfully", tones)
+        );
+    }
+
+    /**
+     * GET /api/emails/diagnostic
+     *
+     * Safe runtime configuration diagnostic (never exposes API keys or secrets).
+     */
+    @GetMapping("/diagnostic")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getDiagnostic() {
+        Map<String, Object> diag = new HashMap<>();
+        diag.put("effectiveBaseUrl", xaiProvider.getEffectiveBaseUrl());
+        diag.put("effectiveModel", xaiProvider.getEffectiveModel());
+        diag.put("configuredBaseUrl", xaiProvider.getConfiguredBaseUrl());
+        diag.put("configuredModel", xaiProvider.getConfiguredModel());
+        diag.put("apiKeyConfigured", xaiProvider.isApiKeyConfigured());
+        diag.put("apiKeyProvider", xaiProvider.getApiKeyProvider());
+        diag.put("apiKeyPrefix", xaiProvider.getApiKeyPrefix());
+        return ResponseEntity.ok(
+            ApiResponse.success("AI configuration diagnostic", diag)
         );
     }
 
