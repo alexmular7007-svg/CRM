@@ -44,6 +44,8 @@ const AutomationExecutionsPage = lazy(() => import('./pages/AutomationExecutions
 const AutomationExecutionDetailPage = lazy(() => import('./pages/AutomationExecutionDetailPage'))
 const AutomationTriggerSelection = lazy(() => import('./components/automation/AutomationTriggerSelection'))
 const PublicFormPage = lazy(() => import('./pages/PublicFormPage'))
+const ChromeExtensions = lazy(() => import('./pages/ChromeExtensions'))
+const ChromeExtensionDetails = lazy(() => import('./pages/ChromeExtensionDetails'))
 
 const PageLoader = () => (
   <div className="flex h-full min-h-[50vh] items-center justify-center">
@@ -142,6 +144,10 @@ function AppContent() {
           <Route path="/marketing/automations/:id/executions" element={<Suspense fallback={<PageLoader />}><AutomationExecutionsPage /></Suspense>} />
           <Route path="/marketing/automations/:id/executions/:executionId" element={<Suspense fallback={<PageLoader />}><AutomationExecutionDetailPage /></Suspense>} />
           <Route path="/profile" element={<Suspense fallback={<PageLoader />}><Profile /></Suspense>} />
+          <Route path="/chrome-extensions" element={<Suspense fallback={<PageLoader />}><ChromeExtensions /></Suspense>} />
+          <Route path="/chrome-extensions/:id" element={<Suspense fallback={<PageLoader />}><ChromeExtensionDetails /></Suspense>} />
+          <Route path="/developer/extension-lab" element={<Navigate to="/chrome-extensions" replace />} />
+          <Route path="/developer/extension-lab/:id" element={<Navigate to="/chrome-extensions" replace />} />
           <Route path="/settings" element={<Suspense fallback={<PageLoader />}><Settings /></Suspense>} />
           <Route path="/workspaces/:workspaceId/settings" element={<Suspense fallback={<PageLoader />}><WorkspaceSettings /></Suspense>} />
         </Route>

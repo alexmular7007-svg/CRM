@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Chrome Extension Playground</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="brand">
+        <span class="icon">🧩</span>
+        <div>
+          <h1 class="title">Chrome Extension Playground</h1>
+          <span class="version" id="ext-version">v1.0.0</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Top Status Badges -->
+    <section class="status-overview">
+      <div class="status-card">
+        <span class="status-label">Extension Status</span>
+        <span class="status-pill ready" id="ext-status-badge">READY</span>
+      </div>
+      <div class="status-card">
+        <span class="status-label">CRM Connection</span>
+        <span class="status-pill disconnected" id="crm-conn-badge">DISCONNECTED</span>
+      </div>
+    </section>
+
+    <!-- Endpoint & Target Info -->
+    <section class="info-bar">
+      <div class="info-item">
+        <span class="label">CRM URL:</span>
+        <span class="val truncate" id="target-endpoint">http://localhost:8080</span>
+      </div>
+      <div class="info-item">
+        <span class="label">Workspace:</span>
+        <span class="val" id="target-workspace">#1</span>
+      </div>
+    </section>
+
+    <!-- Primary Action Buttons -->
+    <section class="action-row">
+      <button type="button" class="btn btn-primary" id="btn-check-crm">
+        <span class="btn-icon">⚡</span>
+        <span>Check CRM Connection</span>
+      </button>
+      <button type="button" class="btn btn-primary" id="btn-run-diagnostics">
+        <span class="btn-icon">🔬</span>
+        <span>Run Diagnostics</span>
+      </button>
+    </section>
+
+    <!-- Diagnostic Section -->
+    <section class="diagnostic-section">
+      <div class="section-header">
+        <h2 class="section-title">Diagnostics Suite</h2>
+        <span class="diag-summary-tag" id="diag-summary-badge">STANDBY</span>
+      </div>
+      <div class="diag-grid">
+        <div class="diag-item">
+          <span class="diag-label">Extension</span>
+          <span class="diag-badge pending" id="diag-extension">—</span>
+        </div>
+        <div class="diag-item">
+          <span class="diag-label">Service Worker</span>
+          <span class="diag-badge pending" id="diag-serviceWorker">—</span>
+        </div>
+        <div class="diag-item">
+          <span class="diag-label">Storage</span>
+          <span class="diag-badge pending" id="diag-storage">—</span>
+        </div>
+        <div class="diag-item">
+          <span class="diag-label">Content Script</span>
+          <span class="diag-badge pending" id="diag-contentScript">—</span>
+        </div>
+        <div class="diag-item">
+          <span class="diag-label">CRM API</span>
+          <span class="diag-badge pending" id="diag-crmApi">—</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Diagnostic Telemetry Console -->
+    <section class="console-section">
+      <div class="console-header">
+        <span class="console-title">Telemetry Log</span>
+        <button type="button" class="btn-clear" id="btn-clear-console">Clear</button>
+      </div>
+      <div class="console-body" id="console-output">
+        <div class="log-line info">Extension ready. Click [Check CRM Connection] or [Run Diagnostics].</div>
+      </div>
+    </section>
+
+    <!-- Footer Links -->
+    <footer class="footer">
+      <button type="button" class="link-btn" id="btn-open-options">
+        ⚙️ Settings & Options
+      </button>
+      <span class="footer-tag">Manifest V3</span>
+    </footer>
+  </div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

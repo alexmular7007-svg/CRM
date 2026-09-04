@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CRM Extension Playground Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="options-container">
+    <div class="header">
+      <div class="icon-wrap">🧩</div>
+      <div>
+        <h1>CRM Extension Playground Settings</h1>
+        <p class="subtitle">Configure communication with your Spring Boot TaskFlow backend.</p>
+      </div>
+    </div>
+
+    <form id="settings-form">
+      <div class="form-group">
+        <label for="crmEndpoint">CRM API Base URL</label>
+        <input
+          type="url"
+          id="crmEndpoint"
+          placeholder="http://localhost:8080"
+          required
+        />
+        <span class="help-text">URL of the backend server (e.g., http://localhost:8080 or https://crm-taskflow-production.up.railway.app)</span>
+      </div>
+
+      <div class="form-group">
+        <label for="workspaceId">Workspace ID</label>
+        <input
+          type="number"
+          id="workspaceId"
+          min="1"
+          placeholder="1"
+          required
+        />
+        <span class="help-text">Target workspace for multi-tenant data isolation</span>
+      </div>
+
+      <div class="form-group">
+        <label for="authToken">JWT Bearer Token (Optional)</label>
+        <input
+          type="password"
+          id="authToken"
+          placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        />
+        <span class="help-text">Obtained after logging into TaskFlow CRM to authenticate privileged CRUD calls.</span>
+      </div>
+
+      <div class="actions">
+        <button type="submit" id="save-btn" class="btn btn-primary">Save Settings</button>
+        <button type="button" id="test-btn" class="btn btn-secondary">Test Connection</button>
+        <button type="button" id="reset-btn" class="btn btn-ghost">Reset Defaults</button>
+      </div>
+    </form>
+
+    <div id="status-card" class="status-card hidden">
+      <div id="status-indicator" class="dot"></div>
+      <div id="status-message">Ready</div>
+    </div>
+  </div>
+
+  <script type="module" src="options.js"></script>
+</body>
+</html>

@@ -11,6 +11,7 @@ import {
   Zap,
   Megaphone,
   ChevronDown,
+  Puzzle,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
@@ -40,6 +41,13 @@ const MOBILE_NAV_ITEMS = [
       { path: '/marketing/lead-magnets', label: 'Lead Magnets' },
       { path: '/marketing/email-campaigns', label: 'Email Campaigns' },
       { path: '/marketing/automations', label: 'Automations' },
+    ],
+  },
+  {
+    label: 'Developer Tools',
+    icon: Puzzle,
+    children: [
+      { path: '/chrome-extensions', label: 'Extension Lab' },
     ],
   },
 ]

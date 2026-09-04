@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "Chrome Extension Playground",
+  "version": "1.0.0",
+  "description": "Chrome Extension playground for testing CRUD operations and communication with TaskFlow CRM.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_title": "Chrome Extension Playground",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "src/background/background.js",
+    "type": "module"
+  },
+  "options_page": "src/options/options.html",
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["src/content/contentScript.js"],
+      "css": ["src/content/contentStyle.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "http://localhost:8080/*",
+    "https://*.up.railway.app/*"
+  ]
+}

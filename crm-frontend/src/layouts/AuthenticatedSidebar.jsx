@@ -13,6 +13,7 @@ import {
   X,
   Megaphone,
   ChevronDown,
+  Puzzle,
 } from 'lucide-react'
 import { useThemeContext } from '../contexts/ThemeContext'
 
@@ -30,6 +31,13 @@ const NAV = [
       { path: '/marketing/lead-magnets', label: 'Lead Magnets' },
       { path: '/marketing/email-campaigns', label: 'Email Campaigns' },
       { path: '/marketing/automations', label: 'Automations' },
+    ]
+  },
+  {
+    label: 'Developer Tools',
+    icon: Puzzle,
+    children: [
+      { path: '/chrome-extensions', label: 'Extension Lab' },
     ]
   },
   { path: '/settings', icon: Settings, label: 'Settings' },
