@@ -1,26 +1,37 @@
 package com.arjun.crm.service;
 
+import com.arjun.crm.dto.request.BrowserTestRunRequest;
 import com.arjun.crm.dto.request.CreateChromeExtensionRequest;
 import com.arjun.crm.dto.request.CreateTestCaseRequest;
 import com.arjun.crm.dto.request.UpdateChromeExtensionRequest;
 import com.arjun.crm.dto.request.UpdateTestCaseRequest;
+import com.arjun.crm.dto.response.BrowserTestRunResponse;
 import com.arjun.crm.dto.response.ChromeExtensionResponse;
 import com.arjun.crm.dto.response.TestCaseResponse;
+import com.arjun.crm.dto.response.TestResultResponse;
+import com.arjun.crm.dto.response.TestRunResponse;
 import com.arjun.crm.entity.ChromeExtension;
 import com.arjun.crm.entity.ChromeExtensionTestCase;
+import com.arjun.crm.entity.ChromeExtensionTestResult;
+import com.arjun.crm.entity.ChromeExtensionTestRun;
 import com.arjun.crm.entity.User;
 import com.arjun.crm.entity.Workspace;
 import com.arjun.crm.entity.WorkspaceMember;
 import com.arjun.crm.enums.ChromeExtensionStatus;
 import com.arjun.crm.enums.TestCaseType;
+import com.arjun.crm.enums.TestResultStatus;
+import com.arjun.crm.enums.TestRunStatus;
 import com.arjun.crm.enums.WorkspaceRole;
 import com.arjun.crm.exception.AccessDeniedException;
 import com.arjun.crm.exception.ConflictException;
 import com.arjun.crm.exception.ResourceNotFoundException;
 import com.arjun.crm.repository.ChromeExtensionRepository;
 import com.arjun.crm.repository.ChromeExtensionTestCaseRepository;
+import com.arjun.crm.repository.ChromeExtensionTestResultRepository;
+import com.arjun.crm.repository.ChromeExtensionTestRunRepository;
 import com.arjun.crm.repository.WorkspaceRepository;
 import com.arjun.crm.security.WorkspaceAuthorizationService;
+import com.arjun.crm.service.ChromeExtensionTestExecutionService;
 import com.arjun.crm.service.impl.ChromeExtensionServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -34,6 +45,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
+import java.util.Collections;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -53,10 +65,22 @@ class ChromeExtensionServiceTest {
     private ChromeExtensionTestCaseRepository testCaseRepository;
 
     @Mock
+    private ChromeExtensionTestRunRepository testRunRepository;
+
+    @Mock
+    private ChromeExtensionTestResultRepository testResultRepository;
+
+    @Mock
+    private ChromeExtensionTestExecutionService testExecutionService;
+
+    @Mock
     private WorkspaceRepository workspaceRepository;
 
     @Mock
     private WorkspaceAuthorizationService workspaceAuthService;
+
+    @Mock
+    private ChromeExtensionRunnerClient runnerClient;
 
     @InjectMocks
     private ChromeExtensionServiceImpl chromeExtensionService;
@@ -379,5 +403,262 @@ class ChromeExtensionServiceTest {
         chromeExtensionService.deleteTestCase(10L, 50L, 200L);
 
         verify(testCaseRepository).delete(testCase);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Test Run Tests
+    // ─────────────────────────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("Create Test Run - Success")
+    void createTestRun_Success() {
+        when(workspaceAuthService.validateWorkspaceAccess(10L)).thenReturn(regularMember);
+        when(chromeExtensionRepository.findByIdAndWorkspaceIdAndArchivedAtIsNull(50L, 10L)).thenReturn(Optional.of(testExtension));
+        when(workspaceAuthService.getAuthenticatedUser()).thenReturn(testUser);
+        when(testCaseRepository.countByExtensionIdAndEnabledTrue(50L)).thenReturn(2L);
+        when(testRunRepository.findFirstByExtensionIdAndStatusInOrderByCreatedAtDesc(eq(50L), anyCollection())).thenReturn(Optional.empty());
+
+        ChromeExtensionTestRun savedRun = ChromeExtensionTestRun.builder()
+                .id(1L)
+                .extension(testExtension)
+                .triggeredBy(testUser)
+                .status(TestRunStatus.QUEUED)
+                .totalTests(2)
+                .build();
+
+        when(testRunRepository.save(any(ChromeExtensionTestRun.class))).thenReturn(savedRun);
+        doNothing().when(testExecutionService).executeTestRunAsync(eq(10L), eq(testExtension), any(ChromeExtensionTestRun.class), eq(testUser), any());
+
+        TestRunResponse response = chromeExtensionService.createTestRun(10L, 50L);
+
+        assertNotNull(response);
+        assertEquals(1L, response.getId());
+        assertEquals(TestRunStatus.QUEUED, response.getStatus());
+        assertEquals(2, response.getTotalTests());
+        verify(testRunRepository).save(any(ChromeExtensionTestRun.class));
+        verify(testExecutionService).executeTestRunAsync(eq(10L), eq(testExtension), any(ChromeExtensionTestRun.class), eq(testUser), any());
+    }
+
+    @Test
+    @DisplayName("Create Test Run - Zero Enabled Test Cases Throws IllegalArgumentException")
+    void createTestRun_ZeroEnabledTestCases_ThrowsIllegalArgumentException() {
+        when(workspaceAuthService.validateWorkspaceAccess(10L)).thenReturn(regularMember);
+        when(chromeExtensionRepository.findByIdAndWorkspaceIdAndArchivedAtIsNull(50L, 10L)).thenReturn(Optional.of(testExtension));
+        when(workspaceAuthService.getAuthenticatedUser()).thenReturn(testUser);
+        when(testCaseRepository.countByExtensionIdAndEnabledTrue(50L)).thenReturn(0L);
+
+        assertThrows(IllegalArgumentException.class, () -> chromeExtensionService.createTestRun(10L, 50L));
+        verify(testRunRepository, never()).save(any());
+        verify(testExecutionService, never()).executeTestRunAsync(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("Create Test Run - Duplicate Active Run Throws ConflictException")
+    void createTestRun_DuplicateActiveRun_ThrowsConflictException() {
+        when(workspaceAuthService.validateWorkspaceAccess(10L)).thenReturn(regularMember);
+        when(chromeExtensionRepository.findByIdAndWorkspaceIdAndArchivedAtIsNull(50L, 10L)).thenReturn(Optional.of(testExtension));
+        when(workspaceAuthService.getAuthenticatedUser()).thenReturn(testUser);
+        when(testCaseRepository.countByExtensionIdAndEnabledTrue(50L)).thenReturn(2L);
+
+        ChromeExtensionTestRun activeRun = ChromeExtensionTestRun.builder()
+                .id(99L)
+                .extension(testExtension)
+                .status(TestRunStatus.RUNNING)
+                .build();
+
+        when(testRunRepository.findFirstByExtensionIdAndStatusInOrderByCreatedAtDesc(eq(50L), anyCollection()))
+                .thenReturn(Optional.of(activeRun));
+
+        assertThrows(ConflictException.class, () -> chromeExtensionService.createTestRun(10L, 50L));
+        verify(testRunRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("List Test Runs - Success")
+    void listTestRuns_Success() {
+        Pageable pageable = PageRequest.of(0, 10);
+        ChromeExtensionTestRun run = ChromeExtensionTestRun.builder()
+                .id(1L)
+                .extension(testExtension)
+                .status(TestRunStatus.PASSED)
+                .totalTests(2)
+                .passedTests(2)
+                .build();
+
+        Page<ChromeExtensionTestRun> page = new PageImpl<>(List.of(run), pageable, 1);
+
+        when(workspaceAuthService.validateWorkspaceAccess(10L)).thenReturn(regularMember);
+        when(chromeExtensionRepository.findByIdAndWorkspaceIdAndArchivedAtIsNull(50L, 10L)).thenReturn(Optional.of(testExtension));
+        when(testRunRepository.findByExtensionIdOrderByCreatedAtDesc(50L, pageable)).thenReturn(page);
+
+        Page<TestRunResponse> responsePage = chromeExtensionService.listTestRuns(10L, 50L, pageable);
+
+        assertNotNull(responsePage);
+        assertEquals(1, responsePage.getTotalElements());
+        assertEquals(1L, responsePage.getContent().get(0).getId());
+    }
+
+    @Test
+    @DisplayName("Get Test Run - Success with Results")
+    void getTestRun_Success() {
+        ChromeExtensionTestRun run = ChromeExtensionTestRun.builder()
+                .id(1L)
+                .extension(testExtension)
+                .status(TestRunStatus.PASSED)
+                .totalTests(1)
+                .passedTests(1)
+                .build();
+
+        ChromeExtensionTestResult result = ChromeExtensionTestResult.builder()
+                .id(10L)
+                .testRun(run)
+                .testCase(testCase)
+                .status(TestResultStatus.PASSED)
+                .actualStatusCode(200)
+                .executionTimeMs(45)
+                .build();
+
+        when(workspaceAuthService.validateWorkspaceAccess(10L)).thenReturn(regularMember);
+        when(chromeExtensionRepository.findByIdAndWorkspaceIdAndArchivedAtIsNull(50L, 10L)).thenReturn(Optional.of(testExtension));
+        when(testRunRepository.findByIdAndExtensionId(1L, 50L)).thenReturn(Optional.of(run));
+        when(testResultRepository.findByTestRunIdOrderByCreatedAtAsc(1L)).thenReturn(List.of(result));
+
+        TestRunResponse response = chromeExtensionService.getTestRun(10L, 50L, 1L);
+
+        assertNotNull(response);
+        assertEquals(1L, response.getId());
+        assertNotNull(response.getResults());
+        assertEquals(1, response.getResults().size());
+        assertEquals("Create Lead via API", response.getResults().get(0).getTestCaseName());
+    }
+
+    @Test
+    @DisplayName("Get Test Run - Invalid Run ID Throws ResourceNotFoundException")
+    void getTestRun_InvalidId_ThrowsResourceNotFoundException() {
+        when(workspaceAuthService.validateWorkspaceAccess(10L)).thenReturn(regularMember);
+        when(chromeExtensionRepository.findByIdAndWorkspaceIdAndArchivedAtIsNull(50L, 10L)).thenReturn(Optional.of(testExtension));
+        when(testRunRepository.findByIdAndExtensionId(999L, 50L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> chromeExtensionService.getTestRun(10L, 50L, 999L));
+    }
+
+    @Test
+    @DisplayName("Cancel Test Run - Success")
+    void cancelTestRun_Success() {
+        ChromeExtensionTestRun run = ChromeExtensionTestRun.builder()
+                .id(1L)
+                .extension(testExtension)
+                .status(TestRunStatus.RUNNING)
+                .build();
+
+        when(workspaceAuthService.validateWorkspaceAccess(10L)).thenReturn(regularMember);
+        when(chromeExtensionRepository.findByIdAndWorkspaceIdAndArchivedAtIsNull(50L, 10L)).thenReturn(Optional.of(testExtension));
+        when(testRunRepository.findByIdAndExtensionId(1L, 50L)).thenReturn(Optional.of(run));
+        when(testRunRepository.save(any(ChromeExtensionTestRun.class))).thenReturn(run);
+        when(testResultRepository.findByTestRunIdOrderByCreatedAtAsc(1L)).thenReturn(Collections.emptyList());
+
+        TestRunResponse response = chromeExtensionService.cancelTestRun(10L, 50L, 1L);
+
+        assertNotNull(response);
+        assertEquals(TestRunStatus.CANCELLED, response.getStatus());
+        verify(testRunRepository).save(run);
+    }
+
+    @Test
+    @DisplayName("Check Runner Health - Success")
+    void checkRunnerHealth_Success() {
+        when(runnerClient.checkHealth()).thenReturn(Map.of("status", "UP"));
+        Map<String, Object> health = chromeExtensionService.checkRunnerHealth();
+        assertNotNull(health);
+        assertEquals("UP", health.get("status"));
+    }
+
+    @Test
+    @DisplayName("Start Browser Run - Success")
+    void startBrowserRun_Success() {
+        ChromeExtensionTestRun run = ChromeExtensionTestRun.builder()
+                .id(100L)
+                .extension(testExtension)
+                .status(TestRunStatus.QUEUED)
+                .build();
+
+        when(workspaceAuthService.validateWorkspaceAccess(10L)).thenReturn(regularMember);
+        when(chromeExtensionRepository.findByIdAndWorkspaceIdAndArchivedAtIsNull(50L, 10L)).thenReturn(Optional.of(testExtension));
+        when(workspaceAuthService.getAuthenticatedUser()).thenReturn(testUser);
+        when(testRunRepository.save(any(ChromeExtensionTestRun.class))).thenReturn(run);
+        when(runnerClient.startBrowserRun(eq(100L), any(BrowserTestRunRequest.class)))
+                .thenReturn(BrowserTestRunResponse.builder().runId(100L).status("QUEUED").build());
+
+        BrowserTestRunResponse response = chromeExtensionService.startBrowserRun(10L, 50L, new BrowserTestRunRequest());
+        assertNotNull(response);
+        assertEquals(100L, response.getRunId());
+        assertEquals("QUEUED", response.getStatus());
+    }
+
+    @Test
+    @DisplayName("Get Browser Run Status - Success")
+    void getBrowserRunStatus_Success() {
+        when(workspaceAuthService.validateWorkspaceAccess(10L)).thenReturn(regularMember);
+        when(chromeExtensionRepository.findByIdAndWorkspaceIdAndArchivedAtIsNull(50L, 10L)).thenReturn(Optional.of(testExtension));
+        when(testRunRepository.findByIdAndExtensionId(100L, 50L)).thenReturn(Optional.empty());
+        when(runnerClient.getBrowserRunStatus(100L))
+                .thenReturn(BrowserTestRunResponse.builder().runId(100L).status("PASSED").totalTests(3).passedTests(3).build());
+
+        BrowserTestRunResponse response = chromeExtensionService.getBrowserRunStatus(10L, 50L, 100L);
+        assertNotNull(response);
+        assertEquals(100L, response.getRunId());
+        assertEquals("PASSED", response.getStatus());
+    }
+
+    @Test
+    @DisplayName("Cancel Browser Run - Success")
+    void cancelBrowserRun_Success() {
+        when(workspaceAuthService.validateWorkspaceAccess(10L)).thenReturn(regularMember);
+        when(chromeExtensionRepository.findByIdAndWorkspaceIdAndArchivedAtIsNull(50L, 10L)).thenReturn(Optional.of(testExtension));
+        when(testRunRepository.findByIdAndExtensionId(100L, 50L)).thenReturn(Optional.empty());
+        when(runnerClient.cancelBrowserRun(100L))
+                .thenReturn(BrowserTestRunResponse.builder().runId(100L).status("CANCELLED").build());
+
+        BrowserTestRunResponse response = chromeExtensionService.cancelBrowserRun(10L, 50L, 100L);
+        assertNotNull(response);
+        assertEquals(100L, response.getRunId());
+        assertEquals("CANCELLED", response.getStatus());
+    }
+
+    @Test
+    @DisplayName("Get Artifact - Success")
+    void getArtifact_Success() {
+        ChromeExtensionTestRun run = ChromeExtensionTestRun.builder()
+                .id(100L)
+                .extension(testExtension)
+                .build();
+        byte[] dummyPng = new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47};
+
+        when(workspaceAuthService.validateWorkspaceAccess(10L)).thenReturn(regularMember);
+        when(chromeExtensionRepository.findByIdAndWorkspaceIdAndArchivedAtIsNull(50L, 10L)).thenReturn(Optional.of(testExtension));
+        when(testRunRepository.findByIdAndExtensionId(100L, 50L)).thenReturn(Optional.of(run));
+        when(runnerClient.getArtifact(100L, "shot.png")).thenReturn(dummyPng);
+
+        byte[] result = chromeExtensionService.getArtifact(10L, 50L, 100L, "shot.png");
+        assertNotNull(result);
+        assertArrayEquals(dummyPng, result);
+    }
+
+    @Test
+    @DisplayName("Get Artifact - Traversal / Invalid Filename Rejected")
+    void getArtifact_InvalidFilename() {
+        ChromeExtensionTestRun run = ChromeExtensionTestRun.builder()
+                .id(100L)
+                .extension(testExtension)
+                .build();
+
+        when(workspaceAuthService.validateWorkspaceAccess(10L)).thenReturn(regularMember);
+        when(chromeExtensionRepository.findByIdAndWorkspaceIdAndArchivedAtIsNull(50L, 10L)).thenReturn(Optional.of(testExtension));
+        when(testRunRepository.findByIdAndExtensionId(100L, 50L)).thenReturn(Optional.of(run));
+
+        assertThrows(IllegalArgumentException.class, () ->
+                chromeExtensionService.getArtifact(10L, 50L, 100L, "../traversal.png"));
+        assertThrows(IllegalArgumentException.class, () ->
+                chromeExtensionService.getArtifact(10L, 50L, 100L, "secrets.txt"));
     }
 }

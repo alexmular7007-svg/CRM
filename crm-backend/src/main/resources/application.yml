@@ -430,5 +430,6 @@ chrome:
   extension:
     runner:
       base-url: ${EXTENSION_RUNNER_BASE_URL:http://localhost:9090}
+      shared-secret: ${RUNNER_SHARED_SECRET:}
       timeout-seconds: ${EXTENSION_RUNNER_TIMEOUT:30}
 

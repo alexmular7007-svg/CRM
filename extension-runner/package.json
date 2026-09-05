@@ -1,0 +1,26 @@
+{
+  "name": "extension-runner",
+  "version": "1.0.0",
+  "description": "Standalone Chromium + Playwright browser automation playground for Manifest V3 Chrome Extension",
+  "main": "src/runner.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:runner": "node src/runner.js"
+  },
+  "keywords": [
+    "chrome-extension",
+    "playwright",
+    "manifest-v3",
+    "automation-playground"
+  ],
+  "author": "TaskFlow CRM Team",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.47.0",
+    "playwright": "^1.47.0"
+  }
+}

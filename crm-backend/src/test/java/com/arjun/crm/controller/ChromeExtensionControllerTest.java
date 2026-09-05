@@ -259,4 +259,188 @@ class ChromeExtensionControllerTest {
 
         verify(chromeExtensionService).deleteTestCase(10L, 1L, 100L);
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Test Run Endpoint Tests
+    // ─────────────────────────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("POST /api/workspaces/{workspaceId}/chrome-extensions/{id}/runs - 201 Created")
+    void createTestRun_Success() throws Exception {
+        com.arjun.crm.dto.response.TestRunResponse runResponse = com.arjun.crm.dto.response.TestRunResponse.builder()
+                .id(1L)
+                .workspaceId(10L)
+                .extensionId(1L)
+                .extensionName("CRM Lead Hunter")
+                .status(com.arjun.crm.enums.TestRunStatus.QUEUED)
+                .totalTests(2)
+                .passedTests(0)
+                .failedTests(0)
+                .errorTests(0)
+                .build();
+
+        when(chromeExtensionService.createTestRun(10L, 1L)).thenReturn(runResponse);
+
+        mockMvc.perform(post("/api/workspaces/10/chrome-extensions/1/runs")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").value(1))
+                .andExpect(jsonPath("$.data.status").value("QUEUED"));
+    }
+
+    @Test
+    @DisplayName("GET /api/workspaces/{workspaceId}/chrome-extensions/{id}/runs - 200 OK")
+    void listTestRuns_Success() throws Exception {
+        com.arjun.crm.dto.response.TestRunResponse runResponse = com.arjun.crm.dto.response.TestRunResponse.builder()
+                .id(1L)
+                .workspaceId(10L)
+                .extensionId(1L)
+                .status(com.arjun.crm.enums.TestRunStatus.PASSED)
+                .totalTests(2)
+                .passedTests(2)
+                .build();
+
+        when(chromeExtensionService.listTestRuns(eq(10L), eq(1L), any()))
+                .thenReturn(new PageImpl<>(List.of(runResponse), PageRequest.of(0, 20), 1));
+
+        mockMvc.perform(get("/api/workspaces/10/chrome-extensions/1/runs")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.content[0].id").value(1));
+    }
+
+    @Test
+    @DisplayName("GET /api/workspaces/{workspaceId}/chrome-extensions/{id}/runs/{runId} - 200 OK")
+    void getTestRun_Success() throws Exception {
+        com.arjun.crm.dto.response.TestRunResponse runResponse = com.arjun.crm.dto.response.TestRunResponse.builder()
+                .id(1L)
+                .workspaceId(10L)
+                .extensionId(1L)
+                .status(com.arjun.crm.enums.TestRunStatus.PASSED)
+                .totalTests(1)
+                .passedTests(1)
+                .results(List.of(
+                        com.arjun.crm.dto.response.TestResultResponse.builder()
+                                .id(10L)
+                                .testRunId(1L)
+                                .testCaseId(100L)
+                                .testCaseName("Test Lead Creation")
+                                .status(com.arjun.crm.enums.TestResultStatus.PASSED)
+                                .actualStatusCode(200)
+                                .build()
+                ))
+                .build();
+
+        when(chromeExtensionService.getTestRun(10L, 1L, 1L)).thenReturn(runResponse);
+
+        mockMvc.perform(get("/api/workspaces/10/chrome-extensions/1/runs/1")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").value(1))
+                .andExpect(jsonPath("$.data.results[0].status").value("PASSED"));
+    }
+
+    @Test
+    @DisplayName("POST /api/workspaces/{workspaceId}/chrome-extensions/{id}/runs/{runId}/cancel - 200 OK")
+    void cancelTestRun_Success() throws Exception {
+        com.arjun.crm.dto.response.TestRunResponse runResponse = com.arjun.crm.dto.response.TestRunResponse.builder()
+                .id(1L)
+                .workspaceId(10L)
+                .extensionId(1L)
+                .status(com.arjun.crm.enums.TestRunStatus.CANCELLED)
+                .build();
+
+        when(chromeExtensionService.cancelTestRun(10L, 1L, 1L)).thenReturn(runResponse);
+
+        mockMvc.perform(post("/api/workspaces/10/chrome-extensions/1/runs/1/cancel")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.status").value("CANCELLED"));
+    }
+
+    @Test
+    @DisplayName("GET /api/workspaces/{workspaceId}/chrome-extensions/runner/health - 200 OK")
+    void getRunnerHealth_Success() throws Exception {
+        when(chromeExtensionService.checkRunnerHealth()).thenReturn(Map.of("status", "UP"));
+
+        mockMvc.perform(get("/api/workspaces/10/chrome-extensions/runner/health"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.status").value("UP"));
+    }
+
+    @Test
+    @DisplayName("POST /api/workspaces/{workspaceId}/chrome-extensions/{id}/browser-runs - 202 Accepted")
+    void startBrowserRun_Success() throws Exception {
+        com.arjun.crm.dto.response.BrowserTestRunResponse response = com.arjun.crm.dto.response.BrowserTestRunResponse.builder()
+                .runId(101L)
+                .status("QUEUED")
+                .message("Browser test run initiated successfully")
+                .build();
+
+        when(chromeExtensionService.startBrowserRun(eq(10L), eq(1L), any()))
+                .thenReturn(response);
+
+        mockMvc.perform(post("/api/workspaces/10/chrome-extensions/1/browser-runs")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.runId").value(101))
+                .andExpect(jsonPath("$.data.status").value("QUEUED"));
+    }
+
+    @Test
+    @DisplayName("GET /api/workspaces/{workspaceId}/chrome-extensions/{id}/browser-runs/{runId} - 200 OK")
+    void getBrowserRunStatus_Success() throws Exception {
+        com.arjun.crm.dto.response.BrowserTestRunResponse response = com.arjun.crm.dto.response.BrowserTestRunResponse.builder()
+                .runId(101L)
+                .status("PASSED")
+                .totalTests(3)
+                .passedTests(3)
+                .build();
+
+        when(chromeExtensionService.getBrowserRunStatus(10L, 1L, 101L))
+                .thenReturn(response);
+
+        mockMvc.perform(get("/api/workspaces/10/chrome-extensions/1/browser-runs/101"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.status").value("PASSED"))
+                .andExpect(jsonPath("$.data.passedTests").value(3));
+    }
+
+    @Test
+    @DisplayName("POST /api/workspaces/{workspaceId}/chrome-extensions/{id}/browser-runs/{runId}/cancel - 200 OK")
+    void cancelBrowserRun_Success() throws Exception {
+        com.arjun.crm.dto.response.BrowserTestRunResponse response = com.arjun.crm.dto.response.BrowserTestRunResponse.builder()
+                .runId(101L)
+                .status("CANCELLED")
+                .build();
+
+        when(chromeExtensionService.cancelBrowserRun(10L, 1L, 101L))
+                .thenReturn(response);
+
+        mockMvc.perform(post("/api/workspaces/10/chrome-extensions/1/browser-runs/101/cancel"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.status").value("CANCELLED"));
+    }
+
+    @Test
+    @DisplayName("GET /api/workspaces/{workspaceId}/chrome-extensions/{id}/browser-runs/{runId}/artifacts/{filename} - 200 OK image/png")
+    void getArtifact_Success() throws Exception {
+        byte[] dummyPng = new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47};
+        when(chromeExtensionService.getArtifact(10L, 1L, 101L, "shot.png"))
+                .thenReturn(dummyPng);
+
+        mockMvc.perform(get("/api/workspaces/10/chrome-extensions/1/browser-runs/101/artifacts/shot.png"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(org.springframework.http.MediaType.IMAGE_PNG))
+                .andExpect(content().bytes(dummyPng));
+    }
 }

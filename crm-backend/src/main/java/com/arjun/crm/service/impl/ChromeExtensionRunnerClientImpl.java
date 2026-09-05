@@ -23,25 +23,36 @@ import java.util.Map;
 public class ChromeExtensionRunnerClientImpl implements ChromeExtensionRunnerClient {
 
     private final String runnerBaseUrl;
+    private final String runnerSharedSecret;
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
 
     public ChromeExtensionRunnerClientImpl(
             @Value("${chrome.extension.runner.base-url:http://localhost:9090}") String runnerBaseUrl,
+            @Value("${chrome.extension.runner.shared-secret:}") String runnerSharedSecret,
             ObjectMapper objectMapper) {
         this.runnerBaseUrl = runnerBaseUrl.endsWith("/") ? runnerBaseUrl.substring(0, runnerBaseUrl.length() - 1) : runnerBaseUrl;
+        this.runnerSharedSecret = runnerSharedSecret;
         this.objectMapper = objectMapper;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(5))
                 .build();
     }
 
+    private HttpRequest.Builder createRequestBuilder(String targetUrl) {
+        HttpRequest.Builder builder = HttpRequest.newBuilder()
+                .uri(URI.create(targetUrl));
+        if (runnerSharedSecret != null && !runnerSharedSecret.trim().isEmpty()) {
+            builder.header("X-Runner-Secret", runnerSharedSecret.trim());
+        }
+        return builder;
+    }
+
     @Override
     public Map<String, Object> checkHealth() {
         String targetUrl = runnerBaseUrl + "/health";
         try {
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(targetUrl))
+            HttpRequest request = createRequestBuilder(targetUrl)
                     .timeout(Duration.ofSeconds(3))
                     .GET()
                     .build();
@@ -75,8 +86,7 @@ public class ChromeExtensionRunnerClientImpl implements ChromeExtensionRunnerCli
             }
             String requestJson = objectMapper.writeValueAsString(request);
 
-            HttpRequest httpRequest = HttpRequest.newBuilder()
-                    .uri(URI.create(targetUrl))
+            HttpRequest httpRequest = createRequestBuilder(targetUrl)
                     .timeout(Duration.ofSeconds(10))
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(requestJson))
@@ -110,8 +120,7 @@ public class ChromeExtensionRunnerClientImpl implements ChromeExtensionRunnerCli
     public BrowserTestRunResponse getBrowserRunStatus(Long runId) {
         String targetUrl = runnerBaseUrl + "/api/test-runs/" + runId;
         try {
-            HttpRequest httpRequest = HttpRequest.newBuilder()
-                    .uri(URI.create(targetUrl))
+            HttpRequest httpRequest = createRequestBuilder(targetUrl)
                     .timeout(Duration.ofSeconds(5))
                     .GET()
                     .build();
@@ -148,8 +157,7 @@ public class ChromeExtensionRunnerClientImpl implements ChromeExtensionRunnerCli
     public BrowserTestRunResponse cancelBrowserRun(Long runId) {
         String targetUrl = runnerBaseUrl + "/api/test-runs/" + runId + "/cancel";
         try {
-            HttpRequest httpRequest = HttpRequest.newBuilder()
-                    .uri(URI.create(targetUrl))
+            HttpRequest httpRequest = createRequestBuilder(targetUrl)
                     .timeout(Duration.ofSeconds(5))
                     .POST(HttpRequest.BodyPublishers.noBody())
                     .build();
@@ -180,8 +188,7 @@ public class ChromeExtensionRunnerClientImpl implements ChromeExtensionRunnerCli
         log.info("[RUNNER_ARTIFACT_REQUEST] Run ID: {}, Filename: {}, Target: {}", runId, filename, targetUrl);
 
         try {
-            HttpRequest httpRequest = HttpRequest.newBuilder()
-                    .uri(URI.create(targetUrl))
+            HttpRequest httpRequest = createRequestBuilder(targetUrl)
                     .timeout(Duration.ofSeconds(10))
                     .GET()
                     .build();
