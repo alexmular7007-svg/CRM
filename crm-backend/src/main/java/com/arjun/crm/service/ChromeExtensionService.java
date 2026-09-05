@@ -6,6 +6,7 @@ import com.arjun.crm.dto.request.UpdateChromeExtensionRequest;
 import com.arjun.crm.dto.request.UpdateTestCaseRequest;
 import com.arjun.crm.dto.response.ChromeExtensionResponse;
 import com.arjun.crm.dto.response.TestCaseResponse;
+import com.arjun.crm.dto.response.TestRunResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -34,4 +35,23 @@ public interface ChromeExtensionService {
     TestCaseResponse updateTestCase(Long workspaceId, Long extensionId, Long testCaseId, UpdateTestCaseRequest request);
 
     void deleteTestCase(Long workspaceId, Long extensionId, Long testCaseId);
+
+    // Test Run Execution & Management
+    TestRunResponse createTestRun(Long workspaceId, Long extensionId);
+
+    Page<TestRunResponse> listTestRuns(Long workspaceId, Long extensionId, Pageable pageable);
+
+    TestRunResponse getTestRun(Long workspaceId, Long extensionId, Long runId);
+
+    TestRunResponse cancelTestRun(Long workspaceId, Long extensionId, Long runId);
+
+    // Browser Test Execution (Phase 6B)
+    java.util.Map<String, Object> checkRunnerHealth();
+
+    com.arjun.crm.dto.response.BrowserTestRunResponse startBrowserRun(Long workspaceId, Long extensionId, com.arjun.crm.dto.request.BrowserTestRunRequest request);
+
+    com.arjun.crm.dto.response.BrowserTestRunResponse getBrowserRunStatus(Long workspaceId, Long extensionId, Long runId);
+
+    com.arjun.crm.dto.response.BrowserTestRunResponse cancelBrowserRun(Long workspaceId, Long extensionId, Long runId);
+    byte[] getArtifact(Long workspaceId, Long extensionId, Long runId, String filename);
 }

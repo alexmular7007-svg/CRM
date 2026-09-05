@@ -6,9 +6,11 @@ package com.arjun.crm.enums;
  * Status states for test suite execution runs.
  */
 public enum TestRunStatus {
+    QUEUED,
     PENDING,
     RUNNING,
     PASSED,
     FAILED,
+    ERROR,
     CANCELLED
 }

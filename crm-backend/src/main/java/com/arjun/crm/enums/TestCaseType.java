@@ -9,5 +9,6 @@ public enum TestCaseType {
     API_CRUD,
     STORAGE_CRUD,
     DOM_INJECTION,
-    INTEGRATION
+    INTEGRATION,
+    BROWSER
 }

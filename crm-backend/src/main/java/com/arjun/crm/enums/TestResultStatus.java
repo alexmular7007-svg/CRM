@@ -7,6 +7,9 @@ package com.arjun.crm.enums;
  */
 public enum TestResultStatus {
     PASS,
+    PASSED,
     FAIL,
+    FAILED,
+    ERROR,
     SKIPPED
 }

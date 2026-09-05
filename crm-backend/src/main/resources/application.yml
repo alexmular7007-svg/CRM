@@ -422,3 +422,13 @@ scheduler:
     # Default: 5000 (5 seconds)
     # Allows application time to initialize before scheduler starts
     initialDelay: ${AUTOMATION_INITIAL_DELAY:5000}
+
+# ───────────────────────────────────────────────────────────────────────────
+# Chrome Extension Browser Runner Configuration (Phase 6B)
+# ─────────────────────────────────────────────────────────────────────────
+chrome:
+  extension:
+    runner:
+      base-url: ${EXTENSION_RUNNER_BASE_URL:http://localhost:9090}
+      timeout-seconds: ${EXTENSION_RUNNER_TIMEOUT:30}
+
