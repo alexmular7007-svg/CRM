@@ -17,7 +17,6 @@ import {
   User,
   ShieldCheck,
   AlertCircle,
-  Terminal,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { chromeExtensionService } from '../services/chromeExtensionService'
@@ -25,6 +24,8 @@ import { useWorkspaceRole } from '../hooks/useWorkspaceRole'
 import ExtensionModal from '../components/extension-lab/ExtensionModal'
 import TestCaseModal from '../components/extension-lab/TestCaseModal'
 import TestCaseList from '../components/extension-lab/TestCaseList'
+import TestSuitesTab from '../components/extension-lab/TestSuitesTab'
+import TestRunsTab from '../components/extension-lab/TestRunsTab'
 import Modal from '../components/common/Modal'
 
 const STATUS_BADGES = {
@@ -79,6 +80,16 @@ export default function ChromeExtensionDetails() {
   } = useQuery({
     queryKey: ['extension-test-cases', id, currentWorkspace?.id],
     queryFn: () => chromeExtensionService.listTestCases(currentWorkspace.id, id),
+    enabled: !!currentWorkspace?.id && !!id,
+  })
+
+  // Fetch test suites
+  const {
+    data: testSuites = [],
+    isLoading: isSuitesLoading,
+  } = useQuery({
+    queryKey: ['extension-test-suites', currentWorkspace?.id, id],
+    queryFn: () => chromeExtensionService.listTestSuites(currentWorkspace.id, id),
     enabled: !!currentWorkspace?.id && !!id,
   })
 
@@ -284,6 +295,22 @@ export default function ChromeExtensionDetails() {
 
           <button
             type="button"
+            onClick={() => setActiveTab('test-suites')}
+            className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2 ${
+              activeTab === 'test-suites'
+                ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+            }`}
+          >
+            <Layers size={16} />
+            <span>Test Suites</span>
+            <span className="ml-1.5 px-2 py-0.5 rounded-full text-xs bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 font-semibold">
+              {testSuites.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setActiveTab('overview')}
             className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2 ${
               activeTab === 'overview'
@@ -325,6 +352,15 @@ export default function ChromeExtensionDetails() {
           }}
           onDelete={(tc) => setDeletingTestCase(tc)}
           onToggleEnabled={(tc) => toggleEnabledMutation.mutate(tc)}
+        />
+      )}
+
+      {activeTab === 'test-suites' && (
+        <TestSuitesTab
+          workspaceId={currentWorkspace?.id}
+          extensionId={id}
+          testCases={testCases}
+          canManage={isAdminOrOwner}
         />
       )}
 
@@ -390,36 +426,11 @@ export default function ChromeExtensionDetails() {
       )}
 
       {activeTab === 'test-runs' && (
-        <div className="p-6 rounded-2xl border border-gray-200 dark:border-[#30363D] bg-white dark:bg-[#161B22] shadow-sm space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-                Execution Engine & History
-              </h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                Execute automated CRUD test suites against CRM backend endpoints.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => toast('Test execution engine ready for Phase 3 extension connection', { icon: '🚀' })}
-              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition-all"
-            >
-              <PlayCircle size={16} /> Run Test Suite
-            </button>
-          </div>
-
-          <div className="p-6 rounded-xl border border-dashed border-gray-300 dark:border-[#30363D] bg-gray-50/50 dark:bg-[#0D1117]/40 text-center space-y-2">
-            <Terminal size={32} className="mx-auto text-indigo-600 dark:text-indigo-400" />
-            <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
-              Ready for Test Execution
-            </h4>
-            <p className="text-xs text-gray-500 dark:text-gray-400 max-w-md mx-auto">
-              You have {testCases.length} test case{testCases.length === 1 ? '' : 's'} defined. Test runs will evaluate assertion rules and capture pass/fail telemetry here.
-            </p>
-          </div>
-        </div>
+        <TestRunsTab
+          workspaceId={currentWorkspace?.id}
+          extensionId={id}
+          testCases={testCases}
+        />
       )}
 
       {/* Edit Extension Modal */}

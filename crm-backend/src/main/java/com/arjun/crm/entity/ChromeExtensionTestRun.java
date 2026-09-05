@@ -52,6 +52,10 @@ public class ChromeExtensionTestRun {
     @Builder.Default
     private String environment = "DEVELOPMENT";
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "suite_id")
+    private ChromeExtensionTestSuite suite;
+
     @Column(nullable = false)
     @Builder.Default
     private Integer totalTests = 0;
@@ -64,9 +68,20 @@ public class ChromeExtensionTestRun {
     @Builder.Default
     private Integer failedTests = 0;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer errorTests = 0;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer skippedTests = 0;
+
     @Column
     @Builder.Default
     private Long durationMs = 0L;
+
+    @Column(columnDefinition = "TEXT")
+    private String logs;
 
     @Column
     private LocalDateTime startedAt;
