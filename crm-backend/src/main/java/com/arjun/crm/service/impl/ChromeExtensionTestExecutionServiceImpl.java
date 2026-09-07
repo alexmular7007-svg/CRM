@@ -1,5 +1,8 @@
 package com.arjun.crm.service.impl;
 
+import com.arjun.crm.dto.request.BrowserTestCaseDto;
+import com.arjun.crm.dto.request.BrowserTestRunRequest;
+import com.arjun.crm.dto.response.BrowserTestRunResponse;
 import com.arjun.crm.entity.ChromeExtension;
 import com.arjun.crm.entity.ChromeExtensionTestCase;
 import com.arjun.crm.entity.ChromeExtensionTestResult;
@@ -11,6 +14,7 @@ import com.arjun.crm.repository.ChromeExtensionTestCaseRepository;
 import com.arjun.crm.repository.ChromeExtensionTestResultRepository;
 import com.arjun.crm.repository.ChromeExtensionTestRunRepository;
 import com.arjun.crm.security.JwtService;
+import com.arjun.crm.service.ChromeExtensionRunnerClient;
 import com.arjun.crm.service.ChromeExtensionTestExecutionService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -40,6 +44,7 @@ public class ChromeExtensionTestExecutionServiceImpl implements ChromeExtensionT
     private final ChromeExtensionTestResultRepository testResultRepository;
     private final JwtService jwtService;
     private final ObjectMapper objectMapper;
+    private final ChromeExtensionRunnerClient runnerClient;
 
     @Value("${crm.backend.base-url:http://localhost:${server.port:8080}}")
     private String defaultBaseUrl;
@@ -122,7 +127,15 @@ public class ChromeExtensionTestExecutionServiceImpl implements ChromeExtensionT
                 return testRunRepository.save(testRun);
             }
 
-            ChromeExtensionTestResult result = executeSingleTestCase(workspaceId, extension, testRun, tc, effectiveToken, runLogs);
+            ChromeExtensionTestResult result;
+            
+            // Route based on testType: BROWSER → browser runner, otherwise → API executor
+            if (tc.getTestType() == com.arjun.crm.enums.TestCaseType.BROWSER) {
+                result = executeBrowserTestCase(workspaceId, extension, testRun, tc, effectiveToken, runLogs);
+            } else {
+                result = executeSingleTestCase(workspaceId, extension, testRun, tc, effectiveToken, runLogs);
+            }
+            
             testResultRepository.save(result);
 
             if (result.getStatus() == TestResultStatus.PASS || result.getStatus() == TestResultStatus.PASSED) {
@@ -347,6 +360,227 @@ public class ChromeExtensionTestExecutionServiceImpl implements ChromeExtensionT
                     .assertionDetails(assertionDetails)
                     .build();
         }
+    }
+
+    /**
+     * Executes a BROWSER test case through the Chrome Extension Runner Client (Playwright).
+     * Similar to executeBrowserSuiteItem() but adapted for standalone test run execution.
+     */
+    private ChromeExtensionTestResult executeBrowserTestCase(
+            Long workspaceId,
+            ChromeExtension extension,
+            ChromeExtensionTestRun testRun,
+            ChromeExtensionTestCase testCase,
+            String authToken,
+            StringBuilder runLogs
+    ) {
+        long caseStartTime = System.currentTimeMillis();
+        
+        // Generate unique child runner ID for this browser test execution
+        long childRunnerRunId = generateChildRunnerId(testRun.getId(), testCase.getId());
+        
+        appendLog(runLogs, "BROWSER_TEST_STARTED", String.format(
+                "Starting Browser Test Case #%d: '%s' (Child Runner ID: %d)", 
+                testCase.getId(), testCase.getName(), childRunnerRunId
+        ));
+        log.info("[BROWSER_TEST_STARTED] Run ID: {}, Test Case ID: {}, Child Runner ID: {}",
+                testRun.getId(), testCase.getId(), childRunnerRunId);
+
+        try {
+            // Extract browser steps from test case configuration
+            Map<String, Object> config = testCase.getConfiguration() != null ? testCase.getConfiguration() : Collections.emptyMap();
+            
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> steps = (config.get("steps") instanceof List)
+                    ? (List<Map<String, Object>>) config.get("steps")
+                    : Collections.emptyList();
+
+            if (steps.isEmpty()) {
+                String warningMsg = "BROWSER test case has no steps defined";
+                appendLog(runLogs, "BROWSER_TEST_WARNING", warningMsg);
+                log.warn("[BROWSER_TEST_WARNING] Run ID: {}, Test Case ID: {}: {}", testRun.getId(), testCase.getId(), warningMsg);
+            }
+
+            // Build browser test request
+            BrowserTestCaseDto browserCase = BrowserTestCaseDto.builder()
+                    .type("BROWSER")
+                    .name(testCase.getName())
+                    .steps(steps)
+                    .build();
+
+            BrowserTestRunRequest runnerRequest = BrowserTestRunRequest.builder()
+                    .runId(childRunnerRunId)
+                    .extensionPath(null) // Security: force null to prevent arbitrary extension loading
+                    .testCases(List.of(browserCase))
+                    .build();
+
+            // Start browser test execution through runner client
+            BrowserTestRunResponse startResponse = runnerClient.startBrowserRun(childRunnerRunId, runnerRequest);
+            
+            if (startResponse == null || "ERROR".equals(startResponse.getStatus())) {
+                String errorMsg = (startResponse == null) 
+                        ? "Runner start failed: null response from runner client" 
+                        : "Runner start error: " + startResponse.getMessage();
+                appendLog(runLogs, "BROWSER_TEST_ERROR", errorMsg);
+                
+                return ChromeExtensionTestResult.builder()
+                        .testRun(testRun)
+                        .testCase(testCase)
+                        .status(TestResultStatus.ERROR)
+                        .executionTimeMs((int) (System.currentTimeMillis() - caseStartTime))
+                        .errorMessage(errorMsg)
+                        .assertionDetails(Map.of("error", errorMsg, "childRunnerRunId", childRunnerRunId))
+                        .build();
+            }
+
+            // Poll runner for completion (max 60 iterations * 500ms = 30 seconds timeout)
+            BrowserTestRunResponse finalResponse = null;
+            for (int pollAttempt = 0; pollAttempt < 60; pollAttempt++) {
+                // Check if test run was cancelled during browser execution
+                Optional<ChromeExtensionTestRun> cancelCheck = testRunRepository.findById(testRun.getId());
+                if (cancelCheck.isPresent() && cancelCheck.get().getStatus() == TestRunStatus.CANCELLED) {
+                    log.info("[BROWSER_TEST_CANCEL] Test run cancelled during browser execution. Cancelling child runner ID: {}", childRunnerRunId);
+                    runnerClient.cancelBrowserRun(childRunnerRunId);
+                    
+                    return ChromeExtensionTestResult.builder()
+                            .testRun(testRun)
+                            .testCase(testCase)
+                            .status(TestResultStatus.ERROR)
+                            .executionTimeMs((int) (System.currentTimeMillis() - caseStartTime))
+                            .errorMessage("Test run cancelled by user")
+                            .assertionDetails(Map.of("cancelled", true, "childRunnerRunId", childRunnerRunId))
+                            .build();
+                }
+
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+
+                BrowserTestRunResponse pollStatus = runnerClient.getBrowserRunStatus(childRunnerRunId);
+                if (pollStatus != null && List.of("PASSED", "FAILED", "ERROR", "CANCELLED").contains(pollStatus.getStatus())) {
+                    finalResponse = pollStatus;
+                    break;
+                }
+            }
+
+            long executionTimeMs = System.currentTimeMillis() - caseStartTime;
+
+            // Timeout - runner did not complete in time
+            if (finalResponse == null) {
+                String timeoutMsg = "Browser test timed out waiting for runner completion (30s)";
+                appendLog(runLogs, "BROWSER_TEST_TIMEOUT", timeoutMsg);
+                log.warn("[BROWSER_TEST_TIMEOUT] Run ID: {}, Test Case ID: {}", testRun.getId(), testCase.getId());
+                
+                return ChromeExtensionTestResult.builder()
+                        .testRun(testRun)
+                        .testCase(testCase)
+                        .status(TestResultStatus.ERROR)
+                        .executionTimeMs((int) executionTimeMs)
+                        .errorMessage(timeoutMsg)
+                        .assertionDetails(Map.of("error", timeoutMsg, "childRunnerRunId", childRunnerRunId))
+                        .build();
+            }
+
+            // Extract and map browser test results
+            TestResultStatus resultStatus;
+            String errorMsg = null;
+            Map<String, Object> assertionDetails = new LinkedHashMap<>();
+            assertionDetails.put("childRunnerRunId", childRunnerRunId);
+
+            // Check if runner returned detailed test case results
+            if (finalResponse.getResults() != null && !finalResponse.getResults().isEmpty()) {
+                Map<String, Object> tcResult = finalResponse.getResults().get(0);
+                String resStatus = (String) tcResult.getOrDefault("status", finalResponse.getStatus());
+                
+                // Map browser runner status to TestResultStatus
+                if ("PASSED".equalsIgnoreCase(resStatus)) {
+                    resultStatus = TestResultStatus.PASSED;
+                } else if ("FAILED".equalsIgnoreCase(resStatus)) {
+                    resultStatus = TestResultStatus.FAILED;
+                } else {
+                    resultStatus = TestResultStatus.ERROR;
+                }
+
+                errorMsg = (String) tcResult.get("error");
+                
+                // Include step results if available
+                if (tcResult.get("stepResults") != null) {
+                    assertionDetails.put("stepResults", tcResult.get("stepResults"));
+                }
+                if (tcResult.get("failedStep") != null) {
+                    assertionDetails.put("failedStep", tcResult.get("failedStep"));
+                }
+
+                // Map stepResults to generic assertions format for UI compatibility
+                if (tcResult.get("stepResults") instanceof List<?> stepList) {
+                    List<Map<String, Object>> assertions = new ArrayList<>();
+                    for (Object item : stepList) {
+                        if (item instanceof Map<?, ?> step) {
+                            Map<String, Object> assertion = new HashMap<>();
+                            assertion.put("passed", "PASSED".equals(step.get("status")));
+                            assertion.put("message", (step.get("action") != null ? step.get("action") : "") + " " + (step.get("target") != null ? step.get("target") : ""));
+                            assertion.put("expected", step.get("expected"));
+                            assertion.put("actual", step.get("actual"));
+                            assertions.add(assertion);
+                        }
+                    }
+                    assertionDetails.put("assertions", assertions);
+                }
+            } else {
+                // No detailed results - use overall response status
+                if ("PASSED".equalsIgnoreCase(finalResponse.getStatus())) {
+                    resultStatus = TestResultStatus.PASSED;
+                } else if ("FAILED".equalsIgnoreCase(finalResponse.getStatus())) {
+                    resultStatus = TestResultStatus.FAILED;
+                } else {
+                    resultStatus = TestResultStatus.ERROR;
+                }
+                errorMsg = finalResponse.getMessage();
+            }
+
+            appendLog(runLogs, "BROWSER_TEST_COMPLETED", String.format(
+                    "Browser Test Case #%d %s (Duration: %dms)", 
+                    testCase.getId(), resultStatus, executionTimeMs
+            ));
+            log.info("[BROWSER_TEST_COMPLETED] Run ID: {}, Test Case ID: {}, Status: {}, Duration: {}ms",
+                    testRun.getId(), testCase.getId(), resultStatus, executionTimeMs);
+
+            return ChromeExtensionTestResult.builder()
+                    .testRun(testRun)
+                    .testCase(testCase)
+                    .status(resultStatus)
+                    .executionTimeMs((int) executionTimeMs)
+                    .errorMessage(errorMsg)
+                    .assertionDetails(assertionDetails)
+                    .build();
+
+        } catch (Exception e) {
+            long executionTimeMs = System.currentTimeMillis() - caseStartTime;
+            String errorMsg = "Browser test execution failed: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
+            appendLog(runLogs, "BROWSER_TEST_ERROR", "Test Case #" + testCase.getId() + " ERROR: " + errorMsg);
+            log.error("[BROWSER_TEST_ERROR] Run ID: {}, Test Case ID: {}, Error: {}", testRun.getId(), testCase.getId(), errorMsg, e);
+
+            return ChromeExtensionTestResult.builder()
+                    .testRun(testRun)
+                    .testCase(testCase)
+                    .status(TestResultStatus.ERROR)
+                    .executionTimeMs((int) executionTimeMs)
+                    .errorMessage(errorMsg)
+                    .assertionDetails(Map.of("error", errorMsg, "childRunnerRunId", generateChildRunnerId(testRun.getId(), testCase.getId())))
+                    .build();
+        }
+    }
+
+    /**
+     * Generates a unique child runner ID for browser test execution.
+     * Uses a combination of test run ID and test case ID to ensure uniqueness.
+     */
+    private long generateChildRunnerId(Long testRunId, Long testCaseId) {
+        // Generate unique ID by combining timestamp, test run ID, and test case ID
+        return System.currentTimeMillis() + (testRunId * 10000L) + testCaseId;
     }
 
     /**
