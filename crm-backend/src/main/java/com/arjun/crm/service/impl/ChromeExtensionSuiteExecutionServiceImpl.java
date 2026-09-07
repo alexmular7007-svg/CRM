@@ -19,6 +19,8 @@ import com.arjun.crm.service.ChromeExtensionSuiteExecutionService;
 import com.arjun.crm.service.ChromeExtensionTestExecutionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,6 +50,17 @@ public class ChromeExtensionSuiteExecutionServiceImpl implements ChromeExtension
 
     // Tracks currently executing child browser runner run ID per active suite run ID for cancellation propagation
     private final Map<Long, Long> activeChildRunners = new ConcurrentHashMap<>();
+
+    private ChromeExtensionSuiteExecutionService self;
+
+    @Autowired
+    public void setSelf(@Lazy ChromeExtensionSuiteExecutionService self) {
+        this.self = self;
+    }
+
+    private ChromeExtensionSuiteExecutionService getSelf() {
+        return self != null ? self : this;
+    }
 
     @Override
     @Transactional
@@ -99,7 +112,7 @@ public class ChromeExtensionSuiteExecutionServiceImpl implements ChromeExtension
         TestRunResponse response = mapToTestRunResponse(testRun, Collections.emptyList());
 
         // 4. Trigger asynchronous execution
-        executeSuiteRunAsync(workspaceId, extension, suite, testRun, currentUser, null);
+        getSelf().executeSuiteRunAsync(workspaceId, extension, suite, testRun, currentUser, null);
 
         return response;
     }
@@ -115,7 +128,21 @@ public class ChromeExtensionSuiteExecutionServiceImpl implements ChromeExtension
             String authToken
     ) {
         log.info("[SUITE_RUN_STARTED] Async suite run execution started for Run ID: {}", testRun.getId());
-        executeSuiteRun(workspaceId, extension, suite, testRun, triggeredBy, authToken);
+        try {
+            executeSuiteRun(workspaceId, extension, suite, testRun, triggeredBy, authToken);
+        } catch (Exception e) {
+            log.error("[SUITE_RUN_ASYNC_ERROR] Uncaught exception during async suite run ID {}: {}", testRun.getId(), e.getMessage(), e);
+            try {
+                ChromeExtensionTestRun failedRun = testRunRepository.findById(testRun.getId()).orElse(testRun);
+                failedRun.setStatus(TestRunStatus.ERROR);
+                failedRun.setCompletedAt(LocalDateTime.now());
+                failedRun.setLogs((failedRun.getLogs() != null ? failedRun.getLogs() : "") +
+                        "\n[FATAL_ERROR] Unexpected error during suite execution: " + e.getMessage());
+                testRunRepository.save(failedRun);
+            } catch (Exception ex) {
+                log.error("[SUITE_RUN_ASYNC_FATAL] Could not record fatal failure on suite run ID {}: {}", testRun.getId(), ex.getMessage());
+            }
+        }
     }
 
     @Override

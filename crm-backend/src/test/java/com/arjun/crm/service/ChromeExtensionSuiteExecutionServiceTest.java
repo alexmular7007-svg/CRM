@@ -208,6 +208,42 @@ class ChromeExtensionSuiteExecutionServiceTest {
     }
 
     @Test
+    @DisplayName("1b. Queuing Suite Run delegates to async proxy and does NOT execute suite synchronously")
+    void createSuiteRun_DelegatesToAsyncProxy_DoesNotExecuteSynchronously() {
+        ChromeExtensionSuiteExecutionService mockSelf = mock(ChromeExtensionSuiteExecutionService.class);
+        suiteExecutionService.setSelf(mockSelf);
+
+        try {
+            when(workspaceAuthService.validateWorkspaceAccess(10L)).thenReturn(sampleMember);
+            when(chromeExtensionRepository.findByIdAndWorkspaceIdAndArchivedAtIsNull(1L, 10L)).thenReturn(Optional.of(sampleExtension));
+            when(testSuiteRepository.findByIdAndExtensionId(500L, 1L)).thenReturn(Optional.of(sampleSuite));
+            when(workspaceAuthService.getAuthenticatedUser()).thenReturn(sampleUser);
+            when(testRunRepository.findFirstByExtensionIdAndStatusInOrderByCreatedAtDesc(eq(1L), anyList())).thenReturn(Optional.empty());
+
+            when(testRunRepository.save(any(ChromeExtensionTestRun.class))).thenAnswer(invocation -> {
+                ChromeExtensionTestRun r = invocation.getArgument(0);
+                if (r.getId() == null) r.setId(1001L);
+                return r;
+            });
+
+            TestRunResponse response = suiteExecutionService.createSuiteRun(10L, 1L, 500L);
+
+            assertNotNull(response);
+            assertEquals(1001L, response.getId());
+            assertEquals(TestRunStatus.QUEUED, response.getStatus());
+
+            // 1. Verify that executeSuiteRunAsync was invoked on the Spring proxy
+            verify(mockSelf, times(1)).executeSuiteRunAsync(eq(10L), eq(sampleExtension), eq(sampleSuite), any(ChromeExtensionTestRun.class), eq(sampleUser), isNull());
+
+            // 2. Verify that synchronous execution methods were NEVER called during createSuiteRun
+            verify(runnerClient, never()).startBrowserRun(anyLong(), any());
+            verify(testExecutionService, never()).executeSingleTestCase(any(), any(), any(), any(), any(), any());
+        } finally {
+            suiteExecutionService.setSelf(null);
+        }
+    }
+
+    @Test
     @DisplayName("2. Queuing Suite Run throws IllegalArgumentException when suite has no enabled test cases")
     void createSuiteRun_EmptySuite_ThrowsBadRequest() {
         sampleSuite.getItems().clear(); // No items
