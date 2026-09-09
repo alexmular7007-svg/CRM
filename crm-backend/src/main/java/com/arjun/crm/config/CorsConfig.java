@@ -21,7 +21,7 @@ import java.util.List;
 @Configuration
 public class CorsConfig {
 
-    @Value("${cors.allowed-origins:http://localhost:3000,http://localhost:3001,http://localhost:5173}")
+    @Value("${cors.allowed-origins:http://localhost:3000,http://localhost:3001,http://localhost:5173,chrome-extension://figdiiedkddjcemakndcfielfdgfoonm}")
     private String allowedOriginsRaw;
 
     /**
@@ -39,10 +39,7 @@ public class CorsConfig {
                 .filter(s -> !s.isEmpty())
                 .toList();
 
-        // Add all configured origins directly (Spring handles both plain URLs and patterns)
-        configuration.setAllowedOriginPatterns(configOrigins);
-        
-        // Add fixed localhost and vercel patterns
+        // Add fixed localhost, vercel, and chrome-extension patterns
         java.util.List<String> patterns = new java.util.ArrayList<>(configOrigins);
         patterns.addAll(List.of(
                 "http://localhost:3000",
@@ -51,7 +48,9 @@ public class CorsConfig {
                 "http://127.0.0.1:3001",
                 "http://localhost:5173",
                 "http://127.0.0.1:5173",
-                "https://*.vercel.app"   // wildcard pattern for vercel
+                "https://*.vercel.app",                                 // wildcard pattern for vercel
+                "chrome-extension://figdiiedkddjcemakndcfielfdgfoonm",   // TaskFlow Chrome Extension ID
+                "chrome-extension://*"                                  // Chrome extension pattern
         ));
 
         // Set patterns using setAllowedOriginPatterns (supports both plain URLs and wildcards)
