@@ -715,7 +715,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       const currentSettings = await extensionStorage.get()
       const targetWs = currentSettings.workspaceId
       const token = currentSettings.authToken || ''
-      const newStatus = isDone ? 'TODO' : 'DONE'
+      const isCurrentlyDone = task.status === 'DONE'
+      const newStatus = isCurrentlyDone ? 'TODO' : 'DONE'
 
       try {
         const res = await chrome.runtime.sendMessage({

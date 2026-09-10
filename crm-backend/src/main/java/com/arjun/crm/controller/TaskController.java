@@ -122,7 +122,7 @@ public class TaskController {
                 : Sort.by(sortBy).descending();
 
         Pageable pageable = PageRequest.of(page, size, sort);
-        Page<TaskResponse> response = taskService.getAllTasks(pageable);
+        Page<TaskResponse> response = taskService.getAllTasks(workspaceId, pageable);
         return ResponseEntity.ok(ApiResponse.success("Tasks fetched successfully", response));
     }
 

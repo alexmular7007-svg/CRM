@@ -22,6 +22,8 @@ public interface TaskService {
 
     Page<TaskResponse> getAllTasks(Pageable pageable);
 
+    Page<TaskResponse> getAllTasks(Long workspaceId, Pageable pageable);
+
     Page<TaskResponse> getTasksByStatus(TaskStatus status, Pageable pageable);
 
     Page<TaskResponse> getTasksByAssignee(Long assignedToId, Pageable pageable);

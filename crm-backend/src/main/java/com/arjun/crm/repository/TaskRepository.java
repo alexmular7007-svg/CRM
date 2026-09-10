@@ -118,6 +118,8 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     @Query("SELECT COUNT(t) FROM Task t WHERE t.status = 'DONE' AND t.updatedAt BETWEEN :startDate AND :endDate")
     Long countTasksCompletedBetween(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
 
+    Page<Task> findByWorkspaceId(Long workspaceId, Pageable pageable);
+
     List<Task> findByWorkspaceId(Long workspaceId);
     
     List<Task> findByWorkspaceIdAndStatus(Long workspaceId, TaskStatus status);

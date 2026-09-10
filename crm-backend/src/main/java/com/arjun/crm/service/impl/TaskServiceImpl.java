@@ -154,6 +154,16 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     @Transactional(readOnly = true)
+    public Page<TaskResponse> getAllTasks(Long workspaceId, Pageable pageable) {
+        if (!workspaceRepository.existsById(workspaceId)) {
+            throw new ResourceNotFoundException("Workspace not found with ID: " + workspaceId);
+        }
+        return taskRepository.findByWorkspaceId(workspaceId, pageable)
+                .map(this::mapToResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Page<TaskResponse> getTasksByStatus(TaskStatus status, Pageable pageable) {
         return taskRepository.findByStatusOrderByCreatedAtDesc(status, pageable)
                 .map(this::mapToResponse);
