@@ -210,6 +210,38 @@ if (fs.existsSync(popupCssPath)) {
   assert(popupCss.includes('.task-status-btn.completed'), 'popup.css styles completed state')
 }
 
+// 11. Validate Recent Activity & Client Polish
+if (fs.existsSync(crmApiPath)) {
+  const crmApiCode = fs.readFileSync(crmApiPath, 'utf8')
+  assert(crmApiCode.includes('fetchRecentActivities'), 'crmApi.js provides fetchRecentActivities')
+  assert(crmApiCode.includes('/api/analytics/recent'), 'crmApi.js uses /api/analytics/recent endpoint')
+}
+
+if (fs.existsSync(backgroundJsPath)) {
+  const bg = fs.readFileSync(backgroundJsPath, 'utf8')
+  assert(bg.includes('FETCH_RECENT_ACTIVITIES'), 'background.js handles FETCH_RECENT_ACTIVITIES message')
+}
+
+if (fs.existsSync(popupHtmlPath)) {
+  const html = fs.readFileSync(popupHtmlPath, 'utf8')
+  assert(html.includes('recent-activity-section'), 'popup.html contains recent-activity-section')
+  assert(html.includes('Assign New Task'), 'popup.html has "Assign New Task" button/header')
+  assert(html.includes('activity-items'), 'popup.html contains activity items list')
+}
+
+if (fs.existsSync(popupJsPath)) {
+  const popupJs = fs.readFileSync(popupJsPath, 'utf8')
+  assert(popupJs.includes('loadRecentActivities'), 'popup.js implements loadRecentActivities')
+  assert(popupJs.includes('FETCH_RECENT_ACTIVITIES'), 'popup.js dispatches FETCH_RECENT_ACTIVITIES')
+  assert(popupJs.includes('activityItemsContainer.innerHTML = \'\''), 'popup.js clears activities on workspace switch')
+}
+
+if (fs.existsSync(popupCssPath)) {
+  const popupCss = fs.readFileSync(popupCssPath, 'utf8')
+  assert(popupCss.includes('.recent-activity-section'), 'popup.css styles .recent-activity-section')
+  assert(popupCss.includes('.activity-item'), 'popup.css styles .activity-item')
+}
+
 console.log('───────────────────────────────────────────────────────')
 if (failed) {
   console.error('💥 Extension validation FAILED!')

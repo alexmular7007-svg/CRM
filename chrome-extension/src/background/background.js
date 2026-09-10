@@ -457,6 +457,22 @@ async function handleMessage(message, sender) {
       }
     }
 
+    case 'FETCH_RECENT_ACTIVITIES':
+    case 'GET_RECENT_ACTIVITIES': {
+      try {
+        const wsId = message.workspaceId ?? null
+        const token = message.token ?? null
+        const limit = message.limit || 8
+        return await crmApi.fetchRecentActivities(wsId, token, limit)
+      } catch (err) {
+        return {
+          success: false,
+          data: [],
+          error: err.message || 'Failed to fetch recent activities',
+        }
+      }
+    }
+
 
     case 'STORAGE_TEST': {
       const testKey = 'last_test_' + Date.now()

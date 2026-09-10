@@ -693,6 +693,49 @@ export const crmApi = {
       }
     }
   },
+
+  /**
+   * Fetch recent activities for the active workspace
+   * API: GET /api/analytics/recent?workspaceId={workspaceId}&limit=10
+   * @param {number|string} [workspaceId]
+   * @param {string} [token]
+   * @param {number} [limit]
+   * @returns {Promise<{success: boolean, data: any[], error?: string}>}
+   */
+  async fetchRecentActivities(workspaceId = null, token = null, limit = 8) {
+    const settings = await extensionStorage.get()
+    const base = (settings.crmEndpoint || 'http://localhost:8080').replace(/\/$/, '')
+    const wsId = workspaceId !== undefined && workspaceId !== null ? workspaceId : settings.workspaceId
+    const authToken = token !== undefined && token !== null ? token : settings.authToken
+
+    if (!authToken || !authToken.trim() || !wsId) {
+      return { success: false, data: [], error: 'Authentication and workspace required' }
+    }
+
+    const endpoint = `${base}/api/analytics/recent?workspaceId=${wsId}&limit=${limit}`
+
+    try {
+      logger.info('Fetching recent activities:', endpoint)
+      const response = await fetch(endpoint, {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Bearer ${authToken.trim()}`,
+        },
+      })
+
+      if (response.ok) {
+        const payload = await response.json()
+        const activities = Array.isArray(payload?.data) ? payload.data : []
+        return { success: true, data: activities }
+      } else {
+        return { success: false, data: [], error: `HTTP ${response.status}` }
+      }
+    } catch (err) {
+      logger.warn('Failed to fetch recent activities:', err.message)
+      return { success: false, data: [], error: err.message }
+    }
+  },
 }
 
 

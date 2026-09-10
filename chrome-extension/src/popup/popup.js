@@ -36,6 +36,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   const stateEmpty = document.getElementById('state-empty')
   const errorMessageEl = document.getElementById('error-message')
 
+  // Recent Activity Elements
+  const recentActivitySection = document.getElementById('recent-activity-section')
+  const activityLoading = document.getElementById('activity-loading')
+  const activityEmpty = document.getElementById('activity-empty')
+  const activityItemsContainer = document.getElementById('activity-items')
+  const activityCountBadge = document.getElementById('activity-count-badge')
+
   // Action Buttons
   const btnRefreshTasks = document.getElementById('btn-refresh-tasks')
   const btnRetryTasks = document.getElementById('btn-retry-tasks')
@@ -140,7 +147,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch {}
     validSessionData = null
     cachedMembers = []
-    taskItemsContainer.innerHTML = ''
+    if (taskItemsContainer) taskItemsContainer.innerHTML = ''
+    if (activityItemsContainer) activityItemsContainer.innerHTML = ''
+    if (recentActivitySection) recentActivitySection.classList.add('hidden')
     showLoginView()
   }
 
@@ -172,9 +181,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     workspaceSwitcher.addEventListener('change', async (e) => {
       const selectedWsId = e.target.value ? parseInt(e.target.value, 10) : null
       
-      // Immediately clear UI and show loading to prevent stale task/member display
+      // Immediately clear UI and show loading to prevent stale task/member/activity display
       cachedMembers = []
       if (taskItemsContainer) taskItemsContainer.innerHTML = ''
+      if (activityItemsContainer) activityItemsContainer.innerHTML = ''
+      if (activityEmpty) activityEmpty.classList.add('hidden')
+      if (activityCountBadge) activityCountBadge.textContent = '0'
       if (newTaskAssignee) newTaskAssignee.innerHTML = '<option value="">Unassigned</option>'
       showLoading()
 
@@ -193,8 +205,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (selectedWsId) {
         const btnFirst = document.getElementById('btn-create-first-task')
         if (btnFirst) btnFirst.classList.remove('hidden')
-        await Promise.all([loadTasks(), loadMembers()])
+        await Promise.all([loadTasks(), loadMembers(), loadRecentActivities()])
       } else {
+        if (recentActivitySection) recentActivitySection.classList.add('hidden')
         showWorkspacePrompt()
       }
     })
@@ -247,6 +260,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (btnRefreshTasks) {
     btnRefreshTasks.addEventListener('click', () => {
       loadTasks()
+      loadRecentActivities()
     })
   }
 
@@ -355,7 +369,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (activeWsId) {
       loadTasks()
       loadMembers()
+      loadRecentActivities()
     } else {
+      if (recentActivitySection) recentActivitySection.classList.add('hidden')
       showWorkspacePrompt()
     }
   }
@@ -572,11 +588,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       })
 
       if (response && response.success) {
-        showSuccessToast('Task created successfully!')
+        showSuccessToast('Task assigned successfully!')
         closeCreateForm()
-        await loadTasks()
+        await Promise.all([loadTasks(), loadRecentActivities()])
       } else {
-        const errorMsg = response?.error || 'Failed to create task.'
+        const errorMsg = response?.error || 'Failed to assign task.'
         showCreateError(errorMsg)
       }
     } catch (err) {
@@ -589,7 +605,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function setSubmitLoading(isLoading) {
     if (!btnSubmitCreateTask) return
     btnSubmitCreateTask.disabled = isLoading
-    btnSubmitCreateTask.textContent = isLoading ? 'Creating...' : 'Create Task'
+    btnSubmitCreateTask.textContent = isLoading ? 'Assigning...' : 'Assign Task'
   }
 
   function showCreateError(msg) {
@@ -770,6 +786,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             tag.className = `status-tag status-${newStatus.toLowerCase()}`
             tag.textContent = newStatus
           }
+          loadRecentActivities()
         } else {
           showSuccessToast(res?.error || 'Failed to update task status')
         }
@@ -869,6 +886,138 @@ document.addEventListener('DOMContentLoaded', async () => {
     stateError.classList.add('hidden')
     stateEmpty.classList.add('hidden')
     taskListContainer.classList.add('hidden')
+  }
+
+  /**
+   * Fetch and render recent workspace activities
+   */
+  async function loadRecentActivities() {
+    const currentSettings = await extensionStorage.get()
+    const targetWs = currentSettings.workspaceId
+    const token = currentSettings.authToken || ''
+
+    if (!token || !targetWs) {
+      if (recentActivitySection) recentActivitySection.classList.add('hidden')
+      return
+    }
+
+    if (recentActivitySection) recentActivitySection.classList.remove('hidden')
+    if (activityLoading) activityLoading.classList.remove('hidden')
+    if (activityEmpty) activityEmpty.classList.add('hidden')
+    if (activityItemsContainer) {
+      activityItemsContainer.classList.add('hidden')
+      activityItemsContainer.innerHTML = ''
+    }
+
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: 'FETCH_RECENT_ACTIVITIES',
+        workspaceId: targetWs,
+        token: token,
+        limit: 8,
+      })
+
+      if (activityLoading) activityLoading.classList.add('hidden')
+
+      if (response && response.success && Array.isArray(response.data) && response.data.length > 0) {
+        renderActivities(response.data)
+      } else {
+        showEmptyActivities()
+      }
+    } catch (err) {
+      if (activityLoading) activityLoading.classList.add('hidden')
+      showEmptyActivities()
+    }
+  }
+
+  function showEmptyActivities() {
+    if (activityEmpty) activityEmpty.classList.remove('hidden')
+    if (activityItemsContainer) activityItemsContainer.classList.add('hidden')
+    if (activityCountBadge) activityCountBadge.textContent = '0'
+  }
+
+  function renderActivities(activities) {
+    if (!activityItemsContainer) return
+    activityItemsContainer.innerHTML = ''
+    activityItemsContainer.classList.remove('hidden')
+    if (activityEmpty) activityEmpty.classList.add('hidden')
+    if (activityCountBadge) activityCountBadge.textContent = activities.length.toString()
+
+    activities.forEach((act) => {
+      const row = createActivityItemElement(act)
+      activityItemsContainer.appendChild(row)
+    })
+  }
+
+  function createActivityItemElement(act) {
+    const li = document.createElement('li')
+    li.className = 'activity-item'
+
+    const actType = (act.type || 'TASK').toUpperCase()
+    const desc = (act.description || '').toUpperCase()
+    const isDone = desc.includes('DONE') || desc.includes('COMPLETE')
+    const isCreate = desc.includes('CREATE')
+    const isLead = actType === 'LEAD'
+
+    let iconBoxClass = 'icon-update'
+    let svgPath = '<path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+
+    if (isDone) {
+      iconBoxClass = 'icon-done'
+      svgPath = '<path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>'
+    } else if (isCreate) {
+      iconBoxClass = 'icon-create'
+      svgPath = '<path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>'
+    } else if (isLead) {
+      iconBoxClass = 'icon-lead'
+      svgPath = '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm14 14v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+    }
+
+    const titleSafe = escapeHtml(act.title || 'Activity')
+    const descSafe = escapeHtml(act.description || '')
+    const authorSafe = escapeHtml(act.createdBy || 'User')
+    const timeSafe = formatRelativeTime(act.timestamp)
+
+    li.innerHTML = `
+      <div class="activity-item-icon-box ${iconBoxClass}">
+        <svg class="activity-item-svg" viewBox="0 0 24 24">
+          ${svgPath}
+        </svg>
+      </div>
+      <div class="activity-item-content">
+        <div class="activity-item-title-row">
+          <span class="activity-item-title" title="${titleSafe}">${titleSafe}</span>
+        </div>
+        <span class="activity-item-desc" title="${descSafe}">${descSafe}</span>
+        <div class="activity-item-meta">
+          <span class="activity-item-author">${authorSafe}</span>
+          <span class="activity-item-time">${timeSafe}</span>
+        </div>
+      </div>
+    `
+    return li
+  }
+
+  function formatRelativeTime(isoStr) {
+    if (!isoStr) return ''
+    try {
+      const d = new Date(isoStr)
+      if (isNaN(d.getTime())) return ''
+      const now = new Date()
+      const diffMs = now.getTime() - d.getTime()
+      const diffMins = Math.floor(diffMs / 60000)
+
+      if (diffMins < 1) return 'just now'
+      if (diffMins < 60) return `${diffMins}m ago`
+      const diffHours = Math.floor(diffMins / 60)
+      if (diffHours < 24) return `${diffHours}h ago`
+      const diffDays = Math.floor(diffHours / 24)
+      if (diffDays < 7) return `${diffDays}d ago`
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+      return `${months[d.getMonth()]} ${d.getDate()}`
+    } catch {
+      return ''
+    }
   }
 
   function escapeHtml(str) {
