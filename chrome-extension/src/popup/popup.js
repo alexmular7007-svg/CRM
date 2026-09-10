@@ -110,6 +110,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (response && response.success && response.data) {
           formLogin.reset()
           const { user, workspaces, selectedWorkspaceId } = response.data
+          // Remember email for fast sign-in without persisting credentials
+          if (user?.email) {
+            await extensionStorage.save({ lastUserEmail: user.email })
+          }
           validSessionData = {
             user,
             workspaces: workspaces || [],
@@ -252,14 +256,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     })
   }
 
+  function openOptions() {
+    if (chrome.runtime.openOptionsPage) {
+      chrome.runtime.openOptionsPage()
+    } else {
+      window.open(chrome.runtime.getURL('src/options/options.html'))
+    }
+  }
+
+  if (btnOpenSettings) {
+    btnOpenSettings.addEventListener('click', openOptions)
+  }
+
   if (btnOpenOptions) {
-    btnOpenOptions.addEventListener('click', () => {
-      if (chrome.runtime.openOptionsPage) {
-        chrome.runtime.openOptionsPage()
-      } else {
-        window.open(chrome.runtime.getURL('src/options/options.html'))
-      }
-    })
+    btnOpenOptions.addEventListener('click', openOptions)
   }
 
   function showSessionChecking() {
@@ -292,13 +302,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  function showLoginView(errorMsg = null) {
+  async function showLoginView(errorMsg = null) {
     if (sessionCheckingPanel) sessionCheckingPanel.classList.add('hidden')
     if (rememberedAccountPanel) rememberedAccountPanel.classList.add('hidden')
     if (loginPanel) loginPanel.classList.remove('hidden')
     if (authenticatedView) authenticatedView.classList.add('hidden')
     if (btnSignOut) btnSignOut.classList.add('hidden')
     if (headerUserInfo) headerUserInfo.textContent = 'Sign In'
+
+    // Remembered account prefill: email only, password strictly empty
+    try {
+      const s = await extensionStorage.get()
+      if (loginEmail && (!loginEmail.value || !loginEmail.value.trim())) {
+        const rememberedEmail = s.lastUserEmail || s.authenticatedUser?.email || ''
+        if (rememberedEmail) {
+          loginEmail.value = rememberedEmail
+        }
+      }
+    } catch {}
+
+    if (loginPassword) {
+      loginPassword.value = ''
+    }
 
     if (errorMsg) {
       showLoginError(errorMsg)
