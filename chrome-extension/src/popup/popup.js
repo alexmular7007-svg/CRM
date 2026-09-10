@@ -58,6 +58,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let currentWorkspaceId = null
   let cachedMembers = []
   let cachedProjects = []
+  let isProjectsLoading = false
 
   // --- 1. Hello World Verification (Phase 1) ---
   try {
@@ -175,6 +176,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Immediately clear old workspace data for clean isolation
     cachedMembers = []
     cachedProjects = []
+    isProjectsLoading = false
     taskItemsContainer.innerHTML = ''
     activityItemsContainer.innerHTML = ''
     newTaskAssignee.innerHTML = '<option value="">Unassigned</option>'
@@ -183,6 +185,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       newTaskProject.disabled = false
     }
     if (noProjectsHint) {
+      noProjectsHint.textContent = 'No projects available in this workspace. Create a project in the CRM before assigning tasks.'
       noProjectsHint.classList.add('hidden')
     }
     btnSubmitCreateTask.disabled = false
@@ -441,37 +444,61 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // --- 6b. Project Selection for Tasks ---
   async function loadProjects(workspaceId = currentWorkspaceId) {
-    if (!workspaceId) return
+    if (!workspaceId || isProjectsLoading) return
+    isProjectsLoading = true
     try {
       const response = await chrome.runtime.sendMessage({
         type: 'GET_PROJECTS',
         workspaceId,
       })
 
-      if (response && response.success) {
-        cachedProjects = Array.isArray(response.data) ? response.data : []
-        populateProjectDropdown(cachedProjects)
+      if (response && response.success && Array.isArray(response.data)) {
+        cachedProjects = response.data
+        if (cachedProjects.length === 0) {
+          showZeroProjects()
+        } else {
+          populateProjectDropdown(cachedProjects)
+        }
       } else {
         cachedProjects = []
-        populateProjectDropdown([])
+        showProjectsError()
       }
     } catch (err) {
       console.warn('Failed to load workspace projects:', err)
       cachedProjects = []
-      populateProjectDropdown([])
+      showProjectsError()
+    } finally {
+      isProjectsLoading = false
     }
+  }
+
+  function showZeroProjects() {
+    if (noProjectsHint) {
+      noProjectsHint.textContent = 'No projects available in this workspace. Create a project in the CRM before assigning tasks.'
+      noProjectsHint.classList.remove('hidden')
+    }
+    if (newTaskProject) {
+      newTaskProject.innerHTML = '<option value="">Select Project</option>'
+      newTaskProject.disabled = true
+    }
+    btnSubmitCreateTask.disabled = true
+  }
+
+  function showProjectsError() {
+    if (noProjectsHint) {
+      noProjectsHint.textContent = 'Failed to load projects. Please try again.'
+      noProjectsHint.classList.remove('hidden')
+    }
+    if (newTaskProject) {
+      newTaskProject.innerHTML = '<option value="">Select Project</option>'
+      newTaskProject.disabled = true
+    }
+    btnSubmitCreateTask.disabled = true
   }
 
   function populateProjectDropdown(projects) {
     if (!newTaskProject) return
     newTaskProject.innerHTML = '<option value="">Select Project</option>'
-    if (!projects || projects.length === 0) {
-      if (noProjectsHint) noProjectsHint.classList.remove('hidden')
-      newTaskProject.disabled = true
-      btnSubmitCreateTask.disabled = true
-      return
-    }
-
     if (noProjectsHint) noProjectsHint.classList.add('hidden')
     newTaskProject.disabled = false
     btnSubmitCreateTask.disabled = false
@@ -492,6 +519,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   function openCreateDrawer() {
     createTaskDrawer.classList.remove('hidden')
     createErrorAlert.classList.add('hidden')
+    if (cachedProjects.length === 0 && currentWorkspaceId && !isProjectsLoading) {
+      loadProjects(currentWorkspaceId)
+    }
     newTaskTitle.focus()
   }
 
