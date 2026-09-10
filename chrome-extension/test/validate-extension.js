@@ -100,6 +100,7 @@ if (fs.existsSync(crmApiPath)) {
   const crmApiCode = fs.readFileSync(crmApiPath, 'utf8')
   assert(crmApiCode.includes('getTasks'), 'crmApi.js implements getTasks (GET)')
   assert(crmApiCode.includes('createTask'), 'crmApi.js implements createTask (POST)')
+  assert(crmApiCode.includes('getProjects'), 'crmApi.js implements getProjects (GET)')
   assert(crmApiCode.includes('updateTaskStatus'), 'crmApi.js implements updateTaskStatus (PATCH)')
   assert(crmApiCode.includes('deleteTask'), 'crmApi.js implements deleteTask (DELETE)')
 }
@@ -107,6 +108,7 @@ if (fs.existsSync(crmApiPath)) {
 if (fs.existsSync(backgroundJsPath)) {
   const bg = fs.readFileSync(backgroundJsPath, 'utf8')
   assert(bg.includes('GET_TASKS'), 'background.js handles GET_TASKS message')
+  assert(bg.includes('GET_PROJECTS'), 'background.js handles GET_PROJECTS message')
   assert(bg.includes('CREATE_TASK'), 'background.js handles CREATE_TASK message')
   assert(bg.includes('UPDATE_TASK_STATUS'), 'background.js handles UPDATE_TASK_STATUS message')
   assert(bg.includes('DELETE_TASK'), 'background.js handles DELETE_TASK message')
@@ -116,6 +118,7 @@ if (fs.existsSync(backgroundJsPath)) {
 try {
   const { crmApi, getStorage, setStorage, clearStorage } = await import('../src/services/crmApi.js')
   assert(typeof crmApi.getTasks === 'function', 'crmApi.getTasks is a function')
+  assert(typeof crmApi.getProjects === 'function', 'crmApi.getProjects is a function')
   assert(typeof crmApi.createTask === 'function', 'crmApi.createTask is a function')
   assert(typeof crmApi.updateTaskStatus === 'function', 'crmApi.updateTaskStatus is a function')
   assert(typeof crmApi.deleteTask === 'function', 'crmApi.deleteTask is a function')
@@ -153,6 +156,7 @@ if (fs.existsSync(popupHtmlPath)) {
   assert(html.includes('workspace-switcher'), 'popup.html contains workspace selector')
   assert(html.includes('recent-activity-section'), 'popup.html contains recent activity section')
   assert(html.includes('task-items'), 'popup.html contains task items list')
+  assert(html.includes('new-task-project'), 'popup.html contains project dropdown (new-task-project)')
   assert(html.includes('new-task-assignee'), 'popup.html contains assignee dropdown')
 }
 
@@ -161,6 +165,7 @@ if (fs.existsSync(popupJsPath)) {
   const js = fs.readFileSync(popupJsPath, 'utf8')
   assert(js.includes('loadTasks'), 'popup.js defines loadTasks')
   assert(js.includes('loadMembers'), 'popup.js defines loadMembers for workspace assignment')
+  assert(js.includes('loadProjects'), 'popup.js defines loadProjects for project selection')
   assert(js.includes('loadRecentActivities'), 'popup.js defines loadRecentActivities')
   assert(js.includes('btn-toggle-status'), 'popup.js implements status toggle action button')
   assert(js.includes('taskItemsContainer.innerHTML = \'\''), 'popup.js immediately clears task list on workspace switch (Isolation)')

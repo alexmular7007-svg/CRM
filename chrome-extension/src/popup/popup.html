@@ -90,6 +90,13 @@
             <label for="new-task-desc">Description</label>
             <textarea id="new-task-desc" rows="2" placeholder="Task details and instructions..."></textarea>
           </div>
+          <div class="field-group">
+            <label for="new-task-project">Project <span class="req">*</span></label>
+            <select id="new-task-project" required>
+              <option value="">Select Project</option>
+            </select>
+            <p class="field-hint hidden" id="no-projects-hint">No projects available in this workspace. Create a project in the CRM before assigning tasks.</p>
+          </div>
           <div class="field-row">
             <div class="field-group flex-1">
               <label for="new-task-assignee">Assign To</label>

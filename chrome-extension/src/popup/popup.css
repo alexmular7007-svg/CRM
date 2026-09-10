@@ -277,6 +277,13 @@ body {
   margin-bottom: 8px;
 }
 
+.field-hint {
+  font-size: 11px;
+  color: var(--danger);
+  margin-top: 4px;
+  line-height: 1.3;
+}
+
 .field-group label {
   display: block;
   font-size: 11px;

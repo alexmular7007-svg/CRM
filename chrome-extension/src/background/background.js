@@ -70,6 +70,11 @@ async function handleMessage(message, sender) {
     case 'FETCH_MEMBERS':
       return await crmApi.getWorkspaceMembers(message.workspaceId, message.token)
 
+    // Projects
+    case 'GET_PROJECTS':
+    case 'FETCH_PROJECTS':
+      return await crmApi.getProjects(message.workspaceId, message.token)
+
     // Task CRUD API (Phase 2 & Phase 3)
     case 'GET_TASKS':
     case 'FETCH_TASKS':

@@ -28,6 +28,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const formCreateTask = document.getElementById('form-create-task')
   const newTaskTitle = document.getElementById('new-task-title')
   const newTaskDesc = document.getElementById('new-task-desc')
+  const newTaskProject = document.getElementById('new-task-project')
+  const noProjectsHint = document.getElementById('no-projects-hint')
   const newTaskAssignee = document.getElementById('new-task-assignee')
   const newTaskPriority = document.getElementById('new-task-priority')
   const newTaskDueDate = document.getElementById('new-task-duedate')
@@ -55,6 +57,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Local state
   let currentWorkspaceId = null
   let cachedMembers = []
+  let cachedProjects = []
 
   // --- 1. Hello World Verification (Phase 1) ---
   try {
@@ -171,18 +174,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Immediately clear old workspace data for clean isolation
     cachedMembers = []
+    cachedProjects = []
     taskItemsContainer.innerHTML = ''
     activityItemsContainer.innerHTML = ''
     newTaskAssignee.innerHTML = '<option value="">Unassigned</option>'
+    if (newTaskProject) {
+      newTaskProject.innerHTML = '<option value="">Select Project</option>'
+      newTaskProject.disabled = false
+    }
+    if (noProjectsHint) {
+      noProjectsHint.classList.add('hidden')
+    }
+    btnSubmitCreateTask.disabled = false
     taskCountBadge.textContent = '0'
     activityCountBadge.textContent = '0'
 
     showLoadingTasks()
 
-    // Parallel load: Tasks, Members, Recent Activity
+    // Parallel load: Tasks, Members, Projects, Recent Activity
     await Promise.all([
       loadTasks(workspaceId),
       loadMembers(workspaceId),
+      loadProjects(workspaceId),
       loadRecentActivities(workspaceId),
     ])
   }
@@ -224,6 +237,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await chrome.runtime.sendMessage({ type: 'LOGOUT' })
     currentWorkspaceId = null
     cachedMembers = []
+    cachedProjects = []
     taskItemsContainer.innerHTML = ''
     showLoginView()
   })
@@ -425,6 +439,55 @@ document.addEventListener('DOMContentLoaded', async () => {
     })
   }
 
+  // --- 6b. Project Selection for Tasks ---
+  async function loadProjects(workspaceId = currentWorkspaceId) {
+    if (!workspaceId) return
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: 'GET_PROJECTS',
+        workspaceId,
+      })
+
+      if (response && response.success) {
+        cachedProjects = Array.isArray(response.data) ? response.data : []
+        populateProjectDropdown(cachedProjects)
+      } else {
+        cachedProjects = []
+        populateProjectDropdown([])
+      }
+    } catch (err) {
+      console.warn('Failed to load workspace projects:', err)
+      cachedProjects = []
+      populateProjectDropdown([])
+    }
+  }
+
+  function populateProjectDropdown(projects) {
+    if (!newTaskProject) return
+    newTaskProject.innerHTML = '<option value="">Select Project</option>'
+    if (!projects || projects.length === 0) {
+      if (noProjectsHint) noProjectsHint.classList.remove('hidden')
+      newTaskProject.disabled = true
+      btnSubmitCreateTask.disabled = true
+      return
+    }
+
+    if (noProjectsHint) noProjectsHint.classList.add('hidden')
+    newTaskProject.disabled = false
+    btnSubmitCreateTask.disabled = false
+
+    projects.forEach((p) => {
+      const opt = document.createElement('option')
+      opt.value = p.id.toString()
+      opt.textContent = `${p.name}${p.status ? ` (${p.status})` : ''}`
+      newTaskProject.appendChild(opt)
+    })
+
+    if (projects.length === 1) {
+      newTaskProject.value = projects[0].id.toString()
+    }
+  }
+
   // --- 7. Task Assignment: Create Form ---
   function openCreateDrawer() {
     createTaskDrawer.classList.remove('hidden')
@@ -435,6 +498,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   function closeCreateDrawer() {
     createTaskDrawer.classList.add('hidden')
     formCreateTask.reset()
+    if (cachedProjects.length === 1 && newTaskProject) {
+      newTaskProject.value = cachedProjects[0].id.toString()
+    }
     createErrorAlert.classList.add('hidden')
   }
 
@@ -460,11 +526,19 @@ document.addEventListener('DOMContentLoaded', async () => {
       return
     }
 
+    const projectId = newTaskProject.value ? parseInt(newTaskProject.value, 10) : null
+    if (!projectId) {
+      createErrorAlert.textContent = 'Please select a project.'
+      createErrorAlert.classList.remove('hidden')
+      return
+    }
+
     btnSubmitCreateTask.disabled = true
     btnSubmitCreateTask.textContent = 'Assigning...'
 
     const taskPayload = {
       workspaceId: currentWorkspaceId,
+      projectId,
       title,
       description: (newTaskDesc.value || '').trim() || null,
       priority: newTaskPriority.value || 'MEDIUM',

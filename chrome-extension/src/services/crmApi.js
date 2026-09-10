@@ -217,6 +217,40 @@ export const crmApi = {
   },
 
   /**
+   * GET /api/projects/workspace/{workspaceId}
+   * Fetch active projects for workspace
+   */
+  async getProjects(workspaceId = null, token = null) {
+    const store = await getStorage()
+    const authToken = token || store.authToken
+    const wsId = workspaceId || store.workspaceId
+    const base = await this.getEndpoint()
+
+    if (!authToken || !wsId) {
+      return { success: false, data: [], error: 'Workspace and authentication required' }
+    }
+
+    try {
+      const url = `${base}/api/projects/workspace/${wsId}`
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: { Accept: 'application/json', Authorization: `Bearer ${authToken}` },
+      })
+      if (!response.ok) {
+        return { success: false, data: [], error: `HTTP ${response.status}` }
+      }
+      const json = await response.json()
+      const rawProjects = extractList(json)
+      const projects = rawProjects.filter(
+        (p) => !p.archived && p.status !== 'CANCELLED'
+      )
+      return { success: true, data: projects }
+    } catch (err) {
+      return { success: false, data: [], error: err.message }
+    }
+  },
+
+  /**
    * GET /api/tasks?workspaceId={workspaceId}
    * Phase 2 / 3: List tasks scoped to workspace
    */
