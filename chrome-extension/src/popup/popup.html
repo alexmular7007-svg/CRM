@@ -1,245 +1,183 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>TaskFlow CRM - My Tasks</title>
-  <link rel="stylesheet" href="popup.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TaskFlow CRM - Quick Task Manager</title>
+  <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
-  <div class="popup-container">
-    <!-- Header -->
+  <div class="popup-wrapper">
+    <!-- App Header -->
     <header class="app-header">
-      <div class="brand">
-        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <path d="M4 4h7l2 2h7a1 1 0 011 1v11a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1z" fill="none" stroke="currentColor" stroke-width="2"/>
-        </svg>
-        <div class="brand-text">
-          <h1 class="title">TaskFlow CRM</h1>
-          <p class="subtitle" id="header-user-info">My Tasks</p>
+      <div class="brand-row">
+        <div class="brand-logo">
+          <svg class="logo-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 11l3 3L22 4" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="brand-headings">
+          <h1 class="brand-title">TaskFlow CRM</h1>
+          <h2 class="brand-subtitle">Quick Task Manager</h2>
         </div>
       </div>
-      <div class="header-actions">
-        <button type="button" class="icon-btn hidden" id="btn-sign-out" title="Sign Out">
-          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
-        <button type="button" class="icon-btn" id="btn-open-settings" title="Settings">
-          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M12 15.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM19.4 12a7.4 7.4 0 01-.14 1.5l2.12 1.66a0.5 0.5 0 01.12.62l-2 3.46a0.5 0.5 0 01-.6.22l-2.5-1a7.3 7.3 0 01-1.3.76l-.38 2.65a0.5 0.5 0 01-.5.42h-4a0.5 0.5 0 01-.5-.42l-.38-2.66a7.3 7.3 0 01-1.3-.75l-2.5 1a0.5 0.5 0 01-.6-.22l-2-3.46a0.5 0.5 0 01.12-.62L4.74 13.5a7.4 7.4 0 010-3l-2.12-1.66a0.5 0.5 0 01-.12-.62l2-3.46a0.5 0.5 0 01.6-.22l2.5 1c.4-.3.84-.55 1.3-.76L9.5 2.42a0.5 0.5 0 01.5-.42h4a0.5 0.5 0 01.5.42l.38 2.66c.46.21.9.46 1.3.76l2.5-1a0.5 0.5 0 01.6.22l2 3.46a0.5 0.5 0 01-.12.62L19.4 12z" fill="none" stroke="currentColor" stroke-width="2"/>
-          </svg>
-        </button>
+      <div class="header-user-actions" id="header-user-actions">
+        <span class="user-greeting" id="user-display-name"></span>
+        <button type="button" class="btn-text-sm hidden" id="btn-sign-out" title="Sign out">Sign Out</button>
       </div>
     </header>
-    <hr class="header-divider">
 
-    <!-- Session Check Loading Panel -->
-    <section class="session-checking-panel hidden" id="session-checking-panel">
-      <div class="spinner"></div>
-      <p class="state-text">Checking session...</p>
-    </section>
-
-    <!-- Remembered Account / Continue Panel -->
-    <section class="remembered-account-panel hidden" id="remembered-account-panel">
-      <div class="remembered-header">
-        <div class="user-avatar-circle">
-          <svg class="icon-avatar" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="currentColor"/>
-          </svg>
-        </div>
-        <p class="remembered-welcome">Welcome back</p>
-        <h2 class="remembered-name" id="remembered-user-name">User</h2>
-        <p class="remembered-email" id="remembered-user-email">user@example.com</p>
-      </div>
-
-      <div class="remembered-actions">
-        <button type="button" class="btn btn-primary btn-block" id="btn-continue-user">
-          Continue as <span id="btn-continue-name">User</span>
-        </button>
-        <button type="button" class="btn-link" id="btn-switch-account">Switch account</button>
-      </div>
-    </section>
-
-    <!-- Login Panel (Rendered when unauthenticated) -->
-    <section class="login-panel" id="login-panel">
-      <div class="login-header">
-        <h2 class="login-title">Sign in to TaskFlow</h2>
-        <p class="login-subtitle">Connect your CRM account to manage tasks</p>
-      </div>
-
-      <div class="form-alert error-alert hidden" id="login-error">
-        <span class="alert-icon">⚠️</span>
-        <span class="alert-text" id="login-error-text">Invalid credentials</span>
-      </div>
-
-      <form id="form-login" class="login-form">
-        <div class="form-group">
-          <label for="login-email" class="form-label">Email</label>
-          <input type="email" id="login-email" class="form-input" placeholder="user@taskflow.com" required autocomplete="username"/>
-        </div>
-        <div class="form-group">
-          <label for="login-password" class="form-label">Password</label>
-          <input type="password" id="login-password" class="form-input" placeholder="••••••••" required autocomplete="current-password"/>
-        </div>
-        <button type="submit" class="btn btn-primary btn-block" id="btn-submit-login">Sign In</button>
-      </form>
-    </section>
-
-    <!-- Authenticated Task Workspace Wrapper -->
-    <div id="authenticated-view" class="hidden">
-      <!-- Top Action Bar -->
-      <section class="section-title-bar">
-        <div class="title-with-badge">
-          <select id="workspace-switcher" class="workspace-select" title="Select Workspace">
-            <option value="">Select workspace...</option>
-          </select>
-          <span class="task-count-pill" id="task-count-badge">0</span>
-        </div>
-        <button type="button" class="btn btn-primary" id="btn-show-create-form">
-          <span class="btn-icon">+</span>
-          <span>Assign New Task</span>
-        </button>
-      </section>
-
-    <!-- Create Task Form Panel (Hidden by default) -->
-    <section class="create-task-panel hidden" id="create-task-panel">
-      <div class="form-header">
-        <h3 class="form-title">Assign New Task</h3>
-        <button type="button" class="btn-close-form" id="btn-close-create-form" title="Close">✕</button>
-      </div>
-
-      <div class="form-alert error-alert hidden" id="create-task-error">
-        <span class="alert-icon">⚠️</span>
-        <span class="alert-text" id="create-task-error-text">Title is required.</span>
-      </div>
-
-      <form id="form-create-task" class="create-task-form">
-        <div class="form-group">
-          <label for="new-task-title" class="form-label">Title <span class="required">*</span></label>
-          <input type="text" id="new-task-title" class="form-input" placeholder="Follow up with Acme" maxlength="255" required autocomplete="off"/>
-        </div>
-        <div class="form-group">
-          <label for="new-task-desc" class="form-label">Description</label>
-          <textarea id="new-task-desc" class="form-textarea" placeholder="Send proposal and schedule meeting..." rows="2" maxlength="5000"></textarea>
-        </div>
-        <div class="form-row">
-          <div class="form-group flex-1">
-            <label for="new-task-assignee" class="form-label">Assign To</label>
-            <select id="new-task-assignee" class="form-select"><option value="">Unassigned</option></select>
-          </div>
-          <div class="form-group flex-1">
-            <label for="new-task-priority" class="form-label">Priority</label>
-            <select id="new-task-priority" class="form-select">
-              <option value="LOW">LOW</option>
-              <option value="MEDIUM" selected>MEDIUM</option>
-              <option value="HIGH">HIGH</option>
-              <option value="URGENT">URGENT</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-group">
-          <label for="new-task-duedate" class="form-label">Due Date</label>
-          <input type="date" id="new-task-duedate" class="form-input"/>
-        </div>
-        <div class="form-actions-row">
-          <button type="button" class="btn btn-secondary" id="btn-cancel-create-task">Cancel</button>
-          <button type="submit" class="btn btn-primary btn-submit-task" id="btn-submit-create-task">Assign Task</button>
-        </div>
-      </form>
-    </section>
-
-    <!-- Success Toast Notification -->
-    <div class="success-toast hidden" id="success-toast">
-      <svg class="toast-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-        <path d="M5 13l4 4L19 7" fill="none" stroke="currentColor" stroke-width="2"/>
-      </svg>
-      <span class="toast-text" id="success-toast-text">Task created successfully!</span>
+    <!-- Phase 1: Hello World Greeting Banner -->
+    <div class="hello-banner" id="hello-banner">
+      <span class="hello-badge">HELLO WORLD</span>
+      <span class="hello-text">Hello from TaskFlow!</span>
     </div>
 
-    <!-- Main Content: Task List View -->
-    <main class="task-manager-section" id="task-manager-section">
-      <!-- State: Loading -->
-      <div class="state-container" id="state-loading">
-        <div class="spinner"></div>
-        <p class="state-text">Loading tasks...</p>
+    <!-- Sign In Panel (when not authenticated) -->
+    <section class="auth-panel" id="auth-panel">
+      <div class="auth-box">
+        <h3 class="auth-title">Connect to CRM</h3>
+        <p class="auth-desc">Sign in with your CRM account to manage workspace tasks.</p>
+        <div class="alert alert-error hidden" id="login-error-alert"></div>
+        <form id="form-login" class="login-form">
+          <div class="field-group">
+            <label for="login-email">Email</label>
+            <input type="email" id="login-email" placeholder="user@example.com" required autocomplete="username" />
+          </div>
+          <div class="field-group">
+            <label for="login-password">Password</label>
+            <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password" />
+          </div>
+          <button type="submit" class="btn btn-primary btn-block" id="btn-submit-login">Sign In</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Main Workspace & Quick Task Manager Panel (when authenticated) -->
+    <section class="main-panel hidden" id="main-panel">
+      <!-- Top Action Bar -->
+      <div class="action-bar">
+        <div class="workspace-picker">
+          <label for="workspace-switcher" class="sr-only">Workspace</label>
+          <select id="workspace-switcher" class="select-workspace" title="Select Workspace">
+            <option value="">Loading workspaces...</option>
+          </select>
+          <span class="count-pill" id="task-count-badge">0</span>
+        </div>
+        <button type="button" class="btn btn-primary" id="btn-show-create-form">
+          <svg class="btn-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>Assign New Task</span>
+        </button>
       </div>
 
-      <!-- State: Error -->
-      <div class="state-container hidden" id="state-error">
-        <svg class="state-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4m0 4h.01M4.93 19h14.14c1.34 0 2.18-1.46 1.5-2.63L13.5 3.37c-.68-1.17-2.32-1.17-3 0L3.43 16.37C2.75 17.54 3.59 19 4.93 19z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <p class="state-title">Unable to load tasks.</p>
-        <p class="state-message" id="error-message">Connection failed</p>
-        <button type="button" class="btn btn-secondary btn-retry" id="btn-retry-tasks">Try Again</button>
+      <!-- Assign New Task Form (collapsible panel) -->
+      <div class="create-task-drawer hidden" id="create-task-drawer">
+        <div class="drawer-header">
+          <h3 class="drawer-title">Assign New Task</h3>
+          <button type="button" class="btn-close" id="btn-close-create-drawer" title="Close">✕</button>
+        </div>
+        <div class="alert alert-error hidden" id="create-error-alert"></div>
+        <form id="form-create-task" class="create-form">
+          <div class="field-group">
+            <label for="new-task-title">Title <span class="req">*</span></label>
+            <input type="text" id="new-task-title" placeholder="e.g. Follow up with client" required />
+          </div>
+          <div class="field-group">
+            <label for="new-task-desc">Description</label>
+            <textarea id="new-task-desc" rows="2" placeholder="Task details and instructions..."></textarea>
+          </div>
+          <div class="field-row">
+            <div class="field-group flex-1">
+              <label for="new-task-assignee">Assign To</label>
+              <select id="new-task-assignee">
+                <option value="">Unassigned</option>
+              </select>
+            </div>
+            <div class="field-group flex-1">
+              <label for="new-task-priority">Priority</label>
+              <select id="new-task-priority">
+                <option value="LOW">LOW</option>
+                <option value="MEDIUM" selected>MEDIUM</option>
+                <option value="HIGH">HIGH</option>
+                <option value="URGENT">URGENT</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-group">
+            <label for="new-task-duedate">Due Date</label>
+            <input type="date" id="new-task-duedate" />
+          </div>
+          <div class="drawer-actions">
+            <button type="button" class="btn btn-secondary" id="btn-cancel-create">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="btn-submit-create-task">Assign Task</button>
+          </div>
+        </form>
       </div>
 
-      <!-- State: Empty -->
-      <div class="state-container hidden" id="state-empty">
-        <svg class="state-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <p class="state-title">No tasks found.</p>
-        <p class="state-sub">Your workspace has no active tasks.</p>
-        <button type="button" class="btn btn-primary btn-new-task-empty" id="btn-create-first-task">+ Assign First Task</button>
+      <!-- Notification Toast -->
+      <div class="toast hidden" id="toast">
+        <svg class="toast-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <span class="toast-message" id="toast-message">Task updated</span>
       </div>
 
-      <!-- State: Success (Task List) -->
-      <div class="task-list-container hidden" id="task-list-container">
-        <ul class="task-list" id="task-items">
-          <!-- Real tasks inserted here -->
+      <!-- Task List Container -->
+      <div class="task-container" id="task-container">
+        <!-- State: Loading -->
+        <div class="state-view" id="state-loading">
+          <div class="spinner"></div>
+          <p>Loading tasks...</p>
+        </div>
+
+        <!-- State: Empty -->
+        <div class="state-view hidden" id="state-empty">
+          <p class="empty-title">No tasks found</p>
+          <p class="empty-sub">Your workspace has no active tasks.</p>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-create-first-task">+ Assign First Task</button>
+        </div>
+
+        <!-- Task List Items -->
+        <ul class="task-list hidden" id="task-items">
+          <!-- Dynamically populated task rows -->
         </ul>
       </div>
 
       <!-- Recent Activity Section -->
       <section class="recent-activity-section" id="recent-activity-section">
-        <div class="activity-section-header">
-          <div class="activity-title-row">
-            <svg class="activity-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <div class="activity-header">
+          <div class="activity-title-wrap">
+            <svg class="activity-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
             </svg>
-            <h4 class="activity-heading">Recent Activity</h4>
+            <h4 class="activity-title">Recent Activity</h4>
           </div>
-          <span class="activity-count-pill" id="activity-count-badge">0</span>
-        </div>
-        <div class="activity-loading hidden" id="activity-loading">
-          <div class="spinner-sm"></div>
-          <span>Loading activity...</span>
+          <span class="activity-pill" id="activity-count-badge">0</span>
         </div>
         <div class="activity-empty hidden" id="activity-empty">
-          <span class="activity-empty-text">No recent activity</span>
+          <span>No recent activity</span>
         </div>
-        <ul class="activity-list hidden" id="activity-items">
-          <!-- Real activities inserted here -->
+        <ul class="activity-list" id="activity-items">
+          <!-- Dynamically populated activities -->
         </ul>
       </section>
 
-      <!-- Action Footer -->
-      <div class="task-actions-row">
-        <button type="button" class="btn btn-primary" id="btn-refresh-tasks">
-          <svg class="btn-svg-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4v5h5M20 20v-5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 005.64 5.64L4 9m16 6l-1.64 3.36A9 9 0 013.51 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <!-- Footer Bar -->
+      <footer class="app-footer">
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-refresh-tasks">
+          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 4v6h-6M1 20v-6h6"></path>
+            <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"></path>
+          </svg>
           <span>Refresh</span>
         </button>
-        <button type="button" class="btn btn-secondary" id="btn-open-options">Options</button>
-      </div>
-    </main>
-    </div>
-
-    <!-- Legacy / Test Harness (Preserves validate-extension.js assertions) -->
-    <div id="legacy-playground-harness" class="legacy-harness" aria-hidden="true">
-      <span class="legacy-title">Chrome Extension Playground</span>
-      <span id="ext-version">v1.0.0</span>
-      <span id="ext-status-badge">READY</span>
-      <span id="crm-conn-badge">DISCONNECTED</span>
-      <span id="target-endpoint">http://localhost:8080</span>
-      <span id="target-workspace">#1</span>
-      <button type="button" id="btn-check-crm">Check CRM Connection</button>
-      <button type="button" id="btn-run-diagnostics">Run Diagnostics</button>
-      <span id="diag-summary-badge">STANDBY</span>
-      <span id="diag-extension">—</span>
-      <span id="diag-serviceWorker">—</span>
-      <span id="diag-storage">—</span>
-      <span id="diag-contentScript">—</span>
-      <span id="diag-crmApi">—</span>
-      <button type="button" id="btn-clear-console">Clear</button>
-      <div id="console-output"></div>
-    </div>
+        <span class="status-indicator">Connected to CRM</span>
+      </footer>
+    </section>
   </div>
 
   <script type="module" src="popup.js"></script>

@@ -1,741 +1,393 @@
-import { extensionStorage } from '../storage/extensionStorage.js'
-import { logger } from '../utils/logger.js'
+/**
+ * TaskFlow CRM - API Client Service
+ * Clean REST API client communicating between the Chrome Extension and CRM backend.
+ * Architecture: popup.js -> background.js -> crmApi.js -> REST API
+ */
+
+const DEFAULT_ENDPOINT = 'https://crm-production-932d.up.railway.app'
+
+// In-memory fallback for unit test environments
+const memoryStorage = {
+  crmEndpoint: DEFAULT_ENDPOINT,
+  authToken: '',
+  authenticatedUser: null,
+  workspaceId: null,
+  availableWorkspaces: [],
+}
 
 /**
- * CRM API Service
- * Handles communication between Chrome Extension and Spring Boot backend.
- * Zero hard-coded credentials: uses user-configured endpoint and optional Bearer token.
+ * Storage helper abstraction for chrome.storage.local / in-memory
  */
+export async function getStorage(key = null) {
+  if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(null, (items) => {
+        const merged = { ...memoryStorage, ...(items || {}) }
+        resolve(key ? merged[key] : merged)
+      })
+    })
+  }
+  return key ? memoryStorage[key] : { ...memoryStorage }
+}
+
+export async function setStorage(items) {
+  Object.assign(memoryStorage, items)
+  if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+    return new Promise((resolve) => {
+      chrome.storage.local.set(items, resolve)
+    })
+  }
+}
+
+export async function clearStorage() {
+  memoryStorage.authToken = ''
+  memoryStorage.authenticatedUser = null
+  memoryStorage.workspaceId = null
+  memoryStorage.availableWorkspaces = []
+  if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+    return new Promise((resolve) => {
+      chrome.storage.local.remove(
+        ['authToken', 'authenticatedUser', 'workspaceId', 'availableWorkspaces'],
+        resolve
+      )
+    })
+  }
+}
+
+export function extractList(payload) {
+  if (!payload) return []
+  if (Array.isArray(payload)) return payload
+  if (Array.isArray(payload.content)) return payload.content
+  if (payload.data) {
+    if (Array.isArray(payload.data)) return payload.data
+    if (Array.isArray(payload.data.content)) return payload.data.content
+  }
+  return []
+}
+
 export const crmApi = {
   /**
-   * Check connection to the CRM backend (/actuator/health)
-   * @param {string} [customEndpoint] - Optional endpoint override
-   * @returns {Promise<{success: boolean, status: string, statusCode: number, latencyMs: number, data?: any, error?: string}>}
+   * Get effective CRM base URL
    */
-  async checkConnection(customEndpoint = null) {
-    const settings = await extensionStorage.get()
-    const base = (customEndpoint || settings.crmEndpoint || 'http://localhost:8080').replace(/\/$/, '')
-    const url = `${base}/actuator/health`
-
-    const startTime = performance.now()
-    try {
-      logger.info('Pinging CRM backend:', url)
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 5000)
-
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-          ...(settings.authToken ? { Authorization: `Bearer ${settings.authToken}` } : {}),
-        },
-        signal: controller.signal,
-      })
-
-      clearTimeout(timeoutId)
-      const latencyMs = Math.round(performance.now() - startTime)
-
-      if (response.ok) {
-        let body = null
-        try {
-          body = await response.json()
-        } catch {
-          body = { status: 'UP' }
-        }
-        logger.success(`CRM Connection OK (${latencyMs}ms):`, body)
-        return {
-          success: true,
-          status: 'CONNECTED',
-          statusCode: response.status,
-          latencyMs,
-          data: body,
-        }
-      } else {
-        logger.warn(`CRM Connection returned status ${response.status} (${latencyMs}ms)`)
-        return {
-          success: false,
-          status: 'DISCONNECTED',
-          statusCode: response.status,
-          latencyMs,
-          error: `HTTP ${response.status}: ${response.statusText}`,
-        }
-      }
-    } catch (err) {
-      const latencyMs = Math.round(performance.now() - startTime)
-      const isTimeout = err.name === 'AbortError'
-      const errorMsg = isTimeout ? 'Connection timed out (5s)' : err.message || 'Network unreachable'
-      logger.error('CRM Connection failed:', errorMsg)
-      return {
-        success: false,
-        status: 'DISCONNECTED',
-        statusCode: 0,
-        latencyMs,
-        error: errorMsg,
-      }
-    }
+  async getEndpoint() {
+    const store = await getStorage()
+    return (store.crmEndpoint || DEFAULT_ENDPOINT).replace(/\/$/, '')
   },
 
   /**
-   * Fetch registered Chrome Extensions for the configured workspace
-   * @returns {Promise<{success: boolean, data?: any[], statusCode: number, latencyMs: number, error?: string}>}
+   * Update CRM base URL
    */
-  async fetchExtensions() {
-    const settings = await extensionStorage.get()
-    const base = (settings.crmEndpoint || 'http://localhost:8080').replace(/\/$/, '')
-    const workspaceId = settings.workspaceId || 1
-    const endpoint = `${base}/api/workspaces/${workspaceId}/chrome-extensions`
-
-    const startTime = performance.now()
-    try {
-      logger.info('Fetching extensions from:', endpoint)
-      const response = await fetch(endpoint, {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-          ...(settings.authToken ? { Authorization: `Bearer ${settings.authToken}` } : {}),
-        },
-      })
-
-      const latencyMs = Math.round(performance.now() - startTime)
-      if (response.ok) {
-        const payload = await response.json()
-        return {
-          success: true,
-          statusCode: response.status,
-          latencyMs,
-          data: payload?.data?.content || payload?.data || [],
-        }
-      } else {
-        return {
-          success: false,
-          statusCode: response.status,
-          latencyMs,
-          error: `HTTP ${response.status}: ${response.statusText}`,
-        }
-      }
-    } catch (err) {
-      return {
-        success: false,
-        statusCode: 0,
-        latencyMs: Math.round(performance.now() - startTime),
-        error: err.message || 'Network request failed',
-      }
-    }
+  async setEndpoint(endpoint) {
+    await setStorage({ crmEndpoint: endpoint })
   },
 
   /**
-   * Login user with email & password
+   * Authenticate user with CRM REST API
    * POST /api/auth/login
-   * @param {string} email
-   * @param {string} password
-   * @param {string} [customEndpoint]
-   * @returns {Promise<{success: boolean, token?: string, user?: any, error?: string}>}
    */
-  async login(email, password, customEndpoint = null) {
-    const settings = await extensionStorage.get()
-    const base = (customEndpoint || settings.crmEndpoint || 'http://localhost:8080').replace(/\/$/, '')
-    const url = `${base}/api/auth/login`
+  async login(email, password) {
+    const base = await this.getEndpoint()
+    try {
+      const response = await fetch(`${base}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+
+      const payload = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: payload?.message || `Login failed with HTTP ${response.status}`,
+        }
+      }
+
+      const token = payload?.data?.token || payload?.token
+      const user = payload?.data?.user || payload?.user
+
+      if (!token) {
+        return { success: false, error: 'No authentication token returned by server' }
+      }
+
+      // Fetch user's workspaces
+      let workspaces = []
+      try {
+        const wsRes = await fetch(`${base}/api/workspaces`, {
+          method: 'GET',
+          headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+        })
+        if (wsRes.ok) {
+          const wsData = await wsRes.json()
+          workspaces = extractList(wsData)
+        }
+      } catch (err) {
+        console.warn('Could not auto-fetch workspaces on login:', err)
+      }
+
+      const selectedWorkspaceId = workspaces.length > 0 ? workspaces[0].id : null
+
+      await setStorage({
+        authToken: token,
+        authenticatedUser: user,
+        availableWorkspaces: workspaces,
+        workspaceId: selectedWorkspaceId,
+      })
+
+      return {
+        success: true,
+        data: {
+          token,
+          user,
+          workspaces,
+          selectedWorkspaceId,
+        },
+      }
+    } catch (err) {
+      return { success: false, error: err.message || 'Network error during login' }
+    }
+  },
+
+  /**
+   * Clear session
+   */
+  async logout() {
+    await clearStorage()
+    return { success: true }
+  },
+
+  /**
+   * Get user workspaces
+   * GET /api/workspaces
+   */
+  async getWorkspaces(token = null) {
+    const store = await getStorage()
+    const authToken = token || store.authToken
+    const base = await this.getEndpoint()
+
+    if (!authToken) {
+      return { success: false, error: 'Authentication required' }
+    }
 
     try {
-      logger.info('Attempting login:', url)
+      const response = await fetch(`${base}/api/workspaces`, {
+        method: 'GET',
+        headers: { Accept: 'application/json', Authorization: `Bearer ${authToken}` },
+      })
+      if (!response.ok) {
+        return { success: false, error: `HTTP ${response.status}` }
+      }
+      const data = await response.json()
+      const workspaces = extractList(data)
+      await setStorage({ availableWorkspaces: workspaces })
+      return { success: true, data: workspaces }
+    } catch (err) {
+      return { success: false, error: err.message }
+    }
+  },
+
+  /**
+   * Get workspace members for assignment
+   * GET /api/workspaces/{workspaceId}/members
+   */
+  async getWorkspaceMembers(workspaceId = null, token = null) {
+    const store = await getStorage()
+    const authToken = token || store.authToken
+    const wsId = workspaceId || store.workspaceId
+    const base = await this.getEndpoint()
+
+    if (!authToken || !wsId) {
+      return { success: false, data: [], error: 'Workspace and authentication required' }
+    }
+
+    try {
+      const response = await fetch(`${base}/api/workspaces/${wsId}/members`, {
+        method: 'GET',
+        headers: { Accept: 'application/json', Authorization: `Bearer ${authToken}` },
+      })
+      if (!response.ok) {
+        return { success: false, data: [], error: `HTTP ${response.status}` }
+      }
+      const data = await response.json()
+      const members = extractList(data)
+      return { success: true, data: members }
+    } catch (err) {
+      return { success: false, data: [], error: err.message }
+    }
+  },
+
+  /**
+   * GET /api/tasks?workspaceId={workspaceId}
+   * Phase 2 / 3: List tasks scoped to workspace
+   */
+  async getTasks(workspaceId = null, token = null, page = 0, size = 20) {
+    const store = await getStorage()
+    const authToken = token || store.authToken
+    const wsId = workspaceId || store.workspaceId
+    const base = await this.getEndpoint()
+
+    if (!authToken || !wsId) {
+      return { success: false, data: [], error: 'Workspace and authentication required' }
+    }
+
+    try {
+      const url = `${base}/api/tasks?workspaceId=${wsId}&page=${page}&size=${size}&sortBy=createdAt&sortDir=desc`
       const response = await fetch(url, {
+        method: 'GET',
+        headers: { Accept: 'application/json', Authorization: `Bearer ${authToken}` },
+      })
+      if (!response.ok) {
+        return { success: false, data: [], error: `HTTP ${response.status}` }
+      }
+      const json = await response.json()
+      const tasks = extractList(json)
+      return { success: true, data: tasks }
+    } catch (err) {
+      return { success: false, data: [], error: err.message }
+    }
+  },
+
+  /**
+   * POST /api/tasks
+   * Phase 2 / 3: Create / Assign new task
+   */
+  async createTask(taskData, token = null) {
+    const store = await getStorage()
+    const authToken = token || store.authToken
+    const base = await this.getEndpoint()
+    const wsId = taskData?.workspaceId || store.workspaceId
+
+    if (!authToken || !wsId) {
+      return { success: false, error: 'Workspace and authentication required' }
+    }
+
+    const payload = {
+      workspaceId: Number(wsId),
+      title: taskData.title,
+      description: taskData.description || null,
+      status: taskData.status || 'TODO',
+      priority: taskData.priority || 'MEDIUM',
+      dueDate: taskData.dueDate || null,
+      assignedToId: taskData.assignedToId ? Number(taskData.assignedToId) : null,
+      projectId: taskData.projectId ? Number(taskData.projectId) : null,
+    }
+
+    try {
+      const response = await fetch(`${base}/api/tasks`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json',
+          Authorization: `Bearer ${authToken}`,
         },
-        body: JSON.stringify({ email: email.trim(), password }),
-      })
-
-      const payload = await response.json().catch(() => null)
-      if (response.ok && payload && payload.success && payload.data?.token) {
-        logger.success('Login successful for user:', payload.data.user?.email)
-        return {
-          success: true,
-          token: payload.data.token,
-          user: payload.data.user,
-        }
-      } else {
-        const errorMsg = payload?.message || `Login failed: HTTP ${response.status}`
-        logger.warn('Login rejected:', errorMsg)
-        return {
-          success: false,
-          error: errorMsg,
-        }
-      }
-    } catch (err) {
-      logger.error('Login network error:', err)
-      return {
-        success: false,
-        error: err.message || 'Unable to connect to CRM server. Check server status and endpoint URL.',
-      }
-    }
-  },
-
-  /**
-   * Validate session token
-   * GET /api/users/me
-   * @param {string} token
-   * @param {string} [customEndpoint]
-   * @returns {Promise<{success: boolean, valid: boolean, user?: any, statusCode?: number, error?: string}>}
-   */
-  async validateSession(token, customEndpoint = null) {
-    if (!token || !token.trim()) {
-      return { success: false, valid: false, error: 'No token provided' }
-    }
-
-    const settings = await extensionStorage.get()
-    const base = (customEndpoint || settings.crmEndpoint || 'http://localhost:8080').replace(/\/$/, '')
-    const url = `${base}/api/users/me`
-
-    try {
-      logger.info('Validating session token with:', url)
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-          Authorization: `Bearer ${token.trim()}`,
-        },
-      })
-
-      if (response.ok) {
-        const payload = await response.json().catch(() => null)
-        const user = payload?.data || null
-        return {
-          success: true,
-          valid: true,
-          statusCode: response.status,
-          user,
-        }
-      } else {
-        return {
-          success: false,
-          valid: false,
-          statusCode: response.status,
-          error: response.status === 401 || response.status === 403 ? 'Session expired' : `HTTP ${response.status}`,
-        }
-      }
-    } catch (err) {
-      logger.error('Session validation error:', err)
-      return {
-        success: false,
-        valid: false,
-        statusCode: 0,
-        error: err.message || 'Network error during validation',
-      }
-    }
-  },
-
-  /**
-   * Fetch all workspaces accessible to current user
-   * GET /api/workspaces?page=0&size=50
-   * @param {string} token
-   * @param {string} [customEndpoint]
-   * @returns {Promise<{success: boolean, data: any[], error?: string}>}
-   */
-  async fetchWorkspaces(token = null, customEndpoint = null) {
-    const settings = await extensionStorage.get()
-    const base = (customEndpoint || settings.crmEndpoint || 'http://localhost:8080').replace(/\/$/, '')
-    const authToken = token !== undefined && token !== null ? token : settings.authToken
-    if (!authToken || !authToken.trim()) {
-      return { success: false, data: [], error: 'Authentication required to fetch workspaces' }
-    }
-
-    const url = `${base}/api/workspaces?page=0&size=50`
-
-    try {
-      logger.info('Fetching accessible workspaces from:', url)
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-          Authorization: `Bearer ${authToken.trim()}`,
-        },
-      })
-
-      if (response.ok) {
-        const payload = await response.json().catch(() => null)
-        const rawWorkspaces = payload?.data?.content !== undefined
-          ? payload.data.content
-          : (Array.isArray(payload?.data) ? payload.data : [])
-        logger.success(`Fetched ${rawWorkspaces.length} accessible workspaces`)
-        return {
-          success: true,
-          data: rawWorkspaces,
-        }
-      } else {
-        return {
-          success: false,
-          data: [],
-          error: `HTTP ${response.status}: Failed to fetch workspaces`,
-        }
-      }
-    } catch (err) {
-      logger.error('Fetch workspaces network error:', err)
-      return {
-        success: false,
-        data: [],
-        error: err.message || 'Network error',
-      }
-    }
-  },
-
-  /**
-   * Fetch real CRM tasks for the configured or specified workspace
-   * API: GET /api/tasks?workspaceId={workspaceId}&page=0&size=10&sortBy=createdAt&sortDir=desc
-   * @param {number|string} [workspaceId] - Workspace ID
-   * @param {string} [token] - Optional JWT token
-   * @param {object} [params] - Pagination & sort options
-   * @returns {Promise<{success: boolean, data: any[], statusCode: number, latencyMs: number, error?: string}>}
-   */
-  async fetchTasks(workspaceId = null, token = null, params = {}) {
-    const settings = await extensionStorage.get()
-    const base = (settings.crmEndpoint || 'http://localhost:8080').replace(/\/$/, '')
-    const wsId = workspaceId !== undefined && workspaceId !== null ? workspaceId : settings.workspaceId
-    const authToken = token !== undefined && token !== null ? token : settings.authToken
-
-    if (!authToken || !authToken.trim()) {
-      return {
-        success: false,
-        statusCode: 401,
-        latencyMs: 0,
-        data: [],
-        error: 'Authentication required. Please sign in.',
-      }
-    }
-
-    if (!wsId) {
-      return {
-        success: false,
-        statusCode: 400,
-        latencyMs: 0,
-        data: [],
-        error: 'No workspace selected. Please select a workspace.',
-      }
-    }
-
-    const { page = 0, size = 10, sortBy = 'createdAt', sortDir = 'desc' } = params
-    const query = new URLSearchParams({
-      workspaceId: wsId.toString(),
-      page: page.toString(),
-      size: size.toString(),
-      sortBy,
-      sortDir,
-    })
-
-    const endpoint = `${base}/api/tasks?${query.toString()}`
-    const startTime = performance.now()
-
-    try {
-      logger.info('Fetching tasks from CRM:', endpoint)
-      const headers = {
-        Accept: 'application/json',
-      }
-      if (authToken && authToken.trim()) {
-        headers['Authorization'] = `Bearer ${authToken.trim()}`
-      }
-
-      const response = await fetch(endpoint, {
-        method: 'GET',
-        headers,
-      })
-
-      const latencyMs = Math.round(performance.now() - startTime)
-      if (response.ok) {
-        const payload = await response.json()
-        // Extract tasks from ApiResponse: payload.data.content or payload.data
-        const rawTasks = payload?.data?.content !== undefined 
-          ? payload.data.content 
-          : (Array.isArray(payload?.data) ? payload.data : [])
-
-        logger.success(`Fetched ${rawTasks.length} tasks (${latencyMs}ms)`)
-        return {
-          success: true,
-          statusCode: response.status,
-          latencyMs,
-          data: rawTasks,
-          totalElements: payload?.data?.totalElements ?? rawTasks.length,
-          totalPages: payload?.data?.totalPages ?? 1,
-        }
-      } else {
-        let errMsg = `HTTP ${response.status}: ${response.statusText}`
-        try {
-          const errBody = await response.json()
-          if (errBody?.message) {
-            errMsg = errBody.message
-          }
-        } catch {}
-
-        logger.warn(`Fetch tasks failed: ${errMsg} (${latencyMs}ms)`)
-        return {
-          success: false,
-          statusCode: response.status,
-          latencyMs,
-          data: [],
-          error: errMsg,
-        }
-      }
-    } catch (err) {
-      const latencyMs = Math.round(performance.now() - startTime)
-      logger.error('Fetch tasks network error:', err)
-      return {
-        success: false,
-        statusCode: 0,
-        latencyMs,
-        data: [],
-        error: err.message || 'Network request failed',
-      }
-    }
-  },
-
-  /**
-   * Fetch members of a workspace to populate assignee dropdowns
-   * API: GET /api/workspaces/{workspaceId}/members?page=0&size=50
-   * @param {number|string} [workspaceId] - Workspace ID
-   * @param {string} [token] - Optional JWT token
-   * @param {object} [params] - Pagination options
-   * @returns {Promise<{success: boolean, data: any[], statusCode: number, latencyMs: number, error?: string}>}
-   */
-  async fetchMembers(workspaceId = null, token = null, params = {}) {
-    const settings = await extensionStorage.get()
-    const base = (settings.crmEndpoint || 'http://localhost:8080').replace(/\/$/, '')
-    const wsId = workspaceId !== undefined && workspaceId !== null ? workspaceId : settings.workspaceId
-    const authToken = token !== undefined && token !== null ? token : settings.authToken
-
-    if (!authToken || !authToken.trim()) {
-      return {
-        success: false,
-        statusCode: 401,
-        latencyMs: 0,
-        data: [],
-        error: 'Authentication required. Please sign in.',
-      }
-    }
-
-    if (!wsId) {
-      return {
-        success: false,
-        statusCode: 400,
-        latencyMs: 0,
-        data: [],
-        error: 'No workspace selected.',
-      }
-    }
-
-    const { page = 0, size = 50 } = params
-    const endpoint = `${base}/api/workspaces/${wsId}/members?page=${page}&size=${size}`
-    const startTime = performance.now()
-
-    try {
-      logger.info('Fetching workspace members from CRM:', endpoint)
-      const headers = {
-        Accept: 'application/json',
-      }
-      if (authToken && authToken.trim()) {
-        headers['Authorization'] = `Bearer ${authToken.trim()}`
-      }
-
-      const response = await fetch(endpoint, {
-        method: 'GET',
-        headers,
-      })
-
-      const latencyMs = Math.round(performance.now() - startTime)
-      if (response.ok) {
-        const payload = await response.json()
-        const members = payload?.data?.content !== undefined
-          ? payload.data.content
-          : (Array.isArray(payload?.data) ? payload.data : [])
-
-        logger.success(`Fetched ${members.length} workspace members (${latencyMs}ms)`)
-        return {
-          success: true,
-          statusCode: response.status,
-          latencyMs,
-          data: members,
-        }
-      } else {
-        let errMsg = `HTTP ${response.status}: ${response.statusText}`
-        try {
-          const errBody = await response.json()
-          if (errBody?.message) errMsg = errBody.message
-        } catch {}
-
-        logger.warn(`Fetch members failed: ${errMsg} (${latencyMs}ms)`)
-        return {
-          success: false,
-          statusCode: response.status,
-          latencyMs,
-          data: [],
-          error: errMsg,
-        }
-      }
-    } catch (err) {
-      const latencyMs = Math.round(performance.now() - startTime)
-      logger.error('Fetch members network error:', err)
-      return {
-        success: false,
-        statusCode: 0,
-        latencyMs,
-        data: [],
-        error: err.message || 'Network request failed',
-      }
-    }
-  },
-
-  /**
-   * Create a real CRM task in the specified workspace
-   * API: POST /api/tasks
-   * @param {object} taskData - Task payload matching TaskCreateRequest
-   * @param {string} [token] - Optional JWT token
-   * @returns {Promise<{success: boolean, data: any, statusCode: number, latencyMs: number, error?: string}>}
-   */
-  async createTask(taskData, token = null) {
-    const settings = await extensionStorage.get()
-    const base = (settings.crmEndpoint || 'http://localhost:8080').replace(/\/$/, '')
-    const wsId = taskData.workspaceId !== undefined && taskData.workspaceId !== null ? taskData.workspaceId : settings.workspaceId
-    const authToken = token !== undefined && token !== null ? token : settings.authToken
-
-    if (!authToken || !authToken.trim()) {
-      return {
-        success: false,
-        statusCode: 401,
-        latencyMs: 0,
-        data: null,
-        error: 'Authentication required. Please sign in.',
-      }
-    }
-
-    if (!wsId) {
-      return {
-        success: false,
-        statusCode: 400,
-        latencyMs: 0,
-        data: null,
-        error: 'No workspace selected.',
-      }
-    }
-
-    const payload = {
-      workspaceId: wsId,
-      title: taskData.title ? taskData.title.trim() : '',
-      description: taskData.description ? taskData.description.trim() : '',
-      status: taskData.status || 'TODO',
-      priority: taskData.priority || 'MEDIUM',
-      dueDate: taskData.dueDate || null,
-      assignedToId: taskData.assignedToId || null,
-      assignedToName: taskData.assignedToName || null,
-      projectId: taskData.projectId || null,
-      projectName: taskData.projectName || null,
-    }
-
-    const endpoint = `${base}/api/tasks`
-    const startTime = performance.now()
-
-    try {
-      logger.info('Creating task in CRM:', endpoint, payload.title)
-      const headers = {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      }
-      if (authToken && authToken.trim()) {
-        headers['Authorization'] = `Bearer ${authToken.trim()}`
-      }
-
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers,
         body: JSON.stringify(payload),
       })
-
-      const latencyMs = Math.round(performance.now() - startTime)
-      if (response.ok) {
-        const resBody = await response.json()
-        const createdTask = resBody?.data || resBody
-        logger.success(`Task created successfully ID: ${createdTask?.id} (${latencyMs}ms)`)
-        return {
-          success: true,
-          statusCode: response.status,
-          latencyMs,
-          data: createdTask,
-          message: resBody?.message || 'Task created successfully',
-        }
-      } else {
-        let errMsg = `HTTP ${response.status}: ${response.statusText}`
-        try {
-          const errBody = await response.json()
-          if (errBody?.message) {
-            errMsg = errBody.message
-          } else if (errBody?.data && typeof errBody.data === 'object') {
-            errMsg = Object.values(errBody.data)[0] || errMsg
-          }
-        } catch {}
-
-        logger.warn(`Task creation failed: ${errMsg} (${latencyMs}ms)`)
-        return {
-          success: false,
-          statusCode: response.status,
-          latencyMs,
-          data: null,
-          error: errMsg,
-        }
+      const json = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        return { success: false, error: json?.message || `HTTP ${response.status}` }
       }
+      return { success: true, data: json?.data || json }
     } catch (err) {
-      const latencyMs = Math.round(performance.now() - startTime)
-      logger.error('Create task network error:', err)
-      return {
-        success: false,
-        statusCode: 0,
-        latencyMs,
-        data: null,
-        error: err.message || 'Network request failed',
-      }
+      return { success: false, error: err.message }
     }
   },
 
   /**
-   * Update task status in CRM
-   * API: PATCH /api/tasks/{id}/status
-   * @param {number|string} taskId - Task ID
-   * @param {string} status - New TaskStatus ('TODO', 'IN_PROGRESS', 'DONE', etc.)
-   * @param {number|string} [workspaceId] - Workspace ID
-   * @param {string} [token] - Optional JWT token
-   * @returns {Promise<{success: boolean, data: any, statusCode: number, latencyMs: number, error?: string}>}
+   * PATCH /api/tasks/{taskId}/status
+   * Phase 2 / 3: Update task status (TODO <-> DONE)
    */
   async updateTaskStatus(taskId, status, workspaceId = null, token = null) {
-    const settings = await extensionStorage.get()
-    const base = (settings.crmEndpoint || 'http://localhost:8080').replace(/\/$/, '')
-    const wsId = workspaceId !== undefined && workspaceId !== null ? workspaceId : settings.workspaceId
-    const authToken = token !== undefined && token !== null ? token : settings.authToken
+    const store = await getStorage()
+    const authToken = token || store.authToken
+    const wsId = workspaceId || store.workspaceId
+    const base = await this.getEndpoint()
 
-    if (!authToken || !authToken.trim()) {
-      return {
-        success: false,
-        statusCode: 401,
-        latencyMs: 0,
-        data: null,
-        error: 'Authentication required. Please sign in.',
-      }
+    if (!authToken || !wsId || !taskId) {
+      return { success: false, error: 'Task ID, workspace, and authentication required' }
     }
-
-    if (!wsId) {
-      return {
-        success: false,
-        statusCode: 400,
-        latencyMs: 0,
-        data: null,
-        error: 'No workspace selected.',
-      }
-    }
-
-    const endpoint = `${base}/api/tasks/${taskId}/status`
-    const payload = {
-      workspaceId: parseInt(wsId, 10),
-      status: status.toUpperCase(),
-    }
-    const startTime = performance.now()
 
     try {
-      logger.info(`Updating task ${taskId} status to ${status} in CRM:`, endpoint)
-      const headers = {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      }
-      if (authToken && authToken.trim()) {
-        headers['Authorization'] = `Bearer ${authToken.trim()}`
-      }
-
-      const response = await fetch(endpoint, {
+      const url = `${base}/api/tasks/${taskId}/status`
+      const response = await fetch(url, {
         method: 'PATCH',
-        headers,
-        body: JSON.stringify(payload),
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          workspaceId: Number(wsId),
+          status: status.toUpperCase(),
+        }),
       })
-
-      const latencyMs = Math.round(performance.now() - startTime)
-      if (response.ok) {
-        const resBody = await response.json()
-        const updatedTask = resBody?.data || resBody
-        logger.success(`Task ${taskId} status updated to ${status} (${latencyMs}ms)`)
-        return {
-          success: true,
-          statusCode: response.status,
-          latencyMs,
-          data: updatedTask,
-          message: resBody?.message || 'Task status updated successfully',
-        }
-      } else {
-        let errMsg = `HTTP ${response.status}: ${response.statusText}`
-        try {
-          const errBody = await response.json()
-          if (errBody?.message) {
-            errMsg = errBody.message
-          }
-        } catch {}
-
-        logger.warn(`Update task status failed: ${errMsg} (${latencyMs}ms)`)
-        return {
-          success: false,
-          statusCode: response.status,
-          latencyMs,
-          data: null,
-          error: errMsg,
-        }
+      const json = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        return { success: false, error: json?.message || `HTTP ${response.status}` }
       }
+      return { success: true, data: json?.data || json }
     } catch (err) {
-      const latencyMs = Math.round(performance.now() - startTime)
-      logger.error('Update task status network error:', err)
-      return {
-        success: false,
-        statusCode: 0,
-        latencyMs,
-        data: null,
-        error: err.message || 'Network request failed',
-      }
+      return { success: false, error: err.message }
     }
   },
 
   /**
-   * Fetch recent activities for the active workspace
-   * API: GET /api/analytics/recent?workspaceId={workspaceId}&limit=10
-   * @param {number|string} [workspaceId]
-   * @param {string} [token]
-   * @param {number} [limit]
-   * @returns {Promise<{success: boolean, data: any[], error?: string}>}
+   * DELETE /api/tasks/{taskId}?workspaceId={workspaceId}
+   * Phase 2 / 3: Delete task
    */
-  async fetchRecentActivities(workspaceId = null, token = null, limit = 8) {
-    const settings = await extensionStorage.get()
-    const base = (settings.crmEndpoint || 'http://localhost:8080').replace(/\/$/, '')
-    const wsId = workspaceId !== undefined && workspaceId !== null ? workspaceId : settings.workspaceId
-    const authToken = token !== undefined && token !== null ? token : settings.authToken
+  async deleteTask(taskId, workspaceId = null, token = null) {
+    const store = await getStorage()
+    const authToken = token || store.authToken
+    const wsId = workspaceId || store.workspaceId
+    const base = await this.getEndpoint()
 
-    if (!authToken || !authToken.trim() || !wsId) {
-      return { success: false, data: [], error: 'Authentication and workspace required' }
+    if (!authToken || !wsId || !taskId) {
+      return { success: false, error: 'Task ID, workspace, and authentication required' }
     }
 
-    const endpoint = `${base}/api/analytics/recent?workspaceId=${wsId}&limit=${limit}`
+    try {
+      const url = `${base}/api/tasks/${taskId}?workspaceId=${wsId}`
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: { Accept: 'application/json', Authorization: `Bearer ${authToken}` },
+      })
+      if (!response.ok) {
+        const json = await response.json().catch(() => ({}))
+        return { success: false, error: json?.message || `HTTP ${response.status}` }
+      }
+      return { success: true }
+    } catch (err) {
+      return { success: false, error: err.message }
+    }
+  },
+
+  /**
+   * GET /api/analytics/recent?workspaceId={workspaceId}&limit={limit}
+   * Phase 3: Fetch workspace recent activity
+   */
+  async getRecentActivities(workspaceId = null, token = null, limit = 8) {
+    const store = await getStorage()
+    const authToken = token || store.authToken
+    const wsId = workspaceId || store.workspaceId
+    const base = await this.getEndpoint()
+
+    if (!authToken || !wsId) {
+      return { success: false, data: [], error: 'Workspace and authentication required' }
+    }
 
     try {
-      logger.info('Fetching recent activities:', endpoint)
-      const response = await fetch(endpoint, {
+      const url = `${base}/api/analytics/recent?workspaceId=${wsId}&limit=${limit}`
+      const response = await fetch(url, {
         method: 'GET',
-        headers: {
-          Accept: 'application/json',
-          Authorization: `Bearer ${authToken.trim()}`,
-        },
+        headers: { Accept: 'application/json', Authorization: `Bearer ${authToken}` },
       })
-
-      if (response.ok) {
-        const payload = await response.json()
-        const activities = Array.isArray(payload?.data) ? payload.data : []
-        return { success: true, data: activities }
-      } else {
+      if (!response.ok) {
         return { success: false, data: [], error: `HTTP ${response.status}` }
       }
+      const json = await response.json()
+      const activities = extractList(json)
+      return { success: true, data: activities }
     } catch (err) {
-      logger.warn('Failed to fetch recent activities:', err.message)
       return { success: false, data: [], error: err.message }
     }
   },
 }
-
-

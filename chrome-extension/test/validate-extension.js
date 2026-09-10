@@ -6,7 +6,7 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const extDir = path.resolve(__dirname, '..')
 
-console.log('🔍 Validating Chrome Extension Playground...')
+console.log('🔍 Validating Clean TaskFlow CRM Chrome Extension...')
 
 let failed = false
 
@@ -19,30 +19,33 @@ function assert(condition, message) {
   }
 }
 
-// 1. Validate manifest.json
+// =========================================================================
+// PHASE 1: MANIFEST V3 & HELLO WORLD VALIDATION
+// =========================================================================
+console.log('\n--- PHASE 1: Manifest V3 & Hello World ---')
+
 const manifestPath = path.join(extDir, 'manifest.json')
 assert(fs.existsSync(manifestPath), 'manifest.json exists')
 
-const manifestContent = fs.readFileSync(manifestPath, 'utf8')
 let manifest = null
 try {
-  manifest = JSON.parse(manifestContent)
+  manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
   assert(true, 'manifest.json is valid JSON')
 } catch (e) {
-  assert(false, 'manifest.json JSON parse error: ' + e.message)
+  assert(false, 'manifest.json parse error: ' + e.message)
 }
 
 if (manifest) {
   assert(manifest.manifest_version === 3, 'Manifest version is 3')
-  assert(manifest.name === 'Chrome Extension Playground', 'Manifest name is "Chrome Extension Playground"')
-  assert(manifest.version === '1.0.0', 'Manifest version is set')
-  assert(manifest.action && manifest.action.default_popup, 'action.default_popup defined')
-  assert(manifest.background && manifest.background.service_worker, 'background.service_worker defined')
-  assert(manifest.content_scripts && manifest.content_scripts.length > 0, 'content_scripts defined')
+  assert(manifest.name.includes('TaskFlow CRM'), 'Manifest name contains "TaskFlow CRM"')
+  assert(manifest.version === '1.0.0', 'Manifest version is 1.0.0')
+  assert(manifest.action && manifest.action.default_popup === 'src/popup/popup.html', 'action.default_popup is src/popup/popup.html')
+  assert(manifest.background && manifest.background.service_worker === 'src/background/background.js', 'background.service_worker is src/background/background.js')
+  assert(manifest.content_scripts && manifest.content_scripts[0].js.includes('src/content/content.js'), 'content_scripts includes src/content/content.js')
   assert(manifest.permissions.includes('storage'), 'permissions include "storage"')
   assert(manifest.permissions.includes('activeTab'), 'permissions include "activeTab"')
 
-  // Check referenced files in manifest
+  // Check referenced files
   const checkFile = (relPath, desc) => {
     const fullPath = path.join(extDir, relPath)
     assert(fs.existsSync(fullPath), `${desc} exists (${relPath})`)
@@ -50,203 +53,133 @@ if (manifest) {
 
   checkFile(manifest.action.default_popup, 'Popup HTML')
   checkFile(manifest.background.service_worker, 'Background Worker')
-  checkFile(manifest.options_page, 'Options Page')
-  manifest.content_scripts[0].js.forEach((js) => checkFile(js, 'Content Script JS'))
-  manifest.content_scripts[0].css.forEach((css) => checkFile(css, 'Content Script CSS'))
-
-  // Check icons
+  checkFile(manifest.content_scripts[0].js[0], 'Content Script')
   Object.entries(manifest.icons).forEach(([size, iconPath]) => {
     checkFile(iconPath, `Icon ${size}x${size}`)
   })
 }
 
-// 2. Check source directory modules
+// Check source files
 const requiredSrcFiles = [
   'src/popup/popup.html',
   'src/popup/popup.js',
   'src/popup/popup.css',
   'src/background/background.js',
-  'src/content/contentScript.js',
-  'src/content/contentStyle.css',
-  'src/options/options.html',
-  'src/options/options.js',
-  'src/options/options.css',
+  'src/content/content.js',
   'src/services/crmApi.js',
-  'src/services/crmService.js',
-  'src/storage/extensionStorage.js',
-  'src/storage/storageService.js',
-  'src/utils/logger.js',
 ]
 
 requiredSrcFiles.forEach((file) => {
-  const fullPath = path.join(extDir, file)
-  assert(fs.existsSync(fullPath), `Source file exists: ${file}`)
+  assert(fs.existsSync(path.join(extDir, file)), `Source file exists: ${file}`)
 })
 
-// 3. Validate popup.html contains required elements
+// Phase 1: Popup Hello World Elements
 const popupHtmlPath = path.join(extDir, 'src/popup/popup.html')
 if (fs.existsSync(popupHtmlPath)) {
   const html = fs.readFileSync(popupHtmlPath, 'utf8')
-  assert(html.includes('Chrome Extension Playground'), 'popup.html contains extension name')
-  assert(html.includes('ext-status-badge'), 'popup.html contains extension status badge')
-  assert(html.includes('crm-conn-badge'), 'popup.html contains CRM connection badge')
-  assert(html.includes('btn-check-crm'), 'popup.html contains [Check CRM Connection] button')
-  assert(html.includes('btn-run-diagnostics'), 'popup.html contains [Run Diagnostics] button')
-  assert(html.includes('diag-extension'), 'popup.html contains diagnostic extension badge')
-  assert(html.includes('diag-serviceWorker'), 'popup.html contains diagnostic serviceWorker badge')
-  assert(html.includes('diag-storage'), 'popup.html contains diagnostic storage badge')
-  assert(html.includes('diag-contentScript'), 'popup.html contains diagnostic contentScript badge')
-  assert(html.includes('diag-crmApi'), 'popup.html contains diagnostic crmApi badge')
+  assert(html.includes('TaskFlow CRM'), 'popup.html contains "TaskFlow CRM"')
+  assert(html.includes('Hello from TaskFlow!'), 'popup.html contains "Hello from TaskFlow!" greeting')
+  assert(html.includes('hello-banner'), 'popup.html contains hello-banner')
 }
 
-// 4. Validate background.js message types
+// Background handles HELLO_WORLD
 const backgroundJsPath = path.join(extDir, 'src/background/background.js')
 if (fs.existsSync(backgroundJsPath)) {
   const bg = fs.readFileSync(backgroundJsPath, 'utf8')
-  assert(bg.includes('GET_EXTENSION_STATUS'), 'background.js handles GET_EXTENSION_STATUS')
-  assert(bg.includes('RUN_DIAGNOSTIC'), 'background.js handles RUN_DIAGNOSTIC')
-  assert(bg.includes('GET_STORAGE_STATUS'), 'background.js handles GET_STORAGE_STATUS')
-  assert(bg.includes('PING_CRM'), 'background.js handles PING_CRM')
+  assert(bg.includes('HELLO_WORLD'), 'background.js handles HELLO_WORLD message')
+  assert(bg.includes('Hello from TaskFlow!'), 'background.js returns "Hello from TaskFlow!"')
 }
 
-// 5. Test extensionStorage module
-try {
-  const { extensionStorage } = await import('../src/storage/extensionStorage.js')
-  assert(typeof extensionStorage.save === 'function', 'extensionStorage.save is a function')
-  assert(typeof extensionStorage.get === 'function', 'extensionStorage.get is a function')
-  assert(typeof extensionStorage.remove === 'function', 'extensionStorage.remove is a function')
-  assert(typeof extensionStorage.clear === 'function', 'extensionStorage.clear is a function')
+// =========================================================================
+// PHASE 2: CRUD API DEMO VALIDATION
+// =========================================================================
+console.log('\n--- PHASE 2: CRUD API Demo (GET, POST, PATCH, DELETE) ---')
 
-  // Run in-memory storage test
-  await extensionStorage.save('unit_test_key', 'unit_test_val')
-  const val = await extensionStorage.get('unit_test_key')
-  assert(val === 'unit_test_val', 'extensionStorage save and get works')
-  await extensionStorage.remove('unit_test_key')
-
-  // 6. Test Default Settings & Password Security
-  await extensionStorage.clear()
-  const defaults = await extensionStorage.get()
-  assert(defaults.workspaceId === null, 'DEFAULT_SETTINGS workspaceId is null (not 1)')
-  assert(defaults.authToken === '', 'DEFAULT_SETTINGS authToken is empty')
-  assert(defaults.authenticatedUser === null, 'DEFAULT_SETTINGS authenticatedUser is null')
-  assert(Array.isArray(defaults.availableWorkspaces) && defaults.availableWorkspaces.length === 0, 'DEFAULT_SETTINGS availableWorkspaces is empty')
-  assert(!Object.keys(defaults).includes('password'), 'Storage schema does not store passwords')
-
-  // 7. Test Account Isolation & Switching
-  const accountA = { id: 101, fullName: 'Alex Miller', email: 'alex@example.com' }
-  const tokenA = 'token_account_a'
-  await extensionStorage.save({
-    authToken: tokenA,
-    authenticatedUser: accountA,
-    availableWorkspaces: [{ id: 42, name: 'Workspace A' }],
-    workspaceId: 42,
-  })
-  const storedA = await extensionStorage.get()
-  assert(storedA.authenticatedUser.fullName === 'Alex Miller', 'Account A stored successfully')
-  assert(storedA.workspaceId === 42, 'Account A workspace is 42')
-
-  // Logout Account A
-  await extensionStorage.save({
-    authToken: '',
-    authenticatedUser: null,
-    availableWorkspaces: [],
-    workspaceId: null,
-    diagnosticResults: null,
-  })
-  const loggedOutState = await extensionStorage.get()
-  assert(loggedOutState.authToken === '', 'Logout clears authToken')
-  assert(loggedOutState.authenticatedUser === null, 'Logout clears authenticatedUser')
-  assert(loggedOutState.workspaceId === null, 'Logout clears workspaceId')
-
-  // Login Account B
-  const accountB = { id: 202, fullName: 'Sarah Connor', email: 'sarah@example.com' }
-  const tokenB = 'token_account_b'
-  await extensionStorage.save({
-    authToken: tokenB,
-    authenticatedUser: accountB,
-    availableWorkspaces: [{ id: 88, name: 'WS 1' }, { id: 99, name: 'WS 2' }],
-    workspaceId: null, // multi-workspace requires selection
-  })
-  const storedB = await extensionStorage.get()
-  assert(storedB.authenticatedUser.fullName === 'Sarah Connor', 'Account B stored successfully')
-  assert(storedB.workspaceId === null, 'Account B multi-workspace is null until selected')
-  assert(!JSON.stringify(storedB).includes('Alex'), 'Account B storage contains zero Account A data')
-
-  // Reset to clean defaults
-  await extensionStorage.clear()
-} catch (err) {
-  assert(false, 'extensionStorage module test failed: ' + err.message)
-}
-
-// 8. Validate Quick Task Manager API & Background integration
 const crmApiPath = path.join(extDir, 'src/services/crmApi.js')
 if (fs.existsSync(crmApiPath)) {
   const crmApiCode = fs.readFileSync(crmApiPath, 'utf8')
-  assert(crmApiCode.includes('updateTaskStatus'), 'crmApi.js provides updateTaskStatus')
-  assert(crmApiCode.includes('/api/tasks/'), 'crmApi.js uses /api/tasks/ endpoint')
-  assert(crmApiCode.includes('PATCH'), 'crmApi.js uses PATCH method for task status updates')
+  assert(crmApiCode.includes('getTasks'), 'crmApi.js implements getTasks (GET)')
+  assert(crmApiCode.includes('createTask'), 'crmApi.js implements createTask (POST)')
+  assert(crmApiCode.includes('updateTaskStatus'), 'crmApi.js implements updateTaskStatus (PATCH)')
+  assert(crmApiCode.includes('deleteTask'), 'crmApi.js implements deleteTask (DELETE)')
 }
 
 if (fs.existsSync(backgroundJsPath)) {
   const bg = fs.readFileSync(backgroundJsPath, 'utf8')
+  assert(bg.includes('GET_TASKS'), 'background.js handles GET_TASKS message')
+  assert(bg.includes('CREATE_TASK'), 'background.js handles CREATE_TASK message')
   assert(bg.includes('UPDATE_TASK_STATUS'), 'background.js handles UPDATE_TASK_STATUS message')
+  assert(bg.includes('DELETE_TASK'), 'background.js handles DELETE_TASK message')
 }
 
-// 9. Validate popup.js task completion & workspace isolation
-const popupJsPath = path.join(extDir, 'src/popup/popup.js')
-if (fs.existsSync(popupJsPath)) {
-  const popupJs = fs.readFileSync(popupJsPath, 'utf8')
-  assert(popupJs.includes('task-status-btn'), 'popup.js creates task status action buttons')
-  assert(popupJs.includes('UPDATE_TASK_STATUS'), 'popup.js sends UPDATE_TASK_STATUS messages')
-  assert(popupJs.includes('taskItemsContainer.innerHTML = \'\''), 'popup.js clears stale tasks immediately on workspace switch')
+// Unit test crmApi storage & security
+try {
+  const { crmApi, getStorage, setStorage, clearStorage } = await import('../src/services/crmApi.js')
+  assert(typeof crmApi.getTasks === 'function', 'crmApi.getTasks is a function')
+  assert(typeof crmApi.createTask === 'function', 'crmApi.createTask is a function')
+  assert(typeof crmApi.updateTaskStatus === 'function', 'crmApi.updateTaskStatus is a function')
+  assert(typeof crmApi.deleteTask === 'function', 'crmApi.deleteTask is a function')
+
+  // Storage tests
+  await clearStorage()
+  const initial = await getStorage()
+  assert(initial.authToken === '', 'Initial authToken is empty')
+  assert(initial.authenticatedUser === null, 'Initial authenticatedUser is null')
+  assert(initial.workspaceId === null, 'Initial workspaceId is null')
+  assert(!Object.keys(initial).includes('password'), 'Storage does not persist password field')
+
+  // Test setStorage
+  await setStorage({ authToken: 'test_token', workspaceId: 10 })
+  const updated = await getStorage()
+  assert(updated.authToken === 'test_token', 'setStorage persists authToken')
+  assert(updated.workspaceId === 10, 'setStorage persists workspaceId')
+
+  await clearStorage()
+  const cleared = await getStorage()
+  assert(cleared.authToken === '', 'clearStorage resets authToken')
+  assert(cleared.workspaceId === null, 'clearStorage resets workspaceId')
+} catch (err) {
+  assert(false, 'crmApi module import test failed: ' + err.message)
 }
 
-// 10. Validate popup.css task styling
-const popupCssPath = path.join(extDir, 'src/popup/popup.css')
-if (fs.existsSync(popupCssPath)) {
-  const popupCss = fs.readFileSync(popupCssPath, 'utf8')
-  assert(popupCss.includes('.task-status-btn'), 'popup.css styles task-status-btn')
-  assert(popupCss.includes('.workspace-select'), 'popup.css styles workspace-select')
-  assert(popupCss.includes('.task-status-btn.completed'), 'popup.css styles completed state')
-}
-
-// 11. Validate Recent Activity & Client Polish
-if (fs.existsSync(crmApiPath)) {
-  const crmApiCode = fs.readFileSync(crmApiPath, 'utf8')
-  assert(crmApiCode.includes('fetchRecentActivities'), 'crmApi.js provides fetchRecentActivities')
-  assert(crmApiCode.includes('/api/analytics/recent'), 'crmApi.js uses /api/analytics/recent endpoint')
-}
-
-if (fs.existsSync(backgroundJsPath)) {
-  const bg = fs.readFileSync(backgroundJsPath, 'utf8')
-  assert(bg.includes('FETCH_RECENT_ACTIVITIES'), 'background.js handles FETCH_RECENT_ACTIVITIES message')
-}
+// =========================================================================
+// PHASE 3: REAL CRM INTEGRATION & QUICK TASK MANAGER UX
+// =========================================================================
+console.log('\n--- PHASE 3: Real CRM Integration & Task Manager UX ---')
 
 if (fs.existsSync(popupHtmlPath)) {
   const html = fs.readFileSync(popupHtmlPath, 'utf8')
-  assert(html.includes('recent-activity-section'), 'popup.html contains recent-activity-section')
-  assert(html.includes('Assign New Task'), 'popup.html has "Assign New Task" button/header')
-  assert(html.includes('activity-items'), 'popup.html contains activity items list')
+  assert(html.includes('Assign New Task'), 'popup.html contains "Assign New Task" button/title')
+  assert(html.includes('workspace-switcher'), 'popup.html contains workspace selector')
+  assert(html.includes('recent-activity-section'), 'popup.html contains recent activity section')
+  assert(html.includes('task-items'), 'popup.html contains task items list')
+  assert(html.includes('new-task-assignee'), 'popup.html contains assignee dropdown')
 }
 
+const popupJsPath = path.join(extDir, 'src/popup/popup.js')
 if (fs.existsSync(popupJsPath)) {
-  const popupJs = fs.readFileSync(popupJsPath, 'utf8')
-  assert(popupJs.includes('loadRecentActivities'), 'popup.js implements loadRecentActivities')
-  assert(popupJs.includes('FETCH_RECENT_ACTIVITIES'), 'popup.js dispatches FETCH_RECENT_ACTIVITIES')
-  assert(popupJs.includes('activityItemsContainer.innerHTML = \'\''), 'popup.js clears activities on workspace switch')
+  const js = fs.readFileSync(popupJsPath, 'utf8')
+  assert(js.includes('loadTasks'), 'popup.js defines loadTasks')
+  assert(js.includes('loadMembers'), 'popup.js defines loadMembers for workspace assignment')
+  assert(js.includes('loadRecentActivities'), 'popup.js defines loadRecentActivities')
+  assert(js.includes('btn-toggle-status'), 'popup.js implements status toggle action button')
+  assert(js.includes('taskItemsContainer.innerHTML = \'\''), 'popup.js immediately clears task list on workspace switch (Isolation)')
 }
 
+const popupCssPath = path.join(extDir, 'src/popup/popup.css')
 if (fs.existsSync(popupCssPath)) {
-  const popupCss = fs.readFileSync(popupCssPath, 'utf8')
-  assert(popupCss.includes('.recent-activity-section'), 'popup.css styles .recent-activity-section')
-  assert(popupCss.includes('.activity-item'), 'popup.css styles .activity-item')
+  const css = fs.readFileSync(popupCssPath, 'utf8')
+  assert(css.includes('380px'), 'popup.css specifies compact 380px width')
+  assert(css.includes('.btn-toggle-status'), 'popup.css styles .btn-toggle-status')
+  assert(css.includes('.recent-activity-section'), 'popup.css styles .recent-activity-section')
+  assert(css.includes('.task-row'), 'popup.css styles .task-row')
 }
 
-console.log('───────────────────────────────────────────────────────')
+console.log('\n───────────────────────────────────────────────────────')
 if (failed) {
   console.error('💥 Extension validation FAILED!')
   process.exit(1)
 } else {
-  console.log('🎉 Extension validation SUCCEEDED! Ready for chrome://extensions.')
+  console.log('🎉 Extension validation SUCCEEDED! All phases verified.')
   process.exit(0)
 }

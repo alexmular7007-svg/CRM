@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Chrome Extension Playground",
+  "name": "TaskFlow CRM - Quick Task Manager",
   "version": "1.0.0",
-  "description": "Chrome Extension playground for testing CRUD operations and communication with TaskFlow CRM.",
+  "description": "Quick Task Manager Chrome Extension for TaskFlow CRM. Manage tasks, assign work, and track activity.",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -10,7 +10,7 @@
   },
   "action": {
     "default_popup": "src/popup/popup.html",
-    "default_title": "Chrome Extension Playground",
+    "default_title": "TaskFlow CRM - Quick Task Manager",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
@@ -21,12 +21,10 @@
     "service_worker": "src/background/background.js",
     "type": "module"
   },
-  "options_page": "src/options/options.html",
   "content_scripts": [
     {
       "matches": ["http://*/*", "https://*/*"],
-      "js": ["src/content/contentScript.js"],
-      "css": ["src/content/contentStyle.css"],
+      "js": ["src/content/content.js"],
       "run_at": "document_idle"
     }
   ],

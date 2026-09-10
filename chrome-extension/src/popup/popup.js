@@ -1,58 +1,30 @@
-import { extensionStorage } from '../storage/extensionStorage.js'
+/**
+ * TaskFlow CRM - Quick Task Manager Popup Controller
+ * Lightweight, direct Manifest V3 popup script.
+ * Architecture: popup.js -> background.js -> crmApi.js -> REST API
+ */
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Views & Containers
-  const loginPanel = document.getElementById('login-panel')
-  const authenticatedView = document.getElementById('authenticated-view')
-  const sessionCheckingPanel = document.getElementById('session-checking-panel')
-  const rememberedAccountPanel = document.getElementById('remembered-account-panel')
-  const rememberedUserName = document.getElementById('remembered-user-name')
-  const rememberedUserEmail = document.getElementById('remembered-user-email')
-  const btnContinueUser = document.getElementById('btn-continue-user')
-  const btnContinueName = document.getElementById('btn-continue-name')
-  const btnSwitchAccount = document.getElementById('btn-switch-account')
-
+  // --- DOM Elements ---
+  const authPanel = document.getElementById('auth-panel')
+  const mainPanel = document.getElementById('main-panel')
   const formLogin = document.getElementById('form-login')
   const loginEmail = document.getElementById('login-email')
   const loginPassword = document.getElementById('login-password')
+  const loginErrorAlert = document.getElementById('login-error-alert')
   const btnSubmitLogin = document.getElementById('btn-submit-login')
-  const loginError = document.getElementById('login-error')
-  const loginErrorText = document.getElementById('login-error-text')
-
-  // Header & Controls
-  const headerUserInfo = document.getElementById('header-user-info')
   const btnSignOut = document.getElementById('btn-sign-out')
+  const userDisplayName = document.getElementById('user-display-name')
+
+  // Top Bar & Workspace Switcher
   const workspaceSwitcher = document.getElementById('workspace-switcher')
-  const btnOpenSettings = document.getElementById('btn-open-settings')
-  const btnOpenOptions = document.getElementById('btn-open-options')
-
-  // Real Task UI Elements
-  const activeWorkspaceBadge = document.getElementById('active-workspace-badge')
   const taskCountBadge = document.getElementById('task-count-badge')
-  const taskItemsContainer = document.getElementById('task-items')
-  const taskListContainer = document.getElementById('task-list-container')
-  const stateLoading = document.getElementById('state-loading')
-  const stateError = document.getElementById('state-error')
-  const stateEmpty = document.getElementById('state-empty')
-  const errorMessageEl = document.getElementById('error-message')
-
-  // Recent Activity Elements
-  const recentActivitySection = document.getElementById('recent-activity-section')
-  const activityLoading = document.getElementById('activity-loading')
-  const activityEmpty = document.getElementById('activity-empty')
-  const activityItemsContainer = document.getElementById('activity-items')
-  const activityCountBadge = document.getElementById('activity-count-badge')
-
-  // Action Buttons
-  const btnRefreshTasks = document.getElementById('btn-refresh-tasks')
-  const btnRetryTasks = document.getElementById('btn-retry-tasks')
   const btnShowCreateForm = document.getElementById('btn-show-create-form')
-  const btnCloseCreateForm = document.getElementById('btn-close-create-form')
-  const btnCancelCreateTask = document.getElementById('btn-cancel-create-task')
-  const btnCreateFirstTask = document.getElementById('btn-create-first-task')
 
-  // Form Elements
-  const createTaskPanel = document.getElementById('create-task-panel')
+  // Create Task Drawer
+  const createTaskDrawer = document.getElementById('create-task-drawer')
+  const btnCloseCreateDrawer = document.getElementById('btn-close-create-drawer')
+  const btnCancelCreate = document.getElementById('btn-cancel-create')
   const formCreateTask = document.getElementById('form-create-task')
   const newTaskTitle = document.getElementById('new-task-title')
   const newTaskDesc = document.getElementById('new-task-desc')
@@ -60,446 +32,377 @@ document.addEventListener('DOMContentLoaded', async () => {
   const newTaskPriority = document.getElementById('new-task-priority')
   const newTaskDueDate = document.getElementById('new-task-duedate')
   const btnSubmitCreateTask = document.getElementById('btn-submit-create-task')
-  const createTaskError = document.getElementById('create-task-error')
-  const createTaskErrorText = document.getElementById('create-task-error-text')
-  const successToast = document.getElementById('success-toast')
-  const successToastText = document.getElementById('success-toast-text')
+  const createErrorAlert = document.getElementById('create-error-alert')
 
-  // Legacy Harness Elements (for test harness validation)
-  const extVersionEl = document.getElementById('ext-version')
-  const extStatusBadge = document.getElementById('ext-status-badge')
-  const crmConnBadge = document.getElementById('crm-conn-badge')
-  const targetEndpointEl = document.getElementById('target-endpoint')
-  const targetWorkspaceEl = document.getElementById('target-workspace')
+  // Task List & States
+  const taskItemsContainer = document.getElementById('task-items')
+  const stateLoading = document.getElementById('state-loading')
+  const stateEmpty = document.getElementById('state-empty')
+  const btnCreateFirstTask = document.getElementById('btn-create-first-task')
+  const btnRefreshTasks = document.getElementById('btn-refresh-tasks')
 
-  let cachedMembers = []
+  // Recent Activity
+  const recentActivitySection = document.getElementById('recent-activity-section')
+  const activityItemsContainer = document.getElementById('activity-items')
+  const activityCountBadge = document.getElementById('activity-count-badge')
+  const activityEmpty = document.getElementById('activity-empty')
+
+  // Toast
+  const toast = document.getElementById('toast')
+  const toastMessage = document.getElementById('toast-message')
   let toastTimer = null
 
-  // 1. Initialize Active Workspace & Settings
-  const settings = await extensionStorage.get()
-  const workspaceId = settings.workspaceId
-  if (activeWorkspaceBadge) {
-    activeWorkspaceBadge.textContent = workspaceId ? `#${workspaceId}` : '—'
-  }
-  if (targetWorkspaceEl) {
-    targetWorkspaceEl.textContent = workspaceId ? `#${workspaceId}` : 'None'
-  }
-  if (targetEndpointEl) {
-    targetEndpointEl.textContent = (settings.crmEndpoint || 'http://localhost:8080').replace(/^https?:\/\//, '')
-  }
-  if (extVersionEl && typeof chrome !== 'undefined' && chrome.runtime?.getManifest) {
-    extVersionEl.textContent = 'v' + chrome.runtime.getManifest().version
+  // Local state
+  let currentWorkspaceId = null
+  let cachedMembers = []
+
+  // --- 1. Hello World Verification (Phase 1) ---
+  try {
+    const helloRes = await chrome.runtime.sendMessage({ type: 'HELLO_WORLD' })
+    if (helloRes && helloRes.message) {
+      console.log('[TaskFlow CRM] Phase 1 Hello World OK:', helloRes.message)
+    }
+  } catch (err) {
+    console.warn('[TaskFlow CRM] Background greeting ping:', err.message)
   }
 
-  // 2. Form Login Submission
-  if (formLogin) {
-    formLogin.addEventListener('submit', async (e) => {
-      e.preventDefault()
-      hideLoginError()
+  // --- 2. Initialize Session ---
+  await initSession()
 
-      const email = (loginEmail?.value || '').trim()
-      const password = loginPassword?.value || ''
-
-      if (!email || !password) {
-        showLoginError('Email and password are required.')
-        return
-      }
-
-      setLoginLoading(true)
-
-      try {
-        const response = await chrome.runtime.sendMessage({
-          type: 'LOGIN',
-          email,
-          password,
-        })
-
-        if (response && response.success && response.data) {
-          formLogin.reset()
-          const { user, workspaces, selectedWorkspaceId } = response.data
-          // Remember email for fast sign-in without persisting credentials
-          if (user?.email) {
-            await extensionStorage.save({ lastUserEmail: user.email })
-          }
-          validSessionData = {
-            user,
-            workspaces: workspaces || [],
-            workspaceId: selectedWorkspaceId,
-          }
-          showAuthenticatedView(user, workspaces, selectedWorkspaceId)
-        } else {
-          showLoginError(response?.error || 'Login failed. Please check your credentials.')
-        }
-      } catch (err) {
-        showLoginError(err.message || 'Error communicating with background worker.')
-      } finally {
-        setLoginLoading(false)
-      }
-    })
-  }
-
-  let validSessionData = null
-
-  // 3. Sign Out & Switch Account Handlers
-  async function performAccountLogout() {
+  async function initSession() {
     try {
-      await chrome.runtime.sendMessage({ type: 'LOGOUT' })
-    } catch {}
-    validSessionData = null
-    cachedMembers = []
-    if (taskItemsContainer) taskItemsContainer.innerHTML = ''
-    if (activityItemsContainer) activityItemsContainer.innerHTML = ''
-    if (recentActivitySection) recentActivitySection.classList.add('hidden')
-    showLoginView()
-  }
+      const authRes = await chrome.runtime.sendMessage({ type: 'GET_AUTH' })
+      const authData = authRes?.data || {}
 
-  if (btnSignOut) {
-    btnSignOut.addEventListener('click', performAccountLogout)
-  }
-
-  if (btnSwitchAccount) {
-    btnSwitchAccount.addEventListener('click', performAccountLogout)
-  }
-
-  // 4. Continue as User Handler
-  if (btnContinueUser) {
-    btnContinueUser.addEventListener('click', () => {
-      if (validSessionData) {
-        showAuthenticatedView(
-          validSessionData.user,
-          validSessionData.workspaces,
-          validSessionData.workspaceId
-        )
+      if (authData.authenticated && authData.user) {
+        showAuthenticatedView(authData.user, authData.workspaceId, authData.availableWorkspaces)
       } else {
-        initSession()
+        showLoginView()
       }
-    })
-  }
-
-  // 5. Workspace Switcher Handler
-  if (workspaceSwitcher) {
-    workspaceSwitcher.addEventListener('change', async (e) => {
-      const selectedWsId = e.target.value ? parseInt(e.target.value, 10) : null
-      
-      // Immediately clear UI and show loading to prevent stale task/member/activity display
-      cachedMembers = []
-      if (taskItemsContainer) taskItemsContainer.innerHTML = ''
-      if (activityItemsContainer) activityItemsContainer.innerHTML = ''
-      if (activityEmpty) activityEmpty.classList.add('hidden')
-      if (activityCountBadge) activityCountBadge.textContent = '0'
-      if (newTaskAssignee) newTaskAssignee.innerHTML = '<option value="">Unassigned</option>'
-      showLoading()
-
-      await chrome.runtime.sendMessage({
-        type: 'SWITCH_WORKSPACE',
-        workspaceId: selectedWsId,
-      })
-
-      if (activeWorkspaceBadge) {
-        activeWorkspaceBadge.textContent = selectedWsId ? `#${selectedWsId}` : '—'
-      }
-      if (targetWorkspaceEl) {
-        targetWorkspaceEl.textContent = selectedWsId ? `#${selectedWsId}` : 'None'
-      }
-
-      if (selectedWsId) {
-        const btnFirst = document.getElementById('btn-create-first-task')
-        if (btnFirst) btnFirst.classList.remove('hidden')
-        await Promise.all([loadTasks(), loadMembers(), loadRecentActivities()])
-      } else {
-        if (recentActivitySection) recentActivitySection.classList.add('hidden')
-        showWorkspacePrompt()
-      }
-    })
-  }
-
-  // 6. Create Task Form Toggle Handlers
-  function openCreateForm() {
-    if (createTaskPanel) {
-      createTaskPanel.classList.remove('hidden')
-    }
-    hideCreateError()
-    if (newTaskTitle) {
-      newTaskTitle.focus()
+    } catch (err) {
+      console.warn('Session init error:', err)
+      showLoginView()
     }
   }
 
-  function closeCreateForm() {
-    if (createTaskPanel) {
-      createTaskPanel.classList.add('hidden')
-    }
-    if (formCreateTask) {
-      formCreateTask.reset()
-    }
-    hideCreateError()
-  }
-
-  if (btnShowCreateForm) {
-    btnShowCreateForm.addEventListener('click', openCreateForm)
-  }
-
-  if (btnCloseCreateForm) {
-    btnCloseCreateForm.addEventListener('click', closeCreateForm)
-  }
-
-  if (btnCancelCreateTask) {
-    btnCancelCreateTask.addEventListener('click', closeCreateForm)
-  }
-
-  if (btnCreateFirstTask) {
-    btnCreateFirstTask.addEventListener('click', openCreateForm)
-  }
-
-  if (formCreateTask) {
-    formCreateTask.addEventListener('submit', async (e) => {
-      e.preventDefault()
-      await handleCreateTask()
-    })
-  }
-
-  if (btnRefreshTasks) {
-    btnRefreshTasks.addEventListener('click', () => {
-      loadTasks()
-      loadRecentActivities()
-    })
-  }
-
-  if (btnRetryTasks) {
-    btnRetryTasks.addEventListener('click', () => {
-      loadTasks()
-    })
-  }
-
-  function openOptions() {
-    if (chrome.runtime.openOptionsPage) {
-      chrome.runtime.openOptionsPage()
-    } else {
-      window.open(chrome.runtime.getURL('src/options/options.html'))
-    }
-  }
-
-  if (btnOpenSettings) {
-    btnOpenSettings.addEventListener('click', openOptions)
-  }
-
-  if (btnOpenOptions) {
-    btnOpenOptions.addEventListener('click', openOptions)
-  }
-
-  function showSessionChecking() {
-    if (sessionCheckingPanel) sessionCheckingPanel.classList.remove('hidden')
-    if (rememberedAccountPanel) rememberedAccountPanel.classList.add('hidden')
-    if (loginPanel) loginPanel.classList.add('hidden')
-    if (authenticatedView) authenticatedView.classList.add('hidden')
-    if (btnSignOut) btnSignOut.classList.add('hidden')
-    if (headerUserInfo) headerUserInfo.textContent = 'Checking...'
-  }
-
-  function showRememberedAccountView(user) {
-    if (sessionCheckingPanel) sessionCheckingPanel.classList.add('hidden')
-    if (loginPanel) loginPanel.classList.add('hidden')
-    if (authenticatedView) authenticatedView.classList.add('hidden')
-    if (rememberedAccountPanel) rememberedAccountPanel.classList.remove('hidden')
-    if (btnSignOut) btnSignOut.classList.remove('hidden')
-
-    const displayName = user?.fullName || user?.name || user?.email || 'User'
-    const email = user?.email || ''
-
-    if (headerUserInfo) headerUserInfo.textContent = displayName
-    if (rememberedUserName) rememberedUserName.textContent = displayName
-    if (rememberedUserEmail) rememberedUserEmail.textContent = email
-    if (btnContinueName) btnContinueName.textContent = displayName.split(' ')[0] || displayName
-
-    if (crmConnBadge) {
-      crmConnBadge.textContent = 'CONNECTED'
-      crmConnBadge.className = 'status-pill connected'
-    }
-  }
-
-  async function showLoginView(errorMsg = null) {
-    if (sessionCheckingPanel) sessionCheckingPanel.classList.add('hidden')
-    if (rememberedAccountPanel) rememberedAccountPanel.classList.add('hidden')
-    if (loginPanel) loginPanel.classList.remove('hidden')
-    if (authenticatedView) authenticatedView.classList.add('hidden')
-    if (btnSignOut) btnSignOut.classList.add('hidden')
-    if (headerUserInfo) headerUserInfo.textContent = 'Sign In'
-
-    // Remembered account prefill: email only, password strictly empty
-    try {
-      const s = await extensionStorage.get()
-      if (loginEmail && (!loginEmail.value || !loginEmail.value.trim())) {
-        const rememberedEmail = s.lastUserEmail || s.authenticatedUser?.email || ''
-        if (rememberedEmail) {
-          loginEmail.value = rememberedEmail
-        }
-      }
-    } catch {}
-
-    if (loginPassword) {
-      loginPassword.value = ''
-    }
-
+  function showLoginView(errorMsg = null) {
+    authPanel.classList.remove('hidden')
+    mainPanel.classList.add('hidden')
+    btnSignOut.classList.add('hidden')
+    userDisplayName.textContent = ''
     if (errorMsg) {
-      showLoginError(errorMsg)
+      loginErrorAlert.textContent = errorMsg
+      loginErrorAlert.classList.remove('hidden')
     } else {
-      hideLoginError()
-    }
-
-    if (crmConnBadge) {
-      crmConnBadge.textContent = 'DISCONNECTED'
-      crmConnBadge.className = 'status-pill disconnected'
+      loginErrorAlert.classList.add('hidden')
     }
   }
 
-  function showAuthenticatedView(user, workspaces = [], activeWsId = null) {
-    if (sessionCheckingPanel) sessionCheckingPanel.classList.add('hidden')
-    if (rememberedAccountPanel) rememberedAccountPanel.classList.add('hidden')
-    if (loginPanel) loginPanel.classList.add('hidden')
-    if (authenticatedView) authenticatedView.classList.remove('hidden')
-    if (btnSignOut) btnSignOut.classList.remove('hidden')
+  function showAuthenticatedView(user, activeWsId = null, workspaces = []) {
+    authPanel.classList.add('hidden')
+    mainPanel.classList.remove('hidden')
+    btnSignOut.classList.remove('hidden')
 
     const displayName = user?.fullName || user?.email || 'User'
-    if (headerUserInfo) {
-      headerUserInfo.textContent = displayName
-    }
+    userDisplayName.textContent = displayName
 
     setupWorkspaceSwitcher(workspaces, activeWsId)
-
-    cachedMembers = []
-    if (activeWsId) {
-      loadTasks()
-      loadMembers()
-      loadRecentActivities()
-    } else {
-      if (recentActivitySection) recentActivitySection.classList.add('hidden')
-      showWorkspacePrompt()
-    }
   }
 
-  function setupWorkspaceSwitcher(workspaces, activeWsId) {
-    if (!workspaceSwitcher) return
+  // --- 3. Workspace Switcher Setup ---
+  async function setupWorkspaceSwitcher(workspaces = [], activeWsId = null) {
     workspaceSwitcher.innerHTML = ''
+
+    // If workspaces list is empty, fetch fresh from API
+    if (!workspaces || workspaces.length === 0) {
+      try {
+        const wsRes = await chrome.runtime.sendMessage({ type: 'GET_WORKSPACES' })
+        if (wsRes && wsRes.success) {
+          workspaces = wsRes.data || []
+        }
+      } catch (err) {
+        console.warn('Failed to load workspaces:', err)
+      }
+    }
 
     if (!workspaces || workspaces.length === 0) {
       const opt = document.createElement('option')
       opt.value = ''
-      opt.textContent = 'No workspaces found'
+      opt.textContent = 'No workspaces'
       workspaceSwitcher.appendChild(opt)
       workspaceSwitcher.disabled = true
       return
     }
 
     workspaceSwitcher.disabled = false
-
-    if (workspaces.length > 1) {
-      const placeholderOpt = document.createElement('option')
-      placeholderOpt.value = ''
-      placeholderOpt.textContent = 'Select workspace...'
-      workspaceSwitcher.appendChild(placeholderOpt)
-    }
-
     workspaces.forEach((ws) => {
       const opt = document.createElement('option')
-      opt.value = ws.id
+      opt.value = ws.id.toString()
       opt.textContent = ws.name || `Workspace #${ws.id}`
-      if (activeWsId && ws.id === parseInt(activeWsId, 10)) {
-        opt.selected = true
-      }
       workspaceSwitcher.appendChild(opt)
     })
 
-    if (activeWsId) {
-      workspaceSwitcher.value = activeWsId.toString()
+    // Select active workspace
+    const targetWsId = activeWsId || workspaces[0]?.id
+    currentWorkspaceId = targetWsId
+    if (targetWsId) {
+      workspaceSwitcher.value = targetWsId.toString()
+      await onWorkspaceSelected(targetWsId)
     }
   }
 
-  function showWorkspacePrompt() {
-    hideAllStates()
-    stateEmpty.classList.remove('hidden')
-    const titleEl = stateEmpty.querySelector('.state-title')
-    const subEl = stateEmpty.querySelector('.state-sub')
-    if (titleEl) titleEl.textContent = 'Please select a workspace'
-    if (subEl) subEl.textContent = 'Choose a workspace from the dropdown above to view tasks.'
-    const btnFirst = document.getElementById('btn-create-first-task')
-    if (btnFirst) btnFirst.classList.add('hidden')
-    taskCountBadge.textContent = '-'
-  }
+  // Handle Workspace Switch
+  workspaceSwitcher.addEventListener('change', async (e) => {
+    const selectedWs = e.target.value ? parseInt(e.target.value, 10) : null
+    currentWorkspaceId = selectedWs
+    // Save to storage
+    await chrome.runtime.sendMessage({
+      type: 'SWITCH_WORKSPACE',
+      workspaceId: selectedWs,
+    })
+    await onWorkspaceSelected(selectedWs)
+  })
 
-  function setLoginLoading(isLoading) {
-    if (!btnSubmitLogin) return
-    btnSubmitLogin.disabled = isLoading
-    btnSubmitLogin.textContent = isLoading ? 'Signing In...' : 'Sign In'
-  }
-
-  function showLoginError(msg) {
-    if (loginError && loginErrorText) {
-      loginErrorText.textContent = msg
-      loginError.classList.remove('hidden')
-    }
-  }
-
-  function hideLoginError() {
-    if (loginError) {
-      loginError.classList.add('hidden')
-    }
-  }
-
-  // 6. Initialize Session & Token Validation on Startup
-  await initSession()
-
-  async function initSession() {
-    const s = await extensionStorage.get()
-    const token = s.authToken
-
-    if (!token) {
-      showLoginView()
+  async function onWorkspaceSelected(workspaceId) {
+    if (!workspaceId) {
+      showEmptyTasks('Please select a workspace')
       return
     }
 
-    showSessionChecking()
+    // Immediately clear old workspace data for clean isolation
+    cachedMembers = []
+    taskItemsContainer.innerHTML = ''
+    activityItemsContainer.innerHTML = ''
+    newTaskAssignee.innerHTML = '<option value="">Unassigned</option>'
+    taskCountBadge.textContent = '0'
+    activityCountBadge.textContent = '0'
 
-    try {
-      const valRes = await chrome.runtime.sendMessage({
-        type: 'VALIDATE_SESSION',
-        token,
-      })
+    showLoadingTasks()
 
-      if (valRes && valRes.valid && valRes.user) {
-        validSessionData = {
-          user: valRes.user,
-          workspaces: valRes.workspaces || [],
-          workspaceId: valRes.workspaceId,
-        }
-        showRememberedAccountView(valRes.user)
-      } else {
-        validSessionData = null
-        showLoginView(valRes?.error || 'Session expired. Please sign in again.')
-      }
-    } catch (err) {
-      validSessionData = null
-      showLoginView('Unable to validate session. Please sign in.')
-    }
+    // Parallel load: Tasks, Members, Recent Activity
+    await Promise.all([
+      loadTasks(workspaceId),
+      loadMembers(workspaceId),
+      loadRecentActivities(workspaceId),
+    ])
   }
 
-  /**
-   * Fetch and populate workspace members in the assignee dropdown
-   */
-  async function loadMembers() {
-    const currentSettings = await extensionStorage.get()
-    const targetWs = currentSettings.workspaceId
-    const token = currentSettings.authToken || ''
+  // --- 4. Login Form Submission ---
+  formLogin.addEventListener('submit', async (e) => {
+    e.preventDefault()
+    loginErrorAlert.classList.add('hidden')
+    btnSubmitLogin.disabled = true
+    btnSubmitLogin.textContent = 'Signing In...'
 
-    if (!targetWs || !token) return
-    if (cachedMembers.length > 0) {
-      populateAssigneeDropdown(cachedMembers)
-      return
-    }
+    const email = (loginEmail.value || '').trim()
+    const password = loginPassword.value || ''
 
     try {
       const response = await chrome.runtime.sendMessage({
-        type: 'FETCH_MEMBERS',
-        workspaceId: targetWs,
-        token: token,
+        type: 'LOGIN',
+        email,
+        password,
+      })
+
+      if (response && response.success && response.data) {
+        formLogin.reset()
+        const { user, workspaces, selectedWorkspaceId } = response.data
+        showAuthenticatedView(user, selectedWorkspaceId, workspaces)
+      } else {
+        showLoginView(response?.error || 'Sign in failed. Please check your credentials.')
+      }
+    } catch (err) {
+      showLoginView(err.message || 'Error communicating with background worker.')
+    } finally {
+      btnSubmitLogin.disabled = false
+      btnSubmitLogin.textContent = 'Sign In'
+    }
+  })
+
+  // Sign Out Handler
+  btnSignOut.addEventListener('click', async () => {
+    await chrome.runtime.sendMessage({ type: 'LOGOUT' })
+    currentWorkspaceId = null
+    cachedMembers = []
+    taskItemsContainer.innerHTML = ''
+    showLoginView()
+  })
+
+  // --- 5. Task CRUD: Load Tasks ---
+  async function loadTasks(workspaceId = currentWorkspaceId) {
+    if (!workspaceId) return
+
+    showLoadingTasks()
+
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: 'GET_TASKS',
+        workspaceId,
+      })
+
+      if (response && response.success) {
+        const tasks = Array.isArray(response.data) ? response.data : []
+        renderTaskList(tasks)
+      } else {
+        showEmptyTasks(response?.error || 'Unable to load tasks.')
+      }
+    } catch (err) {
+      showEmptyTasks(err.message || 'Error loading tasks.')
+    }
+  }
+
+  function renderTaskList(tasks) {
+    stateLoading.classList.add('hidden')
+    taskCountBadge.textContent = tasks.length.toString()
+
+    if (tasks.length === 0) {
+      stateEmpty.classList.remove('hidden')
+      taskItemsContainer.classList.add('hidden')
+      return
+    }
+
+    stateEmpty.classList.add('hidden')
+    taskItemsContainer.classList.remove('hidden')
+    taskItemsContainer.innerHTML = ''
+
+    tasks.forEach((task) => {
+      const row = createTaskRow(task)
+      taskItemsContainer.appendChild(row)
+    })
+  }
+
+  function createTaskRow(task) {
+    const li = document.createElement('li')
+    li.className = 'task-row'
+    li.dataset.taskId = task.id
+    const isDone = task.status === 'DONE'
+
+    if (isDone) {
+      li.classList.add('task-done')
+    }
+
+    const priority = (task.priority || 'MEDIUM').toUpperCase()
+    const priorityClass = `priority-${priority.toLowerCase()}`
+    const assigneeName = task.assignedTo?.fullName || task.assignedToName || 'Unassigned'
+    const statusText = isDone ? 'COMPLETE' : 'TODO'
+    const statusPillClass = isDone ? 'pill-complete' : 'pill-todo'
+
+    li.innerHTML = `
+      <button type="button" class="btn-toggle-status ${isDone ? 'completed' : ''}" title="${isDone ? 'Mark TODO' : 'Mark Complete'}" aria-label="Toggle task status">
+        <svg class="status-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      </button>
+      <div class="task-body">
+        <span class="task-title">${escapeHtml(task.title || 'Untitled Task')}</span>
+        <div class="task-meta">
+          <span class="priority-tag ${priorityClass}">${priority}</span>
+          <span>·</span>
+          <span class="task-assignee">${escapeHtml(assigneeName)}</span>
+          <span>·</span>
+          <span class="task-status-pill ${statusPillClass}">${statusText}</span>
+        </div>
+      </div>
+      <button type="button" class="btn-delete-task" title="Delete task" aria-label="Delete task">
+        <svg class="delete-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
+        </svg>
+      </button>
+    `
+
+    // Status toggle event
+    const btnToggle = li.querySelector('.btn-toggle-status')
+    btnToggle.addEventListener('click', async (e) => {
+      e.stopPropagation()
+      const newStatus = task.status === 'DONE' ? 'TODO' : 'DONE'
+      btnToggle.disabled = true
+
+      try {
+        const res = await chrome.runtime.sendMessage({
+          type: 'UPDATE_TASK_STATUS',
+          taskId: task.id,
+          status: newStatus,
+          workspaceId: currentWorkspaceId,
+        })
+
+        if (res && res.success) {
+          task.status = newStatus
+          const nowDone = newStatus === 'DONE'
+          li.classList.toggle('task-done', nowDone)
+          btnToggle.classList.toggle('completed', nowDone)
+          btnToggle.title = nowDone ? 'Mark TODO' : 'Mark Complete'
+
+          const pill = li.querySelector('.task-status-pill')
+          if (pill) {
+            pill.textContent = nowDone ? 'COMPLETE' : 'TODO'
+            pill.className = `task-status-pill ${nowDone ? 'pill-complete' : 'pill-todo'}`
+          }
+
+          showToast(nowDone ? 'Task marked complete!' : 'Task reopened to TODO')
+          loadRecentActivities(currentWorkspaceId)
+        } else {
+          showToast(res?.error || 'Failed to update status')
+        }
+      } catch (err) {
+        showToast(err.message || 'Error updating task status')
+      } finally {
+        btnToggle.disabled = false
+      }
+    })
+
+    // Delete task event
+    const btnDelete = li.querySelector('.btn-delete-task')
+    btnDelete.addEventListener('click', async (e) => {
+      e.stopPropagation()
+      if (!confirm('Delete this task?')) return
+      btnDelete.disabled = true
+
+      try {
+        const res = await chrome.runtime.sendMessage({
+          type: 'DELETE_TASK',
+          taskId: task.id,
+          workspaceId: currentWorkspaceId,
+        })
+
+        if (res && res.success) {
+          li.remove()
+          showToast('Task deleted.')
+          loadRecentActivities(currentWorkspaceId)
+        } else {
+          showToast(res?.error || 'Failed to delete task')
+        }
+      } catch (err) {
+        showToast(err.message || 'Error deleting task')
+      }
+    })
+
+    return li
+  }
+
+  function showLoadingTasks() {
+    stateLoading.classList.remove('hidden')
+    stateEmpty.classList.add('hidden')
+    taskItemsContainer.classList.add('hidden')
+  }
+
+  function showEmptyTasks(msg = null) {
+    stateLoading.classList.add('hidden')
+    taskItemsContainer.classList.add('hidden')
+    stateEmpty.classList.remove('hidden')
+    if (msg) {
+      const title = stateEmpty.querySelector('.empty-title')
+      if (title) title.textContent = msg
+    }
+  }
+
+  // --- 6. Task Assignment: Load Members ---
+  async function loadMembers(workspaceId = currentWorkspaceId) {
+    if (!workspaceId) return
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: 'GET_MEMBERS',
+        workspaceId,
       })
 
       if (response && response.success) {
@@ -507,417 +410,105 @@ document.addEventListener('DOMContentLoaded', async () => {
         populateAssigneeDropdown(cachedMembers)
       }
     } catch (err) {
-      console.warn('Failed to fetch workspace members:', err)
+      console.warn('Failed to load workspace members:', err)
     }
   }
 
-  /**
-   * Populate assignee dropdown options
-   */
   function populateAssigneeDropdown(members) {
-    if (!newTaskAssignee) return
-    const currentVal = newTaskAssignee.value
     newTaskAssignee.innerHTML = '<option value="">Unassigned</option>'
-
     members.forEach((m) => {
       const opt = document.createElement('option')
-      opt.value = m.userId
-      opt.dataset.name = m.userName || m.userEmail || `User #${m.userId}`
-      opt.textContent = `${m.userName || m.userEmail || `User #${m.userId}`} (${m.role || 'MEMBER'})`
+      const memberId = m.userId || m.id || ''
+      opt.value = memberId.toString()
+      opt.textContent = `${m.userName || m.userEmail || `User #${memberId}`} (${m.role || 'MEMBER'})`
       newTaskAssignee.appendChild(opt)
     })
-
-    if (currentVal) {
-      newTaskAssignee.value = currentVal
-    }
   }
 
-  /**
-   * Handle Task Creation Submission
-   */
-  async function handleCreateTask() {
-    const title = (newTaskTitle?.value || '').trim()
+  // --- 7. Task Assignment: Create Form ---
+  function openCreateDrawer() {
+    createTaskDrawer.classList.remove('hidden')
+    createErrorAlert.classList.add('hidden')
+    newTaskTitle.focus()
+  }
+
+  function closeCreateDrawer() {
+    createTaskDrawer.classList.add('hidden')
+    formCreateTask.reset()
+    createErrorAlert.classList.add('hidden')
+  }
+
+  btnShowCreateForm.addEventListener('click', openCreateDrawer)
+  btnCreateFirstTask.addEventListener('click', openCreateDrawer)
+  btnCloseCreateDrawer.addEventListener('click', closeCreateDrawer)
+  btnCancelCreate.addEventListener('click', closeCreateDrawer)
+
+  formCreateTask.addEventListener('submit', async (e) => {
+    e.preventDefault()
+    createErrorAlert.classList.add('hidden')
+
+    const title = (newTaskTitle.value || '').trim()
     if (!title) {
-      showCreateError('Title is required.')
+      createErrorAlert.textContent = 'Title is required.'
+      createErrorAlert.classList.remove('hidden')
       return
     }
 
-    const currentSettings = await extensionStorage.get()
-    const targetWs = currentSettings.workspaceId
-    const token = currentSettings.authToken || ''
-
-    if (!targetWs) {
-      showCreateError('Please select a workspace before creating tasks.')
+    if (!currentWorkspaceId) {
+      createErrorAlert.textContent = 'Please select a workspace.'
+      createErrorAlert.classList.remove('hidden')
       return
     }
 
-    const description = (newTaskDesc?.value || '').trim() || null
-    const priority = newTaskPriority?.value || 'MEDIUM'
-    const dueDate = newTaskDueDate?.value || null
-
-    let assignedToId = null
-    let assignedToName = null
-    if (newTaskAssignee && newTaskAssignee.value) {
-      assignedToId = parseInt(newTaskAssignee.value, 10)
-      const selectedOpt = newTaskAssignee.options[newTaskAssignee.selectedIndex]
-      assignedToName = selectedOpt ? selectedOpt.dataset.name : null
-    }
+    btnSubmitCreateTask.disabled = true
+    btnSubmitCreateTask.textContent = 'Assigning...'
 
     const taskPayload = {
-      workspaceId: targetWs,
+      workspaceId: currentWorkspaceId,
       title,
-      description,
+      description: (newTaskDesc.value || '').trim() || null,
+      priority: newTaskPriority.value || 'MEDIUM',
+      dueDate: newTaskDueDate.value || null,
+      assignedToId: newTaskAssignee.value ? parseInt(newTaskAssignee.value, 10) : null,
       status: 'TODO',
-      priority,
-      dueDate,
-      assignedToId,
-      assignedToName,
-      projectId: null,
-      projectName: null,
     }
-
-    // Set Loading State for Submit Button
-    setSubmitLoading(true)
-    hideCreateError()
 
     try {
       const response = await chrome.runtime.sendMessage({
         type: 'CREATE_TASK',
         taskData: taskPayload,
-        token,
       })
 
       if (response && response.success) {
-        showSuccessToast('Task assigned successfully!')
-        closeCreateForm()
-        await Promise.all([loadTasks(), loadRecentActivities()])
+        showToast('Task assigned successfully!')
+        closeCreateDrawer()
+        await Promise.all([
+          loadTasks(currentWorkspaceId),
+          loadRecentActivities(currentWorkspaceId),
+        ])
       } else {
-        const errorMsg = response?.error || 'Failed to assign task.'
-        showCreateError(errorMsg)
+        createErrorAlert.textContent = response?.error || 'Failed to assign task.'
+        createErrorAlert.classList.remove('hidden')
       }
     } catch (err) {
-      showCreateError(err.message || 'Error communicating with background worker.')
+      createErrorAlert.textContent = err.message || 'Error creating task.'
+      createErrorAlert.classList.remove('hidden')
     } finally {
-      setSubmitLoading(false)
+      btnSubmitCreateTask.disabled = false
+      btnSubmitCreateTask.textContent = 'Assign Task'
     }
-  }
+  })
 
-  function setSubmitLoading(isLoading) {
-    if (!btnSubmitCreateTask) return
-    btnSubmitCreateTask.disabled = isLoading
-    btnSubmitCreateTask.textContent = isLoading ? 'Assigning...' : 'Assign Task'
-  }
-
-  function showCreateError(msg) {
-    if (createTaskError && createTaskErrorText) {
-      createTaskErrorText.textContent = msg
-      createTaskError.classList.remove('hidden')
-    }
-  }
-
-  function hideCreateError() {
-    if (createTaskError) {
-      createTaskError.classList.add('hidden')
-    }
-  }
-
-  function showSuccessToast(message) {
-    if (!successToast) return
-    if (successToastText) successToastText.textContent = message
-    successToast.classList.remove('hidden')
-
-    if (toastTimer) clearTimeout(toastTimer)
-    toastTimer = setTimeout(() => {
-      successToast.classList.add('hidden')
-    }, 3000)
-  }
-
-  /**
-   * Fetch and render real CRM tasks
-   */
-  async function loadTasks() {
-    const currentSettings = await extensionStorage.get()
-    const targetWs = currentSettings.workspaceId
-    const token = currentSettings.authToken || ''
-
-    if (!token) {
-      showLoginView()
-      return
-    }
-
-    if (!targetWs) {
-      showWorkspacePrompt()
-      return
-    }
-
-    showLoading()
-
-    if (activeWorkspaceBadge) {
-      activeWorkspaceBadge.textContent = `#${targetWs}`
-    }
-    if (targetWorkspaceEl) {
-      targetWorkspaceEl.textContent = `#${targetWs}`
-    }
-
-    try {
-      // Send background message to fetch real tasks
-      const response = await chrome.runtime.sendMessage({
-        type: 'FETCH_TASKS',
-        workspaceId: targetWs,
-        token: token,
-      })
-
-      if (response && response.success) {
-        const tasks = Array.isArray(response.data) ? response.data : []
-        if (crmConnBadge) {
-          crmConnBadge.textContent = 'CONNECTED'
-          crmConnBadge.className = 'status-pill connected'
-        }
-        if (tasks.length === 0) {
-          showEmpty()
-        } else {
-          renderTaskList(tasks)
-        }
-      } else {
-        if (response?.statusCode === 401) {
-          showLoginView('Session expired. Please sign in again.')
-          return
-        }
-
-        const errorText = formatErrorMessage(response?.error, currentSettings)
-        if (crmConnBadge) {
-          crmConnBadge.textContent = 'DISCONNECTED'
-          crmConnBadge.className = 'status-pill disconnected'
-        }
-        showError(errorText)
-      }
-    } catch (err) {
-      showError(err.message || 'Failed to communicate with extension background worker.')
-    }
-  }
-
-  /**
-   * Render tasks into the UI container
-   */
-  function renderTaskList(tasks) {
-    hideAllStates()
-    taskListContainer.classList.remove('hidden')
-    taskCountBadge.textContent = tasks.length.toString()
-
-    taskItemsContainer.innerHTML = ''
-
-    tasks.forEach((task) => {
-      const card = createTaskCardElement(task)
-      taskItemsContainer.appendChild(card)
-    })
-  }
-
-  /**
-   * Create an individual Task Row element
-   */
-  function createTaskCardElement(task) {
-    const row = document.createElement('li')
-    row.className = 'task-row'
-    row.dataset.taskId = task.id
-    const isDone = task.status === 'DONE'
-    if (isDone) {
-      row.classList.add('task-done')
-    }
-
-    const titleText = task.title ? escapeHtml(task.title) : 'Untitled Task'
-    const priority = (task.priority || 'MEDIUM').toUpperCase()
-    const priorityClass = `priority-${priority.toLowerCase()}`
-
-    const dueDateFormatted = formatDueDate(task.dueDate)
-    const isOverdue = Boolean(task.overdue && task.status !== 'DONE')
-
-    const assignedName = task.assignedTo?.fullName || task.assignedToName || 'Unassigned'
-    const statusText = (task.status || 'TODO').toUpperCase()
-    const statusClass = `status-${statusText.toLowerCase()}`
-
-    // Status Action Toggle Button (Circle Checkbox)
-    const statusBtn = document.createElement('button')
-    statusBtn.type = 'button'
-    statusBtn.className = `task-status-btn ${isDone ? 'completed' : ''}`
-    statusBtn.title = isDone ? 'Mark task TODO' : 'Mark task DONE'
-    statusBtn.setAttribute('aria-label', isDone ? 'Mark task incomplete' : 'Mark task complete')
-    statusBtn.innerHTML = `
-      <svg class="task-status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="20 6 9 17 4 12"></polyline>
-      </svg>
-    `
-
-    statusBtn.addEventListener('click', async (e) => {
-      e.stopPropagation()
-      if (statusBtn.disabled) return
-      statusBtn.disabled = true
-      row.classList.add('task-updating')
-
-      const currentSettings = await extensionStorage.get()
-      const targetWs = currentSettings.workspaceId
-      const token = currentSettings.authToken || ''
-      const isCurrentlyDone = task.status === 'DONE'
-      const newStatus = isCurrentlyDone ? 'TODO' : 'DONE'
-
-      try {
-        const res = await chrome.runtime.sendMessage({
-          type: 'UPDATE_TASK_STATUS',
-          taskId: task.id,
-          status: newStatus,
-          workspaceId: targetWs,
-          token: token,
-        })
-
-        if (res && res.success) {
-          task.status = newStatus
-          if (newStatus === 'DONE') {
-            row.classList.add('task-done')
-            statusBtn.classList.add('completed')
-            statusBtn.title = 'Mark task TODO'
-            showSuccessToast('Task marked complete!')
-          } else {
-            row.classList.remove('task-done')
-            statusBtn.classList.remove('completed')
-            statusBtn.title = 'Mark task DONE'
-            showSuccessToast('Task reopened.')
-          }
-          const tag = row.querySelector('.status-tag')
-          if (tag) {
-            tag.className = `status-tag status-${newStatus.toLowerCase()}`
-            tag.textContent = newStatus
-          }
-          loadRecentActivities()
-        } else {
-          showSuccessToast(res?.error || 'Failed to update task status')
-        }
-      } catch (err) {
-        showSuccessToast(err.message || 'Error updating task status')
-      } finally {
-        statusBtn.disabled = false
-        row.classList.remove('task-updating')
-      }
-    })
-
-    const mainDiv = document.createElement('div')
-    mainDiv.className = 'task-main'
-    mainDiv.innerHTML = `
-      <span class="task-title">${titleText}</span>
-      <span class="task-meta">
-        <span class="priority-badge ${priorityClass}">${priority}</span>
-        <span class="due-date ${isOverdue ? 'overdue' : ''}">· ${dueDateFormatted}</span>
-      </span>
-      <span class="task-assignee">${escapeHtml(assignedName)}</span>
-    `
-
-    const sideDiv = document.createElement('div')
-    sideDiv.className = 'task-side'
-    sideDiv.innerHTML = `
-      <span class="status-tag ${statusClass}">${statusText}</span>
-    `
-
-    row.appendChild(statusBtn)
-    row.appendChild(mainDiv)
-    row.appendChild(sideDiv)
-
-    return row
-  }
-
-  /**
-   * Format ISO / standard YYYY-MM-DD date to "Sep 15"
-   */
-  function formatDueDate(dueDateStr) {
-    if (!dueDateStr) return 'No due date'
-    try {
-      const parts = dueDateStr.split('-')
-      if (parts.length === 3) {
-        const year = parseInt(parts[0], 10)
-        const month = parseInt(parts[1], 10) - 1
-        const day = parseInt(parts[2], 10)
-        const date = new Date(year, month, day)
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-        return `${months[date.getMonth()]} ${date.getDate()}`
-      }
-      const d = new Date(dueDateStr)
-      if (isNaN(d.getTime())) return dueDateStr
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-      return `${months[d.getMonth()]} ${d.getDate()}`
-    } catch {
-      return dueDateStr
-    }
-  }
-
-  /**
-   * Format helpful error messages based on response
-   */
-  function formatErrorMessage(errorMsg, currentSettings) {
-    if (!errorMsg) return 'Unable to load tasks from CRM.'
-    if (errorMsg.includes('401') || errorMsg.toLowerCase().includes('unauthorized')) {
-      return 'Authentication required. Please sign in.'
-    }
-    if (errorMsg.includes('403') || errorMsg.toLowerCase().includes('denied')) {
-      return `Access denied. Your user account does not have access to Workspace #${currentSettings.workspaceId || ''}.`
-    }
-    if (errorMsg.toLowerCase().includes('failed to fetch') || errorMsg.toLowerCase().includes('network')) {
-      return `Cannot reach CRM at ${currentSettings.crmEndpoint || 'http://localhost:8080'}. Ensure the backend is running.`
-    }
-    return errorMsg
-  }
-
-  function showLoading() {
-    hideAllStates()
-    stateLoading.classList.remove('hidden')
-  }
-
-  function showEmpty() {
-    hideAllStates()
-    stateEmpty.classList.remove('hidden')
-    taskCountBadge.textContent = '0'
-  }
-
-  function showError(msg) {
-    hideAllStates()
-    stateError.classList.remove('hidden')
-    errorMessageEl.textContent = msg
-    taskCountBadge.textContent = '!'
-  }
-
-  function hideAllStates() {
-    stateLoading.classList.add('hidden')
-    stateError.classList.add('hidden')
-    stateEmpty.classList.add('hidden')
-    taskListContainer.classList.add('hidden')
-  }
-
-  /**
-   * Fetch and render recent workspace activities
-   */
-  async function loadRecentActivities() {
-    const currentSettings = await extensionStorage.get()
-    const targetWs = currentSettings.workspaceId
-    const token = currentSettings.authToken || ''
-
-    if (!token || !targetWs) {
-      if (recentActivitySection) recentActivitySection.classList.add('hidden')
-      return
-    }
-
-    if (recentActivitySection) recentActivitySection.classList.remove('hidden')
-    if (activityLoading) activityLoading.classList.remove('hidden')
-    if (activityEmpty) activityEmpty.classList.add('hidden')
-    if (activityItemsContainer) {
-      activityItemsContainer.classList.add('hidden')
-      activityItemsContainer.innerHTML = ''
-    }
+  // --- 8. Recent Activity Feed ---
+  async function loadRecentActivities(workspaceId = currentWorkspaceId) {
+    if (!workspaceId) return
 
     try {
       const response = await chrome.runtime.sendMessage({
-        type: 'FETCH_RECENT_ACTIVITIES',
-        workspaceId: targetWs,
-        token: token,
+        type: 'GET_RECENT_ACTIVITY',
+        workspaceId,
         limit: 8,
       })
-
-      if (activityLoading) activityLoading.classList.add('hidden')
 
       if (response && response.success && Array.isArray(response.data) && response.data.length > 0) {
         renderActivities(response.data)
@@ -925,77 +516,71 @@ document.addEventListener('DOMContentLoaded', async () => {
         showEmptyActivities()
       }
     } catch (err) {
-      if (activityLoading) activityLoading.classList.add('hidden')
       showEmptyActivities()
     }
   }
 
-  function showEmptyActivities() {
-    if (activityEmpty) activityEmpty.classList.remove('hidden')
-    if (activityItemsContainer) activityItemsContainer.classList.add('hidden')
-    if (activityCountBadge) activityCountBadge.textContent = '0'
-  }
-
   function renderActivities(activities) {
-    if (!activityItemsContainer) return
+    activityEmpty.classList.add('hidden')
     activityItemsContainer.innerHTML = ''
-    activityItemsContainer.classList.remove('hidden')
-    if (activityEmpty) activityEmpty.classList.add('hidden')
-    if (activityCountBadge) activityCountBadge.textContent = activities.length.toString()
+    activityCountBadge.textContent = activities.length.toString()
 
     activities.forEach((act) => {
-      const row = createActivityItemElement(act)
-      activityItemsContainer.appendChild(row)
+      const li = document.createElement('li')
+      li.className = 'activity-item'
+
+      const desc = (act.description || '').toUpperCase()
+      const isDone = desc.includes('DONE') || desc.includes('COMPLETE')
+      const isNew = desc.includes('CREATE')
+
+      const iconClass = isDone ? 'act-icon-done' : (isNew ? 'act-icon-new' : 'act-icon-update')
+      const iconSvg = isDone
+        ? '<polyline points="20 6 9 17 4 12"></polyline>'
+        : '<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>'
+
+      li.innerHTML = `
+        <div class="act-icon ${iconClass}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:10px;height:10px;">
+            ${iconSvg}
+          </svg>
+        </div>
+        <div class="act-body">
+          <p class="act-text">${escapeHtml(act.title || 'Task Activity')}</p>
+          <div class="act-sub">
+            <span>${escapeHtml(act.createdBy || 'User')}</span>
+            <span>${formatRelativeTime(act.timestamp)}</span>
+          </div>
+        </div>
+      `
+      activityItemsContainer.appendChild(li)
     })
   }
 
-  function createActivityItemElement(act) {
-    const li = document.createElement('li')
-    li.className = 'activity-item'
+  function showEmptyActivities() {
+    activityItemsContainer.innerHTML = ''
+    activityEmpty.classList.remove('hidden')
+    activityCountBadge.textContent = '0'
+  }
 
-    const actType = (act.type || 'TASK').toUpperCase()
-    const desc = (act.description || '').toUpperCase()
-    const isDone = desc.includes('DONE') || desc.includes('COMPLETE')
-    const isCreate = desc.includes('CREATE')
-    const isLead = actType === 'LEAD'
-
-    let iconBoxClass = 'icon-update'
-    let svgPath = '<path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
-
-    if (isDone) {
-      iconBoxClass = 'icon-done'
-      svgPath = '<path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>'
-    } else if (isCreate) {
-      iconBoxClass = 'icon-create'
-      svgPath = '<path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>'
-    } else if (isLead) {
-      iconBoxClass = 'icon-lead'
-      svgPath = '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm14 14v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+  // --- 9. Refresh Action ---
+  btnRefreshTasks.addEventListener('click', async () => {
+    if (currentWorkspaceId) {
+      await Promise.all([
+        loadTasks(currentWorkspaceId),
+        loadRecentActivities(currentWorkspaceId),
+      ])
+      showToast('Refreshed')
     }
+  })
 
-    const titleSafe = escapeHtml(act.title || 'Activity')
-    const descSafe = escapeHtml(act.description || '')
-    const authorSafe = escapeHtml(act.createdBy || 'User')
-    const timeSafe = formatRelativeTime(act.timestamp)
-
-    li.innerHTML = `
-      <div class="activity-item-icon-box ${iconBoxClass}">
-        <svg class="activity-item-svg" viewBox="0 0 24 24">
-          ${svgPath}
-        </svg>
-      </div>
-      <div class="activity-item-content">
-        <div class="activity-item-title-row">
-          <span class="activity-item-title" title="${titleSafe}">${titleSafe}</span>
-        </div>
-        <span class="activity-item-desc" title="${descSafe}">${descSafe}</span>
-        <div class="activity-item-meta">
-          <span class="activity-item-author">${authorSafe}</span>
-          <span class="activity-item-time">${timeSafe}</span>
-        </div>
-      </div>
-    `
-    return li
+  // --- 10. Helpers ---
+  function showToast(msg) {
+    if (toastTimer) clearTimeout(toastTimer)
+    toastMessage.textContent = msg
+    toast.classList.remove('hidden')
+    toastTimer = setTimeout(() => {
+      toast.classList.add('hidden')
+    }, 2500)
   }
 
   function formatRelativeTime(isoStr) {
@@ -1003,18 +588,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       const d = new Date(isoStr)
       if (isNaN(d.getTime())) return ''
-      const now = new Date()
-      const diffMs = now.getTime() - d.getTime()
+      const diffMs = Date.now() - d.getTime()
       const diffMins = Math.floor(diffMs / 60000)
-
       if (diffMins < 1) return 'just now'
       if (diffMins < 60) return `${diffMins}m ago`
       const diffHours = Math.floor(diffMins / 60)
       if (diffHours < 24) return `${diffHours}h ago`
-      const diffDays = Math.floor(diffHours / 24)
-      if (diffDays < 7) return `${diffDays}d ago`
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-      return `${months[d.getMonth()]} ${d.getDate()}`
+      return `${Math.floor(diffHours / 24)}d ago`
     } catch {
       return ''
     }
