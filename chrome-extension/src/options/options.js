@@ -13,17 +13,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   const statusMessage = document.getElementById('status-message')
 
   // Load existing settings
-  const settings = await storageService.get()
+  const settings = await extensionStorage.get()
   endpointInput.value = settings.crmEndpoint || 'http://localhost:8080'
-  workspaceInput.value = settings.workspaceId || 1
+  workspaceInput.value = settings.workspaceId !== null && settings.workspaceId !== undefined ? settings.workspaceId : ''
   tokenInput.value = settings.authToken || ''
 
   // Save Settings
   form.addEventListener('submit', async (e) => {
     e.preventDefault()
+    const parsedWs = workspaceInput.value.trim() ? parseInt(workspaceInput.value, 10) : null
     await extensionStorage.save({
       crmEndpoint: endpointInput.value.trim(),
-      workspaceId: parseInt(workspaceInput.value, 10) || 1,
+      workspaceId: parsedWs,
       authToken: tokenInput.value.trim(),
     })
     showStatus('Settings saved successfully!', 'success')
@@ -35,9 +36,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     testBtn.disabled = true
 
     // Temporarily save before test
+    const parsedWs = workspaceInput.value.trim() ? parseInt(workspaceInput.value, 10) : null
     await extensionStorage.save({
       crmEndpoint: endpointInput.value.trim(),
-      workspaceId: parseInt(workspaceInput.value, 10) || 1,
+      workspaceId: parsedWs,
       authToken: tokenInput.value.trim(),
     })
 

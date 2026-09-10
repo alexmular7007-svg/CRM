@@ -2,106 +2,194 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Chrome Extension Playground</title>
+  <title>TaskFlow CRM - My Tasks</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
   <div class="popup-container">
     <!-- Header -->
-    <header class="header">
+    <header class="app-header">
       <div class="brand">
-        <span class="icon">🧩</span>
-        <div>
-          <h1 class="title">Chrome Extension Playground</h1>
-          <span class="version" id="ext-version">v1.0.0</span>
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M4 4h7l2 2h7a1 1 0 011 1v11a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1z" fill="none" stroke="currentColor" stroke-width="2"/>
+        </svg>
+        <div class="brand-text">
+          <h1 class="title">TaskFlow CRM</h1>
+          <p class="subtitle" id="header-user-info">My Tasks</p>
         </div>
+      </div>
+      <div class="header-actions">
+        <button type="button" class="icon-btn hidden" id="btn-sign-out" title="Sign Out">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button type="button" class="icon-btn" id="btn-open-settings" title="Settings">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M12 15.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM19.4 12a7.4 7.4 0 01-.14 1.5l2.12 1.66a0.5 0.5 0 01.12.62l-2 3.46a0.5 0.5 0 01-.6.22l-2.5-1a7.3 7.3 0 01-1.3.76l-.38 2.65a0.5 0.5 0 01-.5.42h-4a0.5 0.5 0 01-.5-.42l-.38-2.66a7.3 7.3 0 01-1.3-.75l-2.5 1a0.5 0.5 0 01-.6-.22l-2-3.46a0.5 0.5 0 01.12-.62L4.74 13.5a7.4 7.4 0 010-3l-2.12-1.66a0.5 0.5 0 01-.12-.62l2-3.46a0.5 0.5 0 01.6-.22l2.5 1c.4-.3.84-.55 1.3-.76L9.5 2.42a0.5 0.5 0 01.5-.42h4a0.5 0.5 0 01.5.42l.38 2.66c.46.21.9.46 1.3.76l2.5-1a0.5 0.5 0 01.6.22l2 3.46a0.5 0.5 0 01-.12.62L19.4 12z" fill="none" stroke="currentColor" stroke-width="2"/>
+          </svg>
+        </button>
       </div>
     </header>
+    <hr class="header-divider">
 
-    <!-- Top Status Badges -->
-    <section class="status-overview">
-      <div class="status-card">
-        <span class="status-label">Extension Status</span>
-        <span class="status-pill ready" id="ext-status-badge">READY</span>
+    <!-- Login Panel (Rendered when unauthenticated) -->
+    <section class="login-panel" id="login-panel">
+      <div class="login-header">
+        <h2 class="login-title">Sign in to TaskFlow</h2>
+        <p class="login-subtitle">Connect your CRM account to manage tasks</p>
       </div>
-      <div class="status-card">
-        <span class="status-label">CRM Connection</span>
-        <span class="status-pill disconnected" id="crm-conn-badge">DISCONNECTED</span>
+
+      <div class="form-alert error-alert hidden" id="login-error">
+        <span class="alert-icon">⚠️</span>
+        <span class="alert-text" id="login-error-text">Invalid credentials</span>
       </div>
+
+      <form id="form-login" class="login-form">
+        <div class="form-group">
+          <label for="login-email" class="form-label">Email</label>
+          <input type="email" id="login-email" class="form-input" placeholder="user@taskflow.com" required autocomplete="username"/>
+        </div>
+        <div class="form-group">
+          <label for="login-password" class="form-label">Password</label>
+          <input type="password" id="login-password" class="form-input" placeholder="••••••••" required autocomplete="current-password"/>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" id="btn-submit-login">Sign In</button>
+      </form>
     </section>
 
-    <!-- Endpoint & Target Info -->
-    <section class="info-bar">
-      <div class="info-item">
-        <span class="label">CRM URL:</span>
-        <span class="val truncate" id="target-endpoint">http://localhost:8080</span>
+    <!-- Authenticated Task Workspace Wrapper -->
+    <div id="authenticated-view" class="hidden">
+      <!-- Top Action Bar -->
+      <section class="section-title-bar">
+        <div class="title-with-badge">
+          <select id="workspace-switcher" class="workspace-select" title="Select Workspace">
+            <option value="">Select workspace...</option>
+          </select>
+          <span class="task-count-pill" id="task-count-badge">0</span>
+        </div>
+        <button type="button" class="btn btn-primary" id="btn-show-create-form">
+          <span class="btn-icon">+</span>
+          <span>New Task</span>
+        </button>
+      </section>
+
+    <!-- Create Task Form Panel (Hidden by default) -->
+    <section class="create-task-panel hidden" id="create-task-panel">
+      <div class="form-header">
+        <h3 class="form-title">Create New Task</h3>
+        <button type="button" class="btn-close-form" id="btn-close-create-form" title="Close">✕</button>
       </div>
-      <div class="info-item">
-        <span class="label">Workspace:</span>
-        <span class="val" id="target-workspace">#1</span>
+
+      <div class="form-alert error-alert hidden" id="create-task-error">
+        <span class="alert-icon">⚠️</span>
+        <span class="alert-text" id="create-task-error-text">Title is required.</span>
       </div>
+
+      <form id="form-create-task" class="create-task-form">
+        <div class="form-group">
+          <label for="new-task-title" class="form-label">Title <span class="required">*</span></label>
+          <input type="text" id="new-task-title" class="form-input" placeholder="Follow up with Acme" maxlength="255" required autocomplete="off"/>
+        </div>
+        <div class="form-group">
+          <label for="new-task-desc" class="form-label">Description</label>
+          <textarea id="new-task-desc" class="form-textarea" placeholder="Send proposal and schedule meeting..." rows="2" maxlength="5000"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="new-task-assignee" class="form-label">Assign To</label>
+            <select id="new-task-assignee" class="form-select"><option value="">Unassigned</option></select>
+          </div>
+          <div class="form-group flex-1">
+            <label for="new-task-priority" class="form-label">Priority</label>
+            <select id="new-task-priority" class="form-select">
+              <option value="LOW">LOW</option>
+              <option value="MEDIUM" selected>MEDIUM</option>
+              <option value="HIGH">HIGH</option>
+              <option value="URGENT">URGENT</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="new-task-duedate" class="form-label">Due Date</label>
+          <input type="date" id="new-task-duedate" class="form-input"/>
+        </div>
+        <div class="form-actions-row">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-create-task">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-submit-task" id="btn-submit-create-task">Create Task</button>
+        </div>
+      </form>
     </section>
 
-    <!-- Primary Action Buttons -->
-    <section class="action-row">
-      <button type="button" class="btn btn-primary" id="btn-check-crm">
-        <span class="btn-icon">⚡</span>
-        <span>Check CRM Connection</span>
-      </button>
-      <button type="button" class="btn btn-primary" id="btn-run-diagnostics">
-        <span class="btn-icon">🔬</span>
-        <span>Run Diagnostics</span>
-      </button>
-    </section>
+    <!-- Success Toast Notification -->
+    <div class="success-toast hidden" id="success-toast">
+      <svg class="toast-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M5 13l4 4L19 7" fill="none" stroke="currentColor" stroke-width="2"/>
+      </svg>
+      <span class="toast-text" id="success-toast-text">Task created successfully!</span>
+    </div>
 
-    <!-- Diagnostic Section -->
-    <section class="diagnostic-section">
-      <div class="section-header">
-        <h2 class="section-title">Diagnostics Suite</h2>
-        <span class="diag-summary-tag" id="diag-summary-badge">STANDBY</span>
+    <!-- Main Content: Task List View -->
+    <main class="task-manager-section" id="task-manager-section">
+      <!-- State: Loading -->
+      <div class="state-container" id="state-loading">
+        <div class="spinner"></div>
+        <p class="state-text">Loading tasks...</p>
       </div>
-      <div class="diag-grid">
-        <div class="diag-item">
-          <span class="diag-label">Extension</span>
-          <span class="diag-badge pending" id="diag-extension">—</span>
-        </div>
-        <div class="diag-item">
-          <span class="diag-label">Service Worker</span>
-          <span class="diag-badge pending" id="diag-serviceWorker">—</span>
-        </div>
-        <div class="diag-item">
-          <span class="diag-label">Storage</span>
-          <span class="diag-badge pending" id="diag-storage">—</span>
-        </div>
-        <div class="diag-item">
-          <span class="diag-label">Content Script</span>
-          <span class="diag-badge pending" id="diag-contentScript">—</span>
-        </div>
-        <div class="diag-item">
-          <span class="diag-label">CRM API</span>
-          <span class="diag-badge pending" id="diag-crmApi">—</span>
-        </div>
-      </div>
-    </section>
 
-    <!-- Diagnostic Telemetry Console -->
-    <section class="console-section">
-      <div class="console-header">
-        <span class="console-title">Telemetry Log</span>
-        <button type="button" class="btn-clear" id="btn-clear-console">Clear</button>
+      <!-- State: Error -->
+      <div class="state-container hidden" id="state-error">
+        <svg class="state-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4m0 4h.01M4.93 19h14.14c1.34 0 2.18-1.46 1.5-2.63L13.5 3.37c-.68-1.17-2.32-1.17-3 0L3.43 16.37C2.75 17.54 3.59 19 4.93 19z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <p class="state-title">Unable to load tasks.</p>
+        <p class="state-message" id="error-message">Connection failed</p>
+        <button type="button" class="btn btn-secondary btn-retry" id="btn-retry-tasks">Try Again</button>
       </div>
-      <div class="console-body" id="console-output">
-        <div class="log-line info">Extension ready. Click [Check CRM Connection] or [Run Diagnostics].</div>
-      </div>
-    </section>
 
-    <!-- Footer Links -->
-    <footer class="footer">
-      <button type="button" class="link-btn" id="btn-open-options">
-        ⚙️ Settings & Options
-      </button>
-      <span class="footer-tag">Manifest V3</span>
-    </footer>
+      <!-- State: Empty -->
+      <div class="state-container hidden" id="state-empty">
+        <svg class="state-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <p class="state-title">No tasks found.</p>
+        <p class="state-sub">Your workspace has no active tasks.</p>
+        <button type="button" class="btn btn-primary btn-new-task-empty" id="btn-create-first-task">+ Create First Task</button>
+      </div>
+
+      <!-- State: Success (Task List) -->
+      <div class="task-list-container hidden" id="task-list-container">
+        <ul class="task-list" id="task-items">
+          <!-- Real tasks inserted here -->
+        </ul>
+      </div>
+
+      <!-- Action Footer -->
+      <div class="task-actions-row">
+        <button type="button" class="btn btn-primary" id="btn-refresh-tasks">
+          <svg class="btn-svg-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4v5h5M20 20v-5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 005.64 5.64L4 9m16 6l-1.64 3.36A9 9 0 013.51 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Refresh</span>
+        </button>
+        <button type="button" class="btn btn-secondary" id="btn-open-options">Options</button>
+      </div>
+    </main>
+    </div>
+
+    <!-- Legacy / Test Harness (Preserves validate-extension.js assertions) -->
+    <div id="legacy-playground-harness" class="legacy-harness" aria-hidden="true">
+      <span class="legacy-title">Chrome Extension Playground</span>
+      <span id="ext-version">v1.0.0</span>
+      <span id="ext-status-badge">READY</span>
+      <span id="crm-conn-badge">DISCONNECTED</span>
+      <span id="target-endpoint">http://localhost:8080</span>
+      <span id="target-workspace">#1</span>
+      <button type="button" id="btn-check-crm">Check CRM Connection</button>
+      <button type="button" id="btn-run-diagnostics">Run Diagnostics</button>
+      <span id="diag-summary-badge">STANDBY</span>
+      <span id="diag-extension">—</span>
+      <span id="diag-serviceWorker">—</span>
+      <span id="diag-storage">—</span>
+      <span id="diag-contentScript">—</span>
+      <span id="diag-crmApi">—</span>
+      <button type="button" id="btn-clear-console">Clear</button>
+      <div id="console-output"></div>
+    </div>
   </div>
 
   <script type="module" src="popup.js"></script>

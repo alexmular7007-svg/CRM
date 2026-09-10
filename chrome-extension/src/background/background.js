@@ -208,8 +208,211 @@ async function handleMessage(message, sender) {
     case 'PING_CRM_HEALTH':
       return await crmApi.checkConnection()
 
+    // Native Authentication & Workspace Actions
+    case 'LOGIN': {
+      try {
+        const { email, password, endpoint } = message
+        if (!email || !password) {
+          return { success: false, error: 'Email and password are required' }
+        }
+
+        const loginRes = await crmApi.login(email, password, endpoint)
+        if (!loginRes.success || !loginRes.token) {
+          return { success: false, error: loginRes.error || 'Login failed' }
+        }
+
+        const token = loginRes.token
+        const user = loginRes.user
+
+        // Discover user's accessible workspaces
+        const wsRes = await crmApi.fetchWorkspaces(token, endpoint)
+        const workspaces = wsRes.success && Array.isArray(wsRes.data) ? wsRes.data : []
+
+        // Workspace selection policy:
+        // - exactly 1 accessible workspace -> auto-select it.
+        // - more than 1 accessible workspace -> do NOT blindly default; let user select (workspaceId = null, or keep null until selected).
+        // - 0 accessible workspaces -> null
+        let selectedWorkspaceId = null
+        if (workspaces.length === 1) {
+          selectedWorkspaceId = workspaces[0].id
+        }
+
+        // Save session data to extensionStorage
+        await extensionStorage.save({
+          authToken: token,
+          authenticatedUser: user,
+          availableWorkspaces: workspaces,
+          workspaceId: selectedWorkspaceId,
+        })
+
+        return {
+          success: true,
+          data: {
+            user,
+            token,
+            workspaces,
+            selectedWorkspaceId,
+          },
+        }
+      } catch (err) {
+        logger.error('Login action error:', err)
+        return { success: false, error: err.message || 'Login failed' }
+      }
+    }
+
+    case 'LOGOUT': {
+      try {
+        // Full session cleanup: remove token, user, workspaces, selected workspaceId, and diagnosticResults
+        await extensionStorage.save({
+          authToken: '',
+          authenticatedUser: null,
+          availableWorkspaces: [],
+          workspaceId: null,
+          diagnosticResults: null,
+        })
+        logger.info('User successfully logged out and storage cleaned.')
+        return { success: true }
+      } catch (err) {
+        logger.error('Logout error:', err)
+        return { success: false, error: err.message || 'Logout failed' }
+      }
+    }
+
+    case 'VALIDATE_SESSION': {
+      try {
+        const settings = await extensionStorage.get()
+        const token = message.token || settings.authToken
+
+        if (!token || !token.trim()) {
+          return {
+            success: true,
+            valid: false,
+            authenticated: false,
+            user: null,
+          }
+        }
+
+        const valRes = await crmApi.validateSession(token, settings.crmEndpoint)
+        if (valRes.valid) {
+          // Token is valid; refresh workspaces if needed
+          let workspaces = settings.availableWorkspaces || []
+          if (!workspaces || workspaces.length === 0) {
+            const wsRes = await crmApi.fetchWorkspaces(token, settings.crmEndpoint)
+            if (wsRes.success && Array.isArray(wsRes.data)) {
+              workspaces = wsRes.data
+              await extensionStorage.save({ availableWorkspaces: workspaces })
+            }
+          }
+
+          return {
+            success: true,
+            valid: true,
+            authenticated: true,
+            user: valRes.user || settings.authenticatedUser,
+            workspaces,
+            workspaceId: settings.workspaceId,
+          }
+        } else {
+          // 401/403 or invalid: clear session state
+          await extensionStorage.save({
+            authToken: '',
+            authenticatedUser: null,
+            availableWorkspaces: [],
+            workspaceId: null,
+          })
+          return {
+            success: true,
+            valid: false,
+            authenticated: false,
+            error: valRes.error || 'Session expired',
+          }
+        }
+      } catch (err) {
+        return {
+          success: false,
+          valid: false,
+          authenticated: false,
+          error: err.message,
+        }
+      }
+    }
+
+    case 'GET_USER_WORKSPACES': {
+      try {
+        const settings = await extensionStorage.get()
+        const token = message.token || settings.authToken
+        if (!token) {
+          return { success: false, data: [], error: 'Not authenticated' }
+        }
+        const wsRes = await crmApi.fetchWorkspaces(token, settings.crmEndpoint)
+        if (wsRes.success) {
+          await extensionStorage.save({ availableWorkspaces: wsRes.data })
+        }
+        return wsRes
+      } catch (err) {
+        return { success: false, data: [], error: err.message }
+      }
+    }
+
+    case 'SWITCH_WORKSPACE': {
+      try {
+        const newWorkspaceId = message.workspaceId ? parseInt(message.workspaceId, 10) : null
+        await extensionStorage.save({ workspaceId: newWorkspaceId })
+        return { success: true, workspaceId: newWorkspaceId }
+      } catch (err) {
+        return { success: false, error: err.message }
+      }
+    }
+
     case 'FETCH_EXTENSIONS':
       return await crmApi.fetchExtensions()
+
+    case 'FETCH_TASKS':
+    case 'GET_TASKS': {
+      try {
+        const wsId = message.workspaceId ?? null
+        const token = message.token ?? null
+        const params = message.params || {}
+        return await crmApi.fetchTasks(wsId, token, params)
+      } catch (err) {
+        return {
+          success: false,
+          data: [],
+          error: err.message || 'Failed to fetch tasks',
+        }
+      }
+    }
+
+    case 'FETCH_MEMBERS':
+    case 'GET_WORKSPACE_MEMBERS': {
+      try {
+        const wsId = message.workspaceId ?? null
+        const token = message.token ?? null
+        const params = message.params || {}
+        return await crmApi.fetchMembers(wsId, token, params)
+      } catch (err) {
+        return {
+          success: false,
+          data: [],
+          error: err.message || 'Failed to fetch workspace members',
+        }
+      }
+    }
+
+    case 'CREATE_TASK': {
+      try {
+        const taskData = message.taskData || {}
+        const token = message.token ?? null
+        return await crmApi.createTask(taskData, token)
+      } catch (err) {
+        return {
+          success: false,
+          data: null,
+          error: err.message || 'Failed to create task',
+        }
+      }
+    }
+
 
     case 'STORAGE_TEST': {
       const testKey = 'last_test_' + Date.now()

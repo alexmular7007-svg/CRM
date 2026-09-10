@@ -11,8 +11,10 @@
 
 const DEFAULT_SETTINGS = {
   crmEndpoint: 'http://localhost:8080',
-  workspaceId: 1,
+  workspaceId: null,
   authToken: '',
+  authenticatedUser: null,
+  availableWorkspaces: [],
   lastPingTimestamp: null,
   diagnosticResults: null,
 }
