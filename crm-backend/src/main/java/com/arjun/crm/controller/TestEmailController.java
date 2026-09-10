@@ -1,14 +1,11 @@
 package com.arjun.crm.controller;
 
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
+import com.arjun.crm.service.brevo.BrevoEmailService;
 import jakarta.validation.constraints.Email;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -24,7 +21,7 @@ import java.util.Map;
 @Slf4j
 public class TestEmailController {
 
-    private final JavaMailSender mailSender;
+    private final BrevoEmailService brevoEmailService;
 
     @Value("${spring.mail.username:NOT_SET}")
     private String fromEmail;
@@ -68,15 +65,6 @@ public class TestEmailController {
         }
 
         try {
-            log.info("Step 2: Creating MIME message");
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            log.info("Step 3: Setting email headers");
-            helper.setFrom(fromEmail);
-            helper.setTo(to);
-            helper.setSubject("SMTP Test Email from TaskFlow");
-            
             String htmlBody = """
                 <html>
                   <body style="font-family: Arial, sans-serif;">
@@ -92,30 +80,25 @@ public class TestEmailController {
                 </html>
                 """.formatted(fromEmail, smtpHost, smtpPort);
             
-            helper.setText(htmlBody, true);
-            log.info("Step 4: Email content prepared");
-
-            log.info("Step 5: Calling JavaMailSender.send() - BEFORE");
+            String plainTextBody = "This is a test email from TaskFlow CRM Backend. If you received this email, Brevo delivery is working correctly.";
+            log.info("Step 2: Calling BrevoEmailService.sendEmail()");
             long startTime = System.currentTimeMillis();
-            
-            mailSender.send(message);
+            String providerResponse = brevoEmailService.sendEmail(to, "Brevo Test Email from TaskFlow", htmlBody, plainTextBody, null);
             
             long endTime = System.currentTimeMillis();
-            log.info("Step 6: JavaMailSender.send() - AFTER (took {} ms)", (endTime - startTime));
-            log.info("Step 7: ✓ EMAIL SENT SUCCESSFULLY");
-            log.info("  → Message ID: {}", message.getMessageID());
+            log.info("Step 3: ✓ EMAIL SENT SUCCESSFULLY (took {} ms)", (endTime - startTime));
             log.info("═══════════════════════════════════════════════════════════");
             log.info("SMTP TEST EMAIL - SUCCESS");
             log.info("═══════════════════════════════════════════════════════════");
 
             response.put("success", true);
             response.put("message", "Test email sent successfully");
-            response.put("messageId", message.getMessageID());
+            response.put("providerResponse", providerResponse);
             response.put("durationMs", (endTime - startTime));
             
             return ResponseEntity.ok(response);
 
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("Step X: ✗ SMTP FAILURE - MessagingException caught");
             log.error("  → Exception Type: {}", e.getClass().getName());
             log.error("  → Error Message: {}", e.getMessage());
@@ -131,29 +114,11 @@ public class TestEmailController {
             log.info("═══════════════════════════════════════════════════════════");
 
             response.put("success", false);
-            response.put("error", e.getMessage());
+            response.put("error", "Brevo test email failed");
             response.put("errorType", e.getClass().getSimpleName());
             
-            if (e.getCause() != null) {
-                response.put("rootCause", e.getCause().getMessage());
-            }
-
             return ResponseEntity.status(500).body(response);
 
-        } catch (Exception e) {
-            log.error("Step X: ✗ UNEXPECTED ERROR");
-            log.error("  → Exception Type: {}", e.getClass().getName());
-            log.error("  → Error Message: {}", e.getMessage());
-            log.error("  → Full Stack Trace:", e);
-            log.info("═══════════════════════════════════════════════════════════");
-            log.info("SMTP TEST EMAIL - UNEXPECTED ERROR");
-            log.info("═══════════════════════════════════════════════════════════");
-
-            response.put("success", false);
-            response.put("error", e.getMessage());
-            response.put("errorType", e.getClass().getSimpleName());
-
-            return ResponseEntity.status(500).body(response);
         }
     }
 

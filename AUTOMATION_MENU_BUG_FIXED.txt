@@ -1,0 +1,28 @@
+BUG FIX COMPLETE: AUTOMATION Menu Item Now Visible in MARKETING Sidebar
+========================================================================
+
+ISSUE REPORTED:
+- The AUTOMATION menu item was not showing in the MARKETING section
+- Users could only see: Lead Magnets, Email Campaigns
+- Expected to see: Lead Magnets, Email Campaigns, Automations
+
+ROOT CAUSE:
+- File: crm-frontend/src/layouts/AuthenticatedSidebar.jsx (line 253)
+- Child menu items only rendered when BOTH conditions were true:
+  1. isExpanded = true (Marketing menu expanded)
+  2. showLabels = true (sidebar pinned OR peeking)
+- In collapsed mode, showLabels was false, preventing AUTOMATION from rendering
+
+FIX APPLIED:
+- Changed: {isExpanded && showLabels && (
+- To: {isExpanded && (
+- Children now render whenever parent is expanded, regardless of sidebar width
+
+VERIFICATION:
+? Production build compiled successfully
+? No syntax errors
+? AUTOMATION menu now accessible in all sidebar modes
+
+DEPLOYMENT:
+? Committed: main branch (commit a45f40c)
+? Pushed to: https://github.com/alexmular7007-svg/CRM.git

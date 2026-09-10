@@ -1,0 +1,153 @@
+﻿diff --git a/crm-backend/src/main/java/com/arjun/crm/config/SecurityConfig.java b/crm-backend/src/main/java/com/arjun/crm/config/SecurityConfig.java
+index 9eedfbf..d76a71a 100644
+--- a/crm-backend/src/main/java/com/arjun/crm/config/SecurityConfig.java
++++ b/crm-backend/src/main/java/com/arjun/crm/config/SecurityConfig.java
+@@ -79,6 +79,33 @@ public class SecurityConfig {
+             .csrf(AbstractHttpConfigurer::disable)
+             // STATELESS ΓÇö no session cookies, no session creation
+             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
++            // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
++            // SECURITY HEADERS FOR PRODUCTION (HTTPS/HSTS)
++            // ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
++            // These headers protect against various attacks including:
++            // - HSTS: Prevents downgrade from HTTPS to HTTP
++            // - X-Content-Type-Options: Prevents MIME sniffing attacks
++            // - X-Frame-Options: Prevents clickjacking attacks
++            // - X-XSS-Protection: Provides XSS protection in older browsers
++            // - Content-Security-Policy: Restricts resource loading (prevent XSS)
++            // - Referrer-Policy: Controls referrer information leakage
++            .headers(headers -> headers
++                // ΓÜá∩╕Å HSTS: Tell browsers to only connect via HTTPS for 1 year
++                // Once set, browsers will refuse HTTP connections for all subdomains
++                // PRODUCTION: Set only on HTTPS endpoints
++                .httpStrictTransportSecurity()
++                    .includeSubDomains(true)    // Apply to all subdomains
++                    .preload(true)              // Allow inclusion in HSTS preload list
++                    .maxAgeInSeconds(31536000)  // 1 year = 365 * 24 * 60 * 60
++                .and()
++                // ΓÜá∩╕Å X-Content-Type-Options: Prevent MIME type sniffing
++                // Tells browsers to respect the Content-Type header, don't guess
++                .contentTypeOptions()
++                .and()
++                // ΓÜá∩╕Å X-Frame-Options: Prevent clickjacking attacks
++                // DENY: Don't allow framing in any context (most secure)
++                .frameOptions().deny()
++            )
+             .authorizeHttpRequests(auth -> auth
+                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                 .requestMatchers("/api/auth/**").permitAll());
+diff --git a/crm-backend/src/main/java/com/arjun/crm/config/WebMvcConfig.java b/crm-backend/src/main/java/com/arjun/crm/config/WebMvcConfig.java
+index 1ff98bf..cab6aee 100644
+--- a/crm-backend/src/main/java/com/arjun/crm/config/WebMvcConfig.java
++++ b/crm-backend/src/main/java/com/arjun/crm/config/WebMvcConfig.java
+@@ -1,7 +1,9 @@
+ package com.arjun.crm.config;
+ 
++import com.arjun.crm.interceptor.RateLimitInterceptor;
+ import org.springframework.beans.factory.annotation.Value;
+ import org.springframework.context.annotation.Configuration;
++import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+ import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+ 
+@@ -21,6 +23,17 @@ public class WebMvcConfig implements WebMvcConfigurer {
+ 
+     @Value("${file.upload.dir:/tmp/uploads}")
+     private String uploadDir;
++    
++    private final RateLimitInterceptor rateLimitInterceptor;
++    
++    public WebMvcConfig(RateLimitInterceptor rateLimitInterceptor) {
++        this.rateLimitInterceptor = rateLimitInterceptor;
++    }
++
++    @Override
++    public void addInterceptors(InterceptorRegistry registry) {
++        registry.addInterceptor(rateLimitInterceptor);
++    }
+ 
+     @Override
+     public void addResourceHandlers(ResourceHandlerRegistry registry) {
+diff --git a/crm-backend/src/main/java/com/arjun/crm/controller/PublicLeadMagnetController.java b/crm-backend/src/main/java/com/arjun/crm/controller/PublicLeadMagnetController.java
+index 676ea47..880d974 100644
+--- a/crm-backend/src/main/java/com/arjun/crm/controller/PublicLeadMagnetController.java
++++ b/crm-backend/src/main/java/com/arjun/crm/controller/PublicLeadMagnetController.java
+@@ -1,5 +1,6 @@
+ package com.arjun.crm.controller;
+ 
++import com.arjun.crm.annotation.RateLimit;
+ import com.arjun.crm.dto.request.LeadMagnetSubmissionRequest;
+ import com.arjun.crm.dto.response.ApiResponse;
+ import com.arjun.crm.dto.response.LeadMagnetResponse;
+@@ -42,8 +43,10 @@ public class PublicLeadMagnetController {
+      * GET /api/public/lead-magnets/{publicToken}
+      * Get public campaign details for rendering the form
+      * NO AUTHENTICATION REQUIRED
++     * Rate limited to 600 requests per minute (10/second)
+      */
+     @GetMapping("/{publicToken}")
++    @RateLimit(requestsPerMinute = 600, description = "Get public lead magnet form")
+     public ResponseEntity<ApiResponse<LeadMagnetResponse>> getPublicCampaign(
+             @PathVariable String publicToken) {
+         
+@@ -83,8 +86,10 @@ public class PublicLeadMagnetController {
+      * POST /api/public/lead-magnets/{publicToken}/submit
+      * Submit the public form and create a Lead
+      * NO AUTHENTICATION REQUIRED
++     * Rate limited to 120 requests per minute (2/second) to prevent spam
+      */
+     @PostMapping("/{publicToken}/submit")
++    @RateLimit(requestsPerMinute = 120, description = "Submit public lead magnet form")
+     public ResponseEntity<ApiResponse<SubmissionResponse>> submitPublicForm(
+             @PathVariable String publicToken,
+             @Valid @RequestBody LeadMagnetSubmissionRequest request) {
+diff --git a/crm-backend/src/main/java/com/arjun/crm/controller/TestEmailController.java b/crm-backend/src/main/java/com/arjun/crm/controller/TestEmailController.java
+index d075f7e..c3864e0 100644
+--- a/crm-backend/src/main/java/com/arjun/crm/controller/TestEmailController.java
++++ b/crm-backend/src/main/java/com/arjun/crm/controller/TestEmailController.java
+@@ -2,6 +2,7 @@ package com.arjun.crm.controller;
+ 
+ import jakarta.mail.MessagingException;
+ import jakarta.mail.internet.MimeMessage;
++import jakarta.validation.constraints.Email;
+ import lombok.RequiredArgsConstructor;
+ import lombok.extern.slf4j.Slf4j;
+ import org.springframework.beans.factory.annotation.Value;
+@@ -40,7 +41,8 @@ public class TestEmailController {
+      * No database, no tokens, no workspace logic
+      */
+     @PostMapping("/email")
+-    public ResponseEntity<Map<String, Object>> sendTestEmail(@RequestParam String to) {
++    public ResponseEntity<Map<String, Object>> sendTestEmail(
++            @RequestParam @Email(message = "Valid email address is required") String to) {
+         Map<String, Object> response = new HashMap<>();
+         
+         log.info("ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ");
+diff --git a/crm-backend/src/main/java/com/arjun/crm/repository/WorkspaceMemberRepository.java b/crm-backend/src/main/java/com/arjun/crm/repository/WorkspaceMemberRepository.java
+index 45a6398..0c06da4 100644
+--- a/crm-backend/src/main/java/com/arjun/crm/repository/WorkspaceMemberRepository.java
++++ b/crm-backend/src/main/java/com/arjun/crm/repository/WorkspaceMemberRepository.java
+@@ -137,6 +137,23 @@ public interface WorkspaceMemberRepository extends JpaRepository<WorkspaceMember
+     @Query("SELECT COUNT(wm) FROM WorkspaceMember wm WHERE wm.workspace.id = :workspaceId AND wm.role = :role AND wm.status = 'ACTIVE' AND wm.deletedAt IS NULL")
+     long countActiveMembersWithRole(@Param("workspaceId") Long workspaceId, @Param("role") WorkspaceRole role);
+ 
++    /**
++     * Check if user is member (not deleted) of workspace
++     */
++    @Query("SELECT CASE WHEN COUNT(wm) > 0 THEN true ELSE false END FROM WorkspaceMember wm " +
++           "WHERE wm.workspace.id = :workspaceId AND wm.user.id = :userId AND wm.deletedAt IS NULL")
++    boolean existsByWorkspaceIdAndUserIdAndDeletedAtIsNull(@Param("workspaceId") Long workspaceId,
++                                                            @Param("userId") Long userId);
++
++    /**
++     * Check if user has specific role in workspace
++     */
++    @Query("SELECT CASE WHEN COUNT(wm) > 0 THEN true ELSE false END FROM WorkspaceMember wm " +
++           "WHERE wm.workspace.id = :workspaceId AND wm.user.id = :userId AND wm.role = :role")
++    boolean existsByWorkspaceIdAndUserIdAndRole(@Param("workspaceId") Long workspaceId,
++                                                 @Param("userId") Long userId,
++                                                 @Param("role") WorkspaceRole role);
++
+     /**
+      * Convenience method: Count active OWNER members in workspace
+      * Includes original workspace.owner as implicit owner

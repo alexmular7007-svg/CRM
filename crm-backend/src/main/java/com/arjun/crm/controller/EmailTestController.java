@@ -1,8 +1,9 @@
 package com.arjun.crm.controller;
 
 import com.arjun.crm.dto.response.ApiResponse;
-import com.arjun.crm.service.EmailService;
-import jakarta.mail.MessagingException;
+import com.arjun.crm.service.brevo.BrevoEmailService;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -35,7 +36,7 @@ import java.time.LocalDateTime;
 @Slf4j
 public class EmailTestController {
 
-    private final EmailService emailService;
+    private final BrevoEmailService brevoEmailService;
 
     /**
      * Send a test email to verify SMTP configuration
@@ -73,7 +74,7 @@ public class EmailTestController {
      */
     @PostMapping("/send-email")
     public ResponseEntity<ApiResponse<Void>> sendTestEmail(
-            @RequestParam String email) {
+            @RequestParam @NotBlank @Email String email) {
 
         if (email == null || email.trim().isEmpty()) {
             log.warn("Test email request received with empty email address");
@@ -86,7 +87,7 @@ public class EmailTestController {
             log.info("SMTP Configuration: Gmail SMTP on port 587 with TLS");
             log.info("Recipient: {}", email);
             
-            // Send test email
+            // Send test email through the same Brevo provider used by campaigns.
             String subject = "SMTP Test Email";
             String htmlBody = String.join("\n",
                 "<html>",
@@ -121,8 +122,8 @@ public class EmailTestController {
                 "</html>"
             );
 
-            // Try to send via EmailService (which now uses JavaMailSender)
-            sendTestEmailDirectly(email, subject, htmlBody);
+                brevoEmailService.sendEmail(email, subject, htmlBody,
+                    htmlBody.replaceAll("<[^>]*>", ""), null);
 
             log.info("=== TEST EMAIL SENT SUCCESSFULLY ===");
             log.info("Status: 200 OK");
@@ -132,67 +133,27 @@ public class EmailTestController {
                     ApiResponse.success("Test email sent successfully to " + email, null)
             );
 
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("=== SMTP MESSAGING ERROR ===");
             log.error("Type: MessagingException");
             log.error("Message: {}", e.getMessage());
             log.error("Cause: ", e);
             
-            if (e.getMessage().contains("Authentication") || e.getMessage().contains("535")) {
-                log.error("DIAGNOSIS: Gmail authentication failed. Check MAIL_PASSWORD (Google App Password)");
+            String message = e.getMessage() == null ? "Email provider failure" : e.getMessage();
+            if (message.contains("401") || message.contains("403") || message.contains("API key")) {
+                log.error("DIAGNOSIS: Brevo authentication or sender validation failed");
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body(ApiResponse.error("Gmail authentication failed: " + e.getMessage() + "\nEnsure MAIL_PASSWORD is set to Google App Password (not regular password)"));
-            } else if (e.getMessage().contains("Connect") || e.getMessage().contains("Connection")) {
-                log.error("DIAGNOSIS: Cannot connect to SMTP server. Check firewall, port 587, and SMTP host configuration");
+                        .body(ApiResponse.error("Brevo authentication failed"));
+            } else if (message.contains("Connect") || message.contains("Connection") || message.contains("timeout")) {
+                log.error("DIAGNOSIS: Brevo connection failure");
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body(ApiResponse.error("SMTP connection failed: " + e.getMessage()));
-            } else if (e.getMessage().contains("Timeout")) {
-                log.error("DIAGNOSIS: SMTP connection timeout. Check network and TLS configuration");
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body(ApiResponse.error("SMTP timeout: " + e.getMessage()));
+                        .body(ApiResponse.error("Brevo connection failed"));
             } else {
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body(ApiResponse.error("Email sending failed: " + e.getMessage()));
+                        .body(ApiResponse.error("Email sending failed"));
             }
 
-        } catch (Exception e) {
-            log.error("=== UNEXPECTED ERROR ===");
-            log.error("Type: {}", e.getClass().getName());
-            log.error("Message: {}", e.getMessage());
-            log.error("Stack trace: ", e);
-            
-            if (e.getMessage().contains("MAIL_USERNAME")) {
-                log.error("DIAGNOSIS: MAIL_USERNAME environment variable not configured");
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body(ApiResponse.error("MAIL_USERNAME environment variable not configured"));
-            } else if (e.getMessage().contains("MAIL_PASSWORD")) {
-                log.error("DIAGNOSIS: MAIL_PASSWORD environment variable not configured");
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body(ApiResponse.error("MAIL_PASSWORD environment variable not configured"));
-            }
-            
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Unexpected error: " + e.getMessage()));
         }
-    }
-
-    /**
-     * Send test email directly using JavaMailSender
-     * (This will be called by the email service)
-     */
-    private void sendTestEmailDirectly(String email, String subject, String htmlBody) throws MessagingException {
-        log.debug("Delegating to EmailService for SMTP delivery");
-        
-        // Create a temporary test using the invitation email method
-        // In a real scenario, this should use a dedicated test method in EmailService
-        // For now, we'll use one of the existing methods
-        
-        emailService.sendMemberAddedEmail(
-                email,
-                "Test User",
-                "Test Workspace",
-                "MEMBER"
-        );
     }
 
     /**

@@ -304,7 +304,7 @@ export default function TestSuiteRunModal({
                 Duration
               </span>
               <div className="text-base font-bold text-indigo-600 dark:text-indigo-400 mt-0.5">
-                {run.durationMs != null ? `${run.durationMs}ms` : 'In progress...'}
+                {run.durationMs != null ? (run.durationMs >= 1000 ? `${(run.durationMs / 1000).toFixed(1)}s` : `${run.durationMs}ms`) : 'In progress...'}
               </div>
             </div>
           </div>

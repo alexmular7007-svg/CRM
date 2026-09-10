@@ -592,6 +592,107 @@ export const crmApi = {
       }
     }
   },
+
+  /**
+   * Update task status in CRM
+   * API: PATCH /api/tasks/{id}/status
+   * @param {number|string} taskId - Task ID
+   * @param {string} status - New TaskStatus ('TODO', 'IN_PROGRESS', 'DONE', etc.)
+   * @param {number|string} [workspaceId] - Workspace ID
+   * @param {string} [token] - Optional JWT token
+   * @returns {Promise<{success: boolean, data: any, statusCode: number, latencyMs: number, error?: string}>}
+   */
+  async updateTaskStatus(taskId, status, workspaceId = null, token = null) {
+    const settings = await extensionStorage.get()
+    const base = (settings.crmEndpoint || 'http://localhost:8080').replace(/\/$/, '')
+    const wsId = workspaceId !== undefined && workspaceId !== null ? workspaceId : settings.workspaceId
+    const authToken = token !== undefined && token !== null ? token : settings.authToken
+
+    if (!authToken || !authToken.trim()) {
+      return {
+        success: false,
+        statusCode: 401,
+        latencyMs: 0,
+        data: null,
+        error: 'Authentication required. Please sign in.',
+      }
+    }
+
+    if (!wsId) {
+      return {
+        success: false,
+        statusCode: 400,
+        latencyMs: 0,
+        data: null,
+        error: 'No workspace selected.',
+      }
+    }
+
+    const endpoint = `${base}/api/tasks/${taskId}/status`
+    const payload = {
+      workspaceId: parseInt(wsId, 10),
+      status: status.toUpperCase(),
+    }
+    const startTime = performance.now()
+
+    try {
+      logger.info(`Updating task ${taskId} status to ${status} in CRM:`, endpoint)
+      const headers = {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      }
+      if (authToken && authToken.trim()) {
+        headers['Authorization'] = `Bearer ${authToken.trim()}`
+      }
+
+      const response = await fetch(endpoint, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify(payload),
+      })
+
+      const latencyMs = Math.round(performance.now() - startTime)
+      if (response.ok) {
+        const resBody = await response.json()
+        const updatedTask = resBody?.data || resBody
+        logger.success(`Task ${taskId} status updated to ${status} (${latencyMs}ms)`)
+        return {
+          success: true,
+          statusCode: response.status,
+          latencyMs,
+          data: updatedTask,
+          message: resBody?.message || 'Task status updated successfully',
+        }
+      } else {
+        let errMsg = `HTTP ${response.status}: ${response.statusText}`
+        try {
+          const errBody = await response.json()
+          if (errBody?.message) {
+            errMsg = errBody.message
+          }
+        } catch {}
+
+        logger.warn(`Update task status failed: ${errMsg} (${latencyMs}ms)`)
+        return {
+          success: false,
+          statusCode: response.status,
+          latencyMs,
+          data: null,
+          error: errMsg,
+        }
+      }
+    } catch (err) {
+      const latencyMs = Math.round(performance.now() - startTime)
+      logger.error('Update task status network error:', err)
+      return {
+        success: false,
+        statusCode: 0,
+        latencyMs,
+        data: null,
+        error: err.message || 'Network request failed',
+      }
+    }
+  },
 }
 
 

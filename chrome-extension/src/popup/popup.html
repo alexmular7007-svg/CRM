@@ -33,6 +33,33 @@
     </header>
     <hr class="header-divider">
 
+    <!-- Session Check Loading Panel -->
+    <section class="session-checking-panel hidden" id="session-checking-panel">
+      <div class="spinner"></div>
+      <p class="state-text">Checking session...</p>
+    </section>
+
+    <!-- Remembered Account / Continue Panel -->
+    <section class="remembered-account-panel hidden" id="remembered-account-panel">
+      <div class="remembered-header">
+        <div class="user-avatar-circle">
+          <svg class="icon-avatar" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="currentColor"/>
+          </svg>
+        </div>
+        <p class="remembered-welcome">Welcome back</p>
+        <h2 class="remembered-name" id="remembered-user-name">User</h2>
+        <p class="remembered-email" id="remembered-user-email">user@example.com</p>
+      </div>
+
+      <div class="remembered-actions">
+        <button type="button" class="btn btn-primary btn-block" id="btn-continue-user">
+          Continue as <span id="btn-continue-name">User</span>
+        </button>
+        <button type="button" class="btn-link" id="btn-switch-account">Switch account</button>
+      </div>
+    </section>
+
     <!-- Login Panel (Rendered when unauthenticated) -->
     <section class="login-panel" id="login-panel">
       <div class="login-header">

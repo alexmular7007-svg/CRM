@@ -251,7 +251,7 @@ export default function TestSuitesTab({
             <Layers size={22} />
           </div>
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-            No test suites configured yet
+            No test suites yet
           </h3>
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
             Group existing API and Browser test cases into executable test suites with custom ordering.
@@ -262,7 +262,7 @@ export default function TestSuitesTab({
               onClick={handleOpenCreate}
               className="mt-4 inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors"
             >
-              <Plus size={14} /> Create First Test Suite
+              <Plus size={14} /> Create Test Suite
             </button>
           )}
         </div>
@@ -290,7 +290,7 @@ export default function TestSuitesTab({
                 className="p-5 rounded-2xl border border-gray-200 dark:border-[#30363D] bg-white dark:bg-[#161B22] shadow-sm flex flex-col justify-between space-y-4 transition-all hover:border-gray-300 dark:hover:border-gray-700"
               >
                 {/* Header info */}
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
@@ -323,8 +323,52 @@ export default function TestSuitesTab({
                     </div>
                   </div>
 
+                  {/* Test Cases Sequence Listing */}
+                  {suite.items && suite.items.length > 0 ? (
+                    <div className="space-y-1.5 pt-2 border-t border-gray-100 dark:border-[#21262D]">
+                      <div className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Suite Sequence ({suite.items.length})
+                      </div>
+                      <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
+                        {suite.items.map((item, idx) => (
+                          <div
+                            key={item.id || idx}
+                            className="flex items-center justify-between p-2 rounded-lg bg-gray-50/80 dark:bg-[#0D1117]/60 text-xs border border-gray-100 dark:border-[#21262D]"
+                          >
+                            <div className="flex items-center gap-2 truncate">
+                              <span className="font-mono text-[11px] font-bold text-gray-500 dark:text-gray-400">
+                                {idx + 1}.
+                              </span>
+                              <span className="font-semibold text-gray-900 dark:text-white truncate">
+                                {item.testCaseName || item.testCase?.name || `Test Case #${item.testCaseId}`}
+                              </span>
+                            </div>
+                            {item.enabled === false && (
+                              <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded">
+                                Disabled
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="py-3 text-xs text-gray-500 dark:text-gray-400 italic flex items-center justify-between border-t border-gray-100 dark:border-[#21262D]">
+                      <span>No test cases configured</span>
+                      {canManage && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEdit(suite)}
+                          className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-semibold"
+                        >
+                          Configure Suite
+                        </button>
+                      )}
+                    </div>
+                  )}
+
                   {/* Summary Bar */}
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-2 text-xs text-gray-500 dark:text-gray-400">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-2 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-[#21262D]">
                     <div>
                       Items: <strong className="text-gray-900 dark:text-white font-mono">{itemCount}</strong>
                     </div>

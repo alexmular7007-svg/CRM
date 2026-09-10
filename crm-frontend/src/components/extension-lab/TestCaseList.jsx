@@ -38,6 +38,11 @@ const TYPE_BADGES = {
     icon: Sparkles,
     style: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
   },
+  BROWSER: {
+    label: 'Browser (Playwright)',
+    icon: Code,
+    style: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
+  },
 }
 
 export default function TestCaseList({

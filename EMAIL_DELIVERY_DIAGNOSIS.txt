@@ -1,0 +1,110 @@
+═══════════════════════════════════════════════════════════════════════════════
+EMAIL DELIVERY DIAGNOSIS - August 17, 2026
+═══════════════════════════════════════════════════════════════════════════════
+
+PROBLEM: Emails not reaching Gmail after webhook implementation
+
+ROOT CAUSE ANALYSIS:
+─────────────────────────────────────────────────────────────────────────────
+✓ Code is correct: EmailCampaignSendingService has all safety checks
+✓ Brevo API key is configured in .env
+✓ BrevoEmailService is making correct API calls with htmlContent
+
+ISSUE: Railway backend is running OLD code (pre-webhook implementation)
+─────────────────────────────────────────────────────────────────────────────
+
+WHAT WAS JUST DONE:
+─────────────────────────────────────────────────────────────────────────────
+1. Rebuilt backend with: mvn clean package -DskipTests
+   Result: BUILD SUCCESS ✓
+
+2. Pushed to github-new (Railway's connected repo):
+   Commit: 55d6944 "Rebuild: Ensure email sending logic is deployed to Railway"
+   Result: PUSH SUCCESSFUL ✓
+
+3. New deployment triggered automatically on Railway
+
+NEXT STEPS FOR USER:
+─────────────────────────────────────────────────────────────────────────────
+
+CRITICAL: Wait 2-5 minutes for Railway to finish deploying the new code
+
+Then check:
+1. Railway logs show: "ASYNC EMAIL CAMPAIGN SEND - START"
+2. Verify Brevo API call succeeded (look for "Brevo API Response: 200")
+3. Send test email campaign
+4. Wait 30 seconds
+5. Check Gmail for email arrival
+
+IF STILL NOT WORKING:
+─────────────────────────────────────────────────────────────────────────────
+Action 1: Verify Railway environment variables
+  - Go to Railway Dashboard → Backend Service → Variables
+  - Ensure these are set:
+    * BREVO_API_KEY=xsmtpsib-1a0b683362f9729d7968bf60f1f528af2d315348ea19a274468c4db78f712a3c-JBJV4ih6bFCPABIa
+    * APP_MAIL_FROM=xsde790@gmail.com
+    * APP_MAIL_FROM_NAME=TaskFlow
+  - If missing, add them
+  - Redeploy manually from Railway Dashboard
+
+Action 2: Check Railway logs for errors
+  - Look for "✗ Brevo API error" or "Unexpected error"
+  - If 401/403: API key is invalid
+  - If 400: Email request format is wrong
+  - Report error message with full context
+
+Action 3: Verify Brevo dashboard
+  - Go to https://dashboard.brevo.com/transactional
+  - Check "Activity" for email sending attempts
+  - Look for delivery logs or bounce logs
+  - Copy any error messages from Brevo
+
+CODE VERIFICATION:
+─────────────────────────────────────────────────────────────────────────────
+✓ EmailCampaignSendingService.java - Lines 60-200:
+  - Loads campaign and template
+  - Checks for custom HTML OR template (not required to have template)
+  - Renders template with variables
+  - Appends CTA button HTML
+  - Validates emailContent is not empty
+  - Validates renderedHtml is not empty
+  - Calls BrevoEmailService.sendEmail()
+  - Updates recipient status to SENT
+  - Logs all steps
+
+✓ BrevoEmailService.java:
+  - Uses Brevo API: https://api.brevo.com/v3/smtp/email
+  - Sets auth header: "api-key" = BREVO_API_KEY
+  - Sends htmlContent field with email HTML
+  - Includes metadata (campaign_id, recipient_id)
+  - Logs response status and errors
+
+EMAILS THAT PREVIOUSLY WORKED:
+─────────────────────────────────────────────────────────────────────────────
+Before webhook implementation (before commit e8799b7):
+- Emails reached Gmail without issue
+- This means:
+  1. Brevo API key is valid
+  2. Gmail whitelist allows xsde790@gmail.com as sender
+  3. Brevo sender is verified
+
+REGRESSION CAUSE:
+─────────────────────────────────────────────────────────────────────────────
+When webhook/analytics was added:
+- Code was changed to support both template AND customHtmlContent
+- Old code broke: If template was null, emailContent became empty string
+- Empty htmlContent = Brevo rejects request
+- Fixed in commit 1c17f04 with safety checks
+
+CURRENT STATE AFTER FIX:
+─────────────────────────────────────────────────────────────────────────────
+✓ Campaign CAN use template OR custom HTML (no longer required to have template)
+✓ emailContent is validated before rendering
+✓ renderedHtml is validated before sending to Brevo
+✓ CTA button is appended correctly
+✓ Error handling prevents silent failures
+✓ All recipients are logged with detailed steps
+
+═══════════════════════════════════════════════════════════════════════════════
+ACTION: Wait for Railway deployment, then send test email
+═══════════════════════════════════════════════════════════════════════════════

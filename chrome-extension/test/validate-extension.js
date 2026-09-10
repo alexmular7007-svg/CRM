@@ -122,8 +122,92 @@ try {
   const val = await extensionStorage.get('unit_test_key')
   assert(val === 'unit_test_val', 'extensionStorage save and get works')
   await extensionStorage.remove('unit_test_key')
+
+  // 6. Test Default Settings & Password Security
+  await extensionStorage.clear()
+  const defaults = await extensionStorage.get()
+  assert(defaults.workspaceId === null, 'DEFAULT_SETTINGS workspaceId is null (not 1)')
+  assert(defaults.authToken === '', 'DEFAULT_SETTINGS authToken is empty')
+  assert(defaults.authenticatedUser === null, 'DEFAULT_SETTINGS authenticatedUser is null')
+  assert(Array.isArray(defaults.availableWorkspaces) && defaults.availableWorkspaces.length === 0, 'DEFAULT_SETTINGS availableWorkspaces is empty')
+  assert(!Object.keys(defaults).includes('password'), 'Storage schema does not store passwords')
+
+  // 7. Test Account Isolation & Switching
+  const accountA = { id: 101, fullName: 'Alex Miller', email: 'alex@example.com' }
+  const tokenA = 'token_account_a'
+  await extensionStorage.save({
+    authToken: tokenA,
+    authenticatedUser: accountA,
+    availableWorkspaces: [{ id: 42, name: 'Workspace A' }],
+    workspaceId: 42,
+  })
+  const storedA = await extensionStorage.get()
+  assert(storedA.authenticatedUser.fullName === 'Alex Miller', 'Account A stored successfully')
+  assert(storedA.workspaceId === 42, 'Account A workspace is 42')
+
+  // Logout Account A
+  await extensionStorage.save({
+    authToken: '',
+    authenticatedUser: null,
+    availableWorkspaces: [],
+    workspaceId: null,
+    diagnosticResults: null,
+  })
+  const loggedOutState = await extensionStorage.get()
+  assert(loggedOutState.authToken === '', 'Logout clears authToken')
+  assert(loggedOutState.authenticatedUser === null, 'Logout clears authenticatedUser')
+  assert(loggedOutState.workspaceId === null, 'Logout clears workspaceId')
+
+  // Login Account B
+  const accountB = { id: 202, fullName: 'Sarah Connor', email: 'sarah@example.com' }
+  const tokenB = 'token_account_b'
+  await extensionStorage.save({
+    authToken: tokenB,
+    authenticatedUser: accountB,
+    availableWorkspaces: [{ id: 88, name: 'WS 1' }, { id: 99, name: 'WS 2' }],
+    workspaceId: null, // multi-workspace requires selection
+  })
+  const storedB = await extensionStorage.get()
+  assert(storedB.authenticatedUser.fullName === 'Sarah Connor', 'Account B stored successfully')
+  assert(storedB.workspaceId === null, 'Account B multi-workspace is null until selected')
+  assert(!JSON.stringify(storedB).includes('Alex'), 'Account B storage contains zero Account A data')
+
+  // Reset to clean defaults
+  await extensionStorage.clear()
 } catch (err) {
   assert(false, 'extensionStorage module test failed: ' + err.message)
+}
+
+// 8. Validate Quick Task Manager API & Background integration
+const crmApiPath = path.join(extDir, 'src/services/crmApi.js')
+if (fs.existsSync(crmApiPath)) {
+  const crmApiCode = fs.readFileSync(crmApiPath, 'utf8')
+  assert(crmApiCode.includes('updateTaskStatus'), 'crmApi.js provides updateTaskStatus')
+  assert(crmApiCode.includes('/api/tasks/'), 'crmApi.js uses /api/tasks/ endpoint')
+  assert(crmApiCode.includes('PATCH'), 'crmApi.js uses PATCH method for task status updates')
+}
+
+if (fs.existsSync(backgroundJsPath)) {
+  const bg = fs.readFileSync(backgroundJsPath, 'utf8')
+  assert(bg.includes('UPDATE_TASK_STATUS'), 'background.js handles UPDATE_TASK_STATUS message')
+}
+
+// 9. Validate popup.js task completion & workspace isolation
+const popupJsPath = path.join(extDir, 'src/popup/popup.js')
+if (fs.existsSync(popupJsPath)) {
+  const popupJs = fs.readFileSync(popupJsPath, 'utf8')
+  assert(popupJs.includes('task-status-btn'), 'popup.js creates task status action buttons')
+  assert(popupJs.includes('UPDATE_TASK_STATUS'), 'popup.js sends UPDATE_TASK_STATUS messages')
+  assert(popupJs.includes('taskItemsContainer.innerHTML = \'\''), 'popup.js clears stale tasks immediately on workspace switch')
+}
+
+// 10. Validate popup.css task styling
+const popupCssPath = path.join(extDir, 'src/popup/popup.css')
+if (fs.existsSync(popupCssPath)) {
+  const popupCss = fs.readFileSync(popupCssPath, 'utf8')
+  assert(popupCss.includes('.task-status-btn'), 'popup.css styles task-status-btn')
+  assert(popupCss.includes('.workspace-select'), 'popup.css styles workspace-select')
+  assert(popupCss.includes('.task-status-btn.completed'), 'popup.css styles completed state')
 }
 
 console.log('───────────────────────────────────────────────────────')

@@ -4,6 +4,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Views & Containers
   const loginPanel = document.getElementById('login-panel')
   const authenticatedView = document.getElementById('authenticated-view')
+  const sessionCheckingPanel = document.getElementById('session-checking-panel')
+  const rememberedAccountPanel = document.getElementById('remembered-account-panel')
+  const rememberedUserName = document.getElementById('remembered-user-name')
+  const rememberedUserEmail = document.getElementById('remembered-user-email')
+  const btnContinueUser = document.getElementById('btn-continue-user')
+  const btnContinueName = document.getElementById('btn-continue-name')
+  const btnSwitchAccount = document.getElementById('btn-switch-account')
+
   const formLogin = document.getElementById('form-login')
   const loginEmail = document.getElementById('login-email')
   const loginPassword = document.getElementById('login-password')
@@ -102,6 +110,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (response && response.success && response.data) {
           formLogin.reset()
           const { user, workspaces, selectedWorkspaceId } = response.data
+          validSessionData = {
+            user,
+            workspaces: workspaces || [],
+            workspaceId: selectedWorkspaceId,
+          }
           showAuthenticatedView(user, workspaces, selectedWorkspaceId)
         } else {
           showLoginError(response?.error || 'Login failed. Please check your credentials.')
@@ -114,28 +127,58 @@ document.addEventListener('DOMContentLoaded', async () => {
     })
   }
 
-  // 3. Sign Out Handler
+  let validSessionData = null
+
+  // 3. Sign Out & Switch Account Handlers
+  async function performAccountLogout() {
+    try {
+      await chrome.runtime.sendMessage({ type: 'LOGOUT' })
+    } catch {}
+    validSessionData = null
+    cachedMembers = []
+    taskItemsContainer.innerHTML = ''
+    showLoginView()
+  }
+
   if (btnSignOut) {
-    btnSignOut.addEventListener('click', async () => {
-      try {
-        await chrome.runtime.sendMessage({ type: 'LOGOUT' })
-      } catch {}
-      cachedMembers = []
-      taskItemsContainer.innerHTML = ''
-      showLoginView()
+    btnSignOut.addEventListener('click', performAccountLogout)
+  }
+
+  if (btnSwitchAccount) {
+    btnSwitchAccount.addEventListener('click', performAccountLogout)
+  }
+
+  // 4. Continue as User Handler
+  if (btnContinueUser) {
+    btnContinueUser.addEventListener('click', () => {
+      if (validSessionData) {
+        showAuthenticatedView(
+          validSessionData.user,
+          validSessionData.workspaces,
+          validSessionData.workspaceId
+        )
+      } else {
+        initSession()
+      }
     })
   }
 
-  // 4. Workspace Switcher Handler
+  // 5. Workspace Switcher Handler
   if (workspaceSwitcher) {
     workspaceSwitcher.addEventListener('change', async (e) => {
       const selectedWsId = e.target.value ? parseInt(e.target.value, 10) : null
+      
+      // Immediately clear UI and show loading to prevent stale task/member display
+      cachedMembers = []
+      if (taskItemsContainer) taskItemsContainer.innerHTML = ''
+      if (newTaskAssignee) newTaskAssignee.innerHTML = '<option value="">Unassigned</option>'
+      showLoading()
+
       await chrome.runtime.sendMessage({
         type: 'SWITCH_WORKSPACE',
         workspaceId: selectedWsId,
       })
 
-      cachedMembers = []
       if (activeWorkspaceBadge) {
         activeWorkspaceBadge.textContent = selectedWsId ? `#${selectedWsId}` : '—'
       }
@@ -153,7 +196,105 @@ document.addEventListener('DOMContentLoaded', async () => {
     })
   }
 
+  // 6. Create Task Form Toggle Handlers
+  function openCreateForm() {
+    if (createTaskPanel) {
+      createTaskPanel.classList.remove('hidden')
+    }
+    hideCreateError()
+    if (newTaskTitle) {
+      newTaskTitle.focus()
+    }
+  }
+
+  function closeCreateForm() {
+    if (createTaskPanel) {
+      createTaskPanel.classList.add('hidden')
+    }
+    if (formCreateTask) {
+      formCreateTask.reset()
+    }
+    hideCreateError()
+  }
+
+  if (btnShowCreateForm) {
+    btnShowCreateForm.addEventListener('click', openCreateForm)
+  }
+
+  if (btnCloseCreateForm) {
+    btnCloseCreateForm.addEventListener('click', closeCreateForm)
+  }
+
+  if (btnCancelCreateTask) {
+    btnCancelCreateTask.addEventListener('click', closeCreateForm)
+  }
+
+  if (btnCreateFirstTask) {
+    btnCreateFirstTask.addEventListener('click', openCreateForm)
+  }
+
+  if (formCreateTask) {
+    formCreateTask.addEventListener('submit', async (e) => {
+      e.preventDefault()
+      await handleCreateTask()
+    })
+  }
+
+  if (btnRefreshTasks) {
+    btnRefreshTasks.addEventListener('click', () => {
+      loadTasks()
+    })
+  }
+
+  if (btnRetryTasks) {
+    btnRetryTasks.addEventListener('click', () => {
+      loadTasks()
+    })
+  }
+
+  if (btnOpenOptions) {
+    btnOpenOptions.addEventListener('click', () => {
+      if (chrome.runtime.openOptionsPage) {
+        chrome.runtime.openOptionsPage()
+      } else {
+        window.open(chrome.runtime.getURL('src/options/options.html'))
+      }
+    })
+  }
+
+  function showSessionChecking() {
+    if (sessionCheckingPanel) sessionCheckingPanel.classList.remove('hidden')
+    if (rememberedAccountPanel) rememberedAccountPanel.classList.add('hidden')
+    if (loginPanel) loginPanel.classList.add('hidden')
+    if (authenticatedView) authenticatedView.classList.add('hidden')
+    if (btnSignOut) btnSignOut.classList.add('hidden')
+    if (headerUserInfo) headerUserInfo.textContent = 'Checking...'
+  }
+
+  function showRememberedAccountView(user) {
+    if (sessionCheckingPanel) sessionCheckingPanel.classList.add('hidden')
+    if (loginPanel) loginPanel.classList.add('hidden')
+    if (authenticatedView) authenticatedView.classList.add('hidden')
+    if (rememberedAccountPanel) rememberedAccountPanel.classList.remove('hidden')
+    if (btnSignOut) btnSignOut.classList.remove('hidden')
+
+    const displayName = user?.fullName || user?.name || user?.email || 'User'
+    const email = user?.email || ''
+
+    if (headerUserInfo) headerUserInfo.textContent = displayName
+    if (rememberedUserName) rememberedUserName.textContent = displayName
+    if (rememberedUserEmail) rememberedUserEmail.textContent = email
+    if (btnContinueName) btnContinueName.textContent = displayName.split(' ')[0] || displayName
+
+    if (crmConnBadge) {
+      crmConnBadge.textContent = 'CONNECTED'
+      crmConnBadge.className = 'status-pill connected'
+    }
+  }
+
   function showLoginView(errorMsg = null) {
+    if (sessionCheckingPanel) sessionCheckingPanel.classList.add('hidden')
+    if (rememberedAccountPanel) rememberedAccountPanel.classList.add('hidden')
     if (loginPanel) loginPanel.classList.remove('hidden')
     if (authenticatedView) authenticatedView.classList.add('hidden')
     if (btnSignOut) btnSignOut.classList.add('hidden')
@@ -172,6 +313,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function showAuthenticatedView(user, workspaces = [], activeWsId = null) {
+    if (sessionCheckingPanel) sessionCheckingPanel.classList.add('hidden')
+    if (rememberedAccountPanel) rememberedAccountPanel.classList.add('hidden')
     if (loginPanel) loginPanel.classList.add('hidden')
     if (authenticatedView) authenticatedView.classList.remove('hidden')
     if (btnSignOut) btnSignOut.classList.remove('hidden')
@@ -260,7 +403,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // 5. Initialize Session & Token Validation on Startup
+  // 6. Initialize Session & Token Validation on Startup
   await initSession()
 
   async function initSession() {
@@ -272,18 +415,27 @@ document.addEventListener('DOMContentLoaded', async () => {
       return
     }
 
+    showSessionChecking()
+
     try {
       const valRes = await chrome.runtime.sendMessage({
         type: 'VALIDATE_SESSION',
         token,
       })
 
-      if (valRes && valRes.valid) {
-        showAuthenticatedView(valRes.user, valRes.workspaces, valRes.workspaceId)
+      if (valRes && valRes.valid && valRes.user) {
+        validSessionData = {
+          user: valRes.user,
+          workspaces: valRes.workspaces || [],
+          workspaceId: valRes.workspaceId,
+        }
+        showRememberedAccountView(valRes.user)
       } else {
+        validSessionData = null
         showLoginView(valRes?.error || 'Session expired. Please sign in again.')
       }
     } catch (err) {
+      validSessionData = null
       showLoginView('Unable to validate session. Please sign in.')
     }
   }
@@ -525,7 +677,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   function createTaskCardElement(task) {
     const row = document.createElement('li')
     row.className = 'task-row'
-    if (task.status === 'DONE') {
+    row.dataset.taskId = task.id
+    const isDone = task.status === 'DONE'
+    if (isDone) {
       row.classList.add('task-done')
     }
 
@@ -540,19 +694,88 @@ document.addEventListener('DOMContentLoaded', async () => {
     const statusText = (task.status || 'TODO').toUpperCase()
     const statusClass = `status-${statusText.toLowerCase()}`
 
-    row.innerHTML = `
-      <div class="task-main">
-        <span class="task-title">${titleText}</span>
-        <span class="task-meta">
-          <span class="priority-badge ${priorityClass}">${priority}</span>
-          <span class="due-date ${isOverdue ? 'overdue' : ''}">· ${dueDateFormatted}</span>
-        </span>
-        <span class="task-assignee">${escapeHtml(assignedName)}</span>
-      </div>
-      <div class="task-side">
-        <span class="status-tag ${statusClass}">${statusText}</span>
-      </div>
+    // Status Action Toggle Button (Circle Checkbox)
+    const statusBtn = document.createElement('button')
+    statusBtn.type = 'button'
+    statusBtn.className = `task-status-btn ${isDone ? 'completed' : ''}`
+    statusBtn.title = isDone ? 'Mark task TODO' : 'Mark task DONE'
+    statusBtn.setAttribute('aria-label', isDone ? 'Mark task incomplete' : 'Mark task complete')
+    statusBtn.innerHTML = `
+      <svg class="task-status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
     `
+
+    statusBtn.addEventListener('click', async (e) => {
+      e.stopPropagation()
+      if (statusBtn.disabled) return
+      statusBtn.disabled = true
+      row.classList.add('task-updating')
+
+      const currentSettings = await extensionStorage.get()
+      const targetWs = currentSettings.workspaceId
+      const token = currentSettings.authToken || ''
+      const newStatus = isDone ? 'TODO' : 'DONE'
+
+      try {
+        const res = await chrome.runtime.sendMessage({
+          type: 'UPDATE_TASK_STATUS',
+          taskId: task.id,
+          status: newStatus,
+          workspaceId: targetWs,
+          token: token,
+        })
+
+        if (res && res.success) {
+          task.status = newStatus
+          if (newStatus === 'DONE') {
+            row.classList.add('task-done')
+            statusBtn.classList.add('completed')
+            statusBtn.title = 'Mark task TODO'
+            showSuccessToast('Task marked complete!')
+          } else {
+            row.classList.remove('task-done')
+            statusBtn.classList.remove('completed')
+            statusBtn.title = 'Mark task DONE'
+            showSuccessToast('Task reopened.')
+          }
+          const tag = row.querySelector('.status-tag')
+          if (tag) {
+            tag.className = `status-tag status-${newStatus.toLowerCase()}`
+            tag.textContent = newStatus
+          }
+        } else {
+          showSuccessToast(res?.error || 'Failed to update task status')
+        }
+      } catch (err) {
+        showSuccessToast(err.message || 'Error updating task status')
+      } finally {
+        statusBtn.disabled = false
+        row.classList.remove('task-updating')
+      }
+    })
+
+    const mainDiv = document.createElement('div')
+    mainDiv.className = 'task-main'
+    mainDiv.innerHTML = `
+      <span class="task-title">${titleText}</span>
+      <span class="task-meta">
+        <span class="priority-badge ${priorityClass}">${priority}</span>
+        <span class="due-date ${isOverdue ? 'overdue' : ''}">· ${dueDateFormatted}</span>
+      </span>
+      <span class="task-assignee">${escapeHtml(assignedName)}</span>
+    `
+
+    const sideDiv = document.createElement('div')
+    sideDiv.className = 'task-side'
+    sideDiv.innerHTML = `
+      <span class="status-tag ${statusClass}">${statusText}</span>
+    `
+
+    row.appendChild(statusBtn)
+    row.appendChild(mainDiv)
+    row.appendChild(sideDiv)
+
     return row
   }
 

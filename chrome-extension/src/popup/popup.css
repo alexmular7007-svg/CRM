@@ -20,6 +20,10 @@
   padding: 0;
 }
 
+.hidden {
+  display: none !important;
+}
+
 body {
   width: 400px;
   min-height: 280px;
@@ -721,4 +725,179 @@ svg.state-icon {
   border-color: var(--primary);
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
 }
+
+/* ── Session Checking Panel ─────────────────────── */
+.session-checking-panel {
+  padding: 48px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.session-checking-panel.hidden {
+  display: none !important;
+}
+
+/* ── Remembered Account Panel ────────────────────── */
+.remembered-account-panel {
+  padding: 32px 24px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  text-align: center;
+}
+
+.remembered-account-panel.hidden {
+  display: none !important;
+}
+
+.remembered-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.user-avatar-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.icon-avatar {
+  width: 24px;
+  height: 24px;
+}
+
+.remembered-welcome {
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+
+.remembered-name {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.remembered-email {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.remembered-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.btn-link {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 8px;
+  transition: color 0.12s ease;
+}
+
+.btn-link:hover {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+
+/* ── Workspace Selector ─────────────────────────── */
+.workspace-select {
+  height: 28px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0 8px;
+  outline: none;
+  cursor: pointer;
+  max-width: 170px;
+  transition: border-color 0.12s ease;
+}
+
+.workspace-select:hover {
+  border-color: #D1D5DB;
+}
+
+.workspace-select:focus {
+  border-color: var(--primary);
+}
+
+/* ── Task Row Status Action Button (Checkmark) ──── */
+.task-status-btn {
+  background: transparent;
+  border: 1.5px solid #CBD5E1;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  min-height: 18px;
+  padding: 0;
+  margin-top: 2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
+  transition: all 0.15s ease;
+  outline: none;
+  flex-shrink: 0;
+}
+
+.task-status-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background-color: #EFF6FF;
+}
+
+.task-status-btn.completed {
+  background-color: var(--success);
+  border-color: var(--success);
+  color: #FFFFFF;
+}
+
+.task-status-btn.completed:hover {
+  background-color: #15803D;
+  border-color: #15803D;
+}
+
+.task-status-btn:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.task-status-icon {
+  width: 11px;
+  height: 11px;
+}
+
+.task-row.task-updating {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
 

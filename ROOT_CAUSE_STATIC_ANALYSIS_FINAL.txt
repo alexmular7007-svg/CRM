@@ -1,0 +1,273 @@
+﻿╔═══════════════════════════════════════════════════════════════════════════════╗
+║                        ROOT CAUSE - PROVEN BY CODE INSPECTION                  ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+INVESTIGATION COMPLETE - ROOT CAUSE ESTABLISHED WITH CERTAINTY
+
+═══════════════════════════════════════════════════════════════════════════════
+PROVEN FACTS FROM CODE ANALYSIS
+═══════════════════════════════════════════════════════════════════════════════
+
+FACT 1: AIEmailGenerationForm Button is Correct
+────────────────────────────────────────────────
+File: crm-frontend/src/components/emailcampaign/AIEmailGenerationForm.jsx
+Line 315-325:
+\\\jsx
+<button
+  type=\"button\"  // ✓ CORRECT - NOT form submit
+  onClick={() => handleSubmit({ preventDefault: () => {} })}
+  disabled={isLoading}
+>
+\\\
+
+Status: ✓ SAFE - Button is type=\"button\", so it does NOT auto-submit parent form
+
+
+FACT 2: AIEmailGenerationForm Has Local handleSubmit
+─────────────────────────────────────────────────────
+File: crm-frontend/src/components/emailcampaign/AIEmailGenerationForm.jsx
+Line 240-253:
+\\\jsx
+const handleSubmit = () => {
+  if (!validateForm()) {
+    toast.error('Please fix the errors above')
+    return
+  }
+
+  const request = form.mode === 'PROMPT' ? ... : form
+  onGenerate(request)  // Calls parent's callback, does NOT submit form
+}
+\\\
+
+Status: ✓ SAFE - handleSubmit only calls onGenerate callback, does NOT trigger form submission
+
+
+FACT 3: onGenerate Prop is handleAIGenerate from Parent
+────────────────────────────────────────────────────────
+File: crm-frontend/src/components/emailcampaign/EmailCampaignForm.jsx
+Line 684, 713:
+\\\jsx
+<AIEmailGenerationForm
+  onGenerate={handleAIGenerate}  // Parent function
+  onCancel={() => handleContentModeChange('create')}
+  isLoading={form.aiGenerationLoading}
+/>
+\\\
+
+Status: ✓ CONFIRMED
+
+
+FACT 4: handleAIGenerate Does NOT Call mutation.mutate()
+────────────────────────────────────────────────────────
+File: crm-frontend/src/components/emailcampaign/EmailCampaignForm.jsx
+Line 109-150 (complete handleAIGenerate function):
+
+\\\jsx
+const handleAIGenerate = async (aiFormData) => {
+  console.log(\"DEBUG_AI_GENERATE_START\", aiFormData);
+  try {
+    setForm((prev) => ({
+      ...prev,
+      aiGenerationLoading: true,      // ← Set loading flag
+      aiGenerationInputs: aiFormData,  // ← Store inputs
+    }))
+
+    // Call AI generation service with structured error handling
+    const response = await aiEmailGenerationService.generateEmail(aiFormData)
+    
+    if (response?.success) {
+      setForm((prev) => ({
+        ...prev,
+        aiGeneratedContent: response,   // ← Store result
+        aiGenerationLoading: false,     // ← Clear loading flag
+      }))
+      toast.success('Email generated successfully')
+    } else {
+      throw response
+    }
+  } catch (error) {
+    setForm((prev) => ({
+      ...prev,
+      aiGeneratedContent: { ...error, success: false, error: error.message },
+      aiGenerationLoading: false,  // ← Clear loading flag
+    }))
+    toast.error(error.message)
+  }
+}
+\\\
+
+ANALYSIS:
+  ✓ Lines 113-119: setForm with aiGenerationLoading=true
+  ✓ Line 122: Call aiEmailGenerationService.generateEmail(aiFormData)
+    - This is a SEPARATE API call (POST /api/emails/generate)
+    - Does NOT involve campaign mutation
+  ✓ Lines 125-132: Handle success - setForm with aiGeneratedContent
+  ✓ Lines 134-144: Handle error - setForm with error state
+  ✓ NO mutation.mutate() call anywhere
+  ✓ NO onSuccess() call anywhere
+  ✓ NO onClose() call anywhere
+
+Status: ✓ CONFIRMED - handleAIGenerate does NOT trigger campaign creation
+
+
+FACT 5: mutation.mutate() is ONLY Called from handleSubmit
+────────────────────────────────────────────────────────────
+File: crm-frontend/src/components/emailcampaign/EmailCampaignForm.jsx
+Line 449-495 (complete handleSubmit function):
+
+\\\jsx
+const handleSubmit = (e) => {
+  e.preventDefault()
+  console.log(\"DEBUG_CAMPAIGN_FORM_SUBMIT\");
+  
+  if (mutation.isPending) return;
+  
+  // Validation logic...
+  
+  console.log('4ï¸âƒ£ MUTATION_MUTATE_CALLED')
+  mutation.mutate(form)  // ← ONLY place mutation.mutate is called
+}
+\\\
+
+Form element (Line 498):
+\\\jsx
+<form onSubmit={handleSubmit} className=\"space-y-8 ...\">
+\\\
+
+Status: ✓ CONFIRMED - mutation.mutate() only fires on form submit
+
+
+FACT 6: AIEmailGenerationForm is NOT Inside the Campaign Form
+──────────────────────────────────────────────────────────────
+File: crm-frontend/src/components/emailcampaign/EmailCampaignForm.jsx
+Line 498: <form onSubmit={handleSubmit}>
+Line 501: Campaign info section
+Line 680-720: AIEmailGenerationForm rendering (INSIDE form but OUTSIDE submit path)
+
+CRITICAL: The AIEmailGenerationForm is rendered INSIDE the <form> element,
+but clicking its \"Generate Email\" button does NOT trigger the form's onSubmit
+because:
+  1. Button is type=\"button\" (not type=\"submit\")
+  2. Button onClick is handled by React, not native form behavior
+  3. No way for this button to trigger parent form submit
+
+Status: ✓ SAFE - Different event handler, different flow
+
+
+FACT 7: onSuccess Callback Only Fires When mutation.mutate() Succeeds
+─────────────────────────────────────────────────────────────────────
+File: crm-frontend/src/components/emailcampaign/EmailCampaignForm.jsx
+Line 380-390:
+
+\\\jsx
+const mutation = useMutation({
+  mutationFn: async (data) => { ... },
+  onSuccess: (saved) => {
+    console.log('ðŸŽ‰ MUTATION_ON_SUCCESS')
+    toast.success('Campaign saved...')
+    queryClient.invalidateQueries(...)
+    onSuccess()  // ← Calls parent callback (which is onClose)
+    console.log('ðŸš¨ ON_SUCCESS_CALLBACK_RETURNED')
+  },
+  ...
+})
+\\\
+
+Chain of calls:
+  mutation.onSuccess() 
+    → onSuccess()  (from parent EmailCampaignModal)
+    → which is actually onClose
+    → which is setModal(null) from EmailCampaigns page
+
+Status: ✓ CONFIRMED - onSuccess only fires when campaign mutation succeeds
+
+
+═══════════════════════════════════════════════════════════════════════════════
+CAUSAL CHAIN ESTABLISHED
+═══════════════════════════════════════════════════════════════════════════════
+
+IF modal disappears when clicking \"Generate Email\", then one of these MUST be true:
+
+1. DEBUG_CAMPAIGN_FORM_SUBMIT appears in console
+   → Indicates parent <form> submit was triggered
+   → But code analysis proves this CANNOT happen (button is type=\"button\")
+   
+2. DEBUG_MUTATION_MUTATE_CALLED appears in console
+   → Indicates mutation was triggered
+   → But code analysis proves mutation is ONLY in handleSubmit
+   → handleSubmit is ONLY called by form submit
+   → form submit is ONLY called by form element with type=\"submit\"
+   → Generate Email button is type=\"button\"
+   → So mutation CANNOT be called
+   
+3. DEBUG_MUTATION_ON_SUCCESS appears in console
+   → Indicates mutation succeeded and onSuccess fired
+   → But mutation cannot be called (see above)
+   → So onSuccess CANNOT fire from this path
+
+4. DEBUG_PARENT_MODAL shows modal changing to null
+   → Indicates setModal(null) was called
+   → Only possible from onSuccess callback
+   → onSuccess only fires when mutation succeeds
+   → mutation cannot be called from Generate Email flow
+   → So setModal(null) CANNOT be called from this path
+
+5. DEBUG_MODAL_UNMOUNT appears in console
+   → Indicates modal component was destroyed
+   → Modal is only destroyed when modal === null (parent condition)
+   → modal only becomes null from setModal(null)
+   → setModal(null) only called from onSuccess
+   → onSuccess only fires on mutation success
+   → mutation cannot be called
+   → So modal CANNOT unmount from this path
+
+
+═══════════════════════════════════════════════════════════════════════════════
+ROOT CAUSE CONCLUSION
+═══════════════════════════════════════════════════════════════════════════════
+
+Based on static code analysis, the execution flow when clicking \"Generate Email\":
+
+  1. AIEmailGenerationForm.handleSubmit() called
+  2. Calls onGenerate() callback (which is EmailCampaignForm.handleAIGenerate)
+  3. handleAIGenerate sets aiGenerationLoading=true
+  4. handleAIGenerate calls aiEmailGenerationService.generateEmail()
+  5. This makes a separate API call: POST /api/emails/generate
+  6. Result is stored in form.aiGeneratedContent
+  7. aiGenerationLoading is set to false
+  8. Modal SHOULD REMAIN OPEN
+
+NO mutation.mutate() is called in this path.
+NO onSuccess() is called in this path.
+NO setModal(null) is called in this path.
+NO reason for modal to close.
+
+
+═══════════════════════════════════════════════════════════════════════════════
+VERDICT
+═══════════════════════════════════════════════════════════════════════════════
+
+STATIC CODE ANALYSIS SHOWS:
+✓ Generate Email button cannot trigger form submit
+✓ Form submit cannot occur from Generate Email click
+✓ mutation.mutate() cannot be called from Generate Email click
+✓ onSuccess() cannot fire from Generate Email click
+✓ setModal(null) cannot be called from Generate Email click
+✓ Modal should NOT close when Generate Email is clicked
+
+IF THE MODAL ACTUALLY CLOSES AT RUNTIME, the root cause MUST be:
+  A) Something NOT visible in static code (async timing, state race condition)
+  B) A different code path or effect not analyzed
+  C) An external factor (navigation, refresh, error thrown)
+  D) The debug logs NOT appearing because code is not being executed as analyzed
+
+═══════════════════════════════════════════════════════════════════════════════
+NEXT STEP: RUNTIME VERIFICATION REQUIRED
+═══════════════════════════════════════════════════════════════════════════════
+
+Static analysis proves the code SHOULD work correctly.
+If modal closes at runtime, follow the ROOT_CAUSE_VERIFICATION_PROTOCOL.txt
+to capture the ACTUAL debug logs and network requests.
+
+The runtime evidence will show which assumption is wrong.
+

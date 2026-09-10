@@ -103,7 +103,12 @@ public class EmailCampaignSendingService {
             metadata.put("automation_id", recipient.getAutomation().getId());
             metadata.put("execution_id", recipient.getExecution().getId());
             metadata.put("automation_step_id", recipient.getAutomationStep().getId());
-            String providerResponse = brevoEmailService.sendEmail(recipient.getRecipientEmail(), renderedSubject, renderedHtml, metadata);
+                String providerResponse = brevoEmailService.sendEmail(
+                    recipient.getRecipientEmail(),
+                    renderedSubject,
+                    renderedHtml,
+                    renderedHtml.replaceAll("<[^>]*>", ""),
+                    metadata);
             recipient.setProviderMessageId(extractProviderMessageId(providerResponse));
             recipient.setStatus("SENT");
             recipient.setSentAt(LocalDateTime.now());
@@ -286,26 +291,17 @@ public class EmailCampaignSendingService {
                         // Call Brevo API
                         log.info("[STEP 4] Calling BrevoEmailService.sendEmail()...");
                         log.info("[DEBUG] Metadata for Brevo: campaign_id={}, recipient_id={}", campaign.getId(), recipient.getId());
-                        try {
-                            brevoEmailService.sendEmail(
-                                    recipient.getRecipientEmail(),
-                                    renderedSubject,
-                                    renderedHtml,
-                                    Map.of(
-                                            "campaign_id", campaign.getId(),
-                                            "recipient_id", recipient.getId()
-                                    )
-                            );
-                        } catch (Exception metadataEx) {
-                            log.warn("[DEBUG] Retrying without metadata after failure: {}", metadataEx.getMessage());
-                            // Retry without metadata
-                            brevoEmailService.sendEmail(
-                                    recipient.getRecipientEmail(),
-                                    renderedSubject,
-                                    renderedHtml,
-                                    null
-                            );
-                        }
+                        String providerResponse = brevoEmailService.sendEmail(
+                            recipient.getRecipientEmail(),
+                            renderedSubject,
+                            renderedHtml,
+                            renderedHtml.replaceAll("<[^>]*>", ""),
+                            Map.of(
+                                "campaign_id", campaign.getId(),
+                                "recipient_id", recipient.getId()
+                            )
+                        );
+                        recipient.setProviderMessageId(extractProviderMessageId(providerResponse));
                         
                         // Update recipient status to SENT on success
                         saveRecipientAsync(recipient);

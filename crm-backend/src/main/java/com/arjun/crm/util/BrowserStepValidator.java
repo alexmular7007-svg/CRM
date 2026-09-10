@@ -107,7 +107,7 @@ public final class BrowserStepValidator {
             // 3. Action-specific field validations
             switch (action) {
                 case "OPEN_PAGE": {
-                    String target = getStringField(stepMap, "target", "value");
+                    String target = getStringField(stepMap, "target", "value", "url");
                     if (target == null || target.isBlank()) {
                         throw new IllegalArgumentException("OPEN_PAGE step at index " + i + " requires a non-empty target URL");
                     }
@@ -119,7 +119,7 @@ public final class BrowserStepValidator {
                 }
 
                 case "CLICK": {
-                    String target = getStringField(stepMap, "target");
+                    String target = getStringField(stepMap, "target", "selector");
                     if (target == null || target.isBlank()) {
                         throw new IllegalArgumentException("CLICK step at index " + i + " requires a non-empty target selector");
                     }
@@ -127,11 +127,12 @@ public final class BrowserStepValidator {
                 }
 
                 case "TYPE": {
-                    String target = getStringField(stepMap, "target");
+                    String target = getStringField(stepMap, "target", "selector");
                     if (target == null || target.isBlank()) {
                         throw new IllegalArgumentException("TYPE step at index " + i + " requires a non-empty target selector");
                     }
                     Object value = stepMap.get("value");
+                    if (value == null) value = stepMap.get("text");
                     if (value == null) {
                         throw new IllegalArgumentException("TYPE step at index " + i + " requires a value to type");
                     }
@@ -164,7 +165,7 @@ public final class BrowserStepValidator {
                 }
 
                 case "ASSERT_VISIBLE": {
-                    String target = getStringField(stepMap, "target");
+                    String target = getStringField(stepMap, "target", "selector");
                     if (target == null || target.isBlank()) {
                         throw new IllegalArgumentException("ASSERT_VISIBLE step at index " + i + " requires a non-empty target selector");
                     }
@@ -172,12 +173,13 @@ public final class BrowserStepValidator {
                 }
 
                 case "ASSERT_TEXT": {
-                    String target = getStringField(stepMap, "target");
+                    String target = getStringField(stepMap, "target", "selector");
                     if (target == null || target.isBlank()) {
                         throw new IllegalArgumentException("ASSERT_TEXT step at index " + i + " requires a non-empty target selector");
                     }
                     Object value = stepMap.get("value");
                     if (value == null) value = stepMap.get("expected");
+                    if (value == null) value = stepMap.get("expectedText");
                     if (value == null) {
                         throw new IllegalArgumentException("ASSERT_TEXT step at index " + i + " requires an expected text value");
                     }
@@ -185,7 +187,7 @@ public final class BrowserStepValidator {
                 }
 
                 case "ASSERT_URL": {
-                    String expected = getStringField(stepMap, "value", "expected", "target");
+                    String expected = getStringField(stepMap, "value", "expected", "target", "url");
                     if (expected == null || expected.isBlank()) {
                         throw new IllegalArgumentException("ASSERT_URL step at index " + i + " requires an expected URL pattern");
                     }
@@ -193,7 +195,7 @@ public final class BrowserStepValidator {
                 }
 
                 case "ASSERT_TITLE": {
-                    String expected = getStringField(stepMap, "value", "expected", "target");
+                    String expected = getStringField(stepMap, "value", "expected", "target", "title");
                     if (expected == null || expected.isBlank()) {
                         throw new IllegalArgumentException("ASSERT_TITLE step at index " + i + " requires an expected title");
                     }
@@ -218,11 +220,12 @@ public final class BrowserStepValidator {
                 }
 
                 case "SELECT_OPTION": {
-                    String target = getStringField(stepMap, "target");
+                    String target = getStringField(stepMap, "target", "selector");
                     if (target == null || target.isBlank()) {
                         throw new IllegalArgumentException("SELECT_OPTION step at index " + i + " requires a non-empty target selector");
                     }
                     Object value = stepMap.get("value");
+                    if (value == null) value = stepMap.get("option");
                     if (value == null) {
                         throw new IllegalArgumentException("SELECT_OPTION step at index " + i + " requires an option value");
                     }

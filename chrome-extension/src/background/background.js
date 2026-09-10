@@ -222,7 +222,13 @@ async function handleMessage(message, sender) {
         }
 
         const token = loginRes.token
-        const user = loginRes.user
+        const rawUser = loginRes.user || {}
+        const user = {
+          id: rawUser.id,
+          fullName: rawUser.fullName || rawUser.name || '',
+          email: rawUser.email || '',
+          role: rawUser.role || '',
+        }
 
         // Discover user's accessible workspaces
         const wsRes = await crmApi.fetchWorkspaces(token, endpoint)
@@ -237,7 +243,7 @@ async function handleMessage(message, sender) {
           selectedWorkspaceId = workspaces[0].id
         }
 
-        // Save session data to extensionStorage
+        // Save session data to extensionStorage (only non-sensitive profile info, no credentials)
         await extensionStorage.save({
           authToken: token,
           authenticatedUser: user,
@@ -293,24 +299,45 @@ async function handleMessage(message, sender) {
         }
 
         const valRes = await crmApi.validateSession(token, settings.crmEndpoint)
-        if (valRes.valid) {
-          // Token is valid; refresh workspaces if needed
-          let workspaces = settings.availableWorkspaces || []
-          if (!workspaces || workspaces.length === 0) {
+        if (valRes.valid && valRes.user) {
+          const freshUser = {
+            id: valRes.user.id,
+            fullName: valRes.user.fullName || valRes.user.name || '',
+            email: valRes.user.email || '',
+            role: valRes.user.role || '',
+          }
+
+          // Check if user identity changed unexpectedly
+          const storedUser = settings.authenticatedUser
+          const isUserChanged = storedUser && storedUser.id && freshUser.id && storedUser.id !== freshUser.id
+
+          let workspaces = isUserChanged ? [] : (settings.availableWorkspaces || [])
+          let workspaceId = isUserChanged ? null : settings.workspaceId
+
+          // If workspaces missing or user changed, refresh accessible workspaces
+          if (workspaces.length === 0) {
             const wsRes = await crmApi.fetchWorkspaces(token, settings.crmEndpoint)
             if (wsRes.success && Array.isArray(wsRes.data)) {
               workspaces = wsRes.data
-              await extensionStorage.save({ availableWorkspaces: workspaces })
+              if (workspaces.length === 1) {
+                workspaceId = workspaces[0].id
+              }
             }
           }
+
+          await extensionStorage.save({
+            authenticatedUser: freshUser,
+            availableWorkspaces: workspaces,
+            workspaceId,
+          })
 
           return {
             success: true,
             valid: true,
             authenticated: true,
-            user: valRes.user || settings.authenticatedUser,
+            user: freshUser,
             workspaces,
-            workspaceId: settings.workspaceId,
+            workspaceId,
           }
         } else {
           // 401/403 or invalid: clear session state
@@ -319,6 +346,7 @@ async function handleMessage(message, sender) {
             authenticatedUser: null,
             availableWorkspaces: [],
             workspaceId: null,
+            diagnosticResults: null,
           })
           return {
             success: true,
@@ -409,6 +437,22 @@ async function handleMessage(message, sender) {
           success: false,
           data: null,
           error: err.message || 'Failed to create task',
+        }
+      }
+    }
+
+    case 'UPDATE_TASK_STATUS': {
+      try {
+        const taskId = message.taskId
+        const status = message.status
+        const workspaceId = message.workspaceId ?? null
+        const token = message.token ?? null
+        return await crmApi.updateTaskStatus(taskId, status, workspaceId, token)
+      } catch (err) {
+        return {
+          success: false,
+          data: null,
+          error: err.message || 'Failed to update task status',
         }
       }
     }

@@ -1,0 +1,411 @@
+═══════════════════════════════════════════════════════════════════════════════
+URGENT REGRESSION DEBUG — EMAIL CAMPAIGN SENDING NOT WORKING
+═══════════════════════════════════════════════════════════════════════════════
+Investigation Date: August 17, 2026
+Status: ROOT CAUSE IDENTIFIED - AWAITING CONFIRMATION
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 1: TRACE THE COMPLETE SEND REQUEST
+═══════════════════════════════════════════════════════════════════════════════
+
+REQUEST FLOW (NO ISSUES FOUND):
+─────────────────────────────────────────────────────────────────────────────
+✓ POST /api/workspaces/{workspaceId}/email-campaigns/{campaignId}/send
+  → EmailCampaignController.sendCampaign()
+  → EmailCampaignServiceImpl.sendCampaign()
+    - Loads campaign
+    - Loads recipients
+    - Sets status to "SENDING"
+    - Saves campaign
+  → EmailCampaignSendingService.sendCampaignAsync()
+    - Async method - does NOT block response
+    - Executed in background
+    - Method signature unchanged
+
+ENTRY POINT: EmailCampaignSendingService.sendCampaignAsync(Long campaignId)
+  - Uses @Async annotation
+  - Loads campaign from repository
+  - Loads recipients in pages of 1000
+  - For EACH recipient, calls Brevo API
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 2: VERIFY RECIPIENT PROCESSING
+═══════════════════════════════════════════════════════════════════════════════
+
+RECIPIENT LOADING LOGIC (UNCHANGED):
+─────────────────────────────────────────────────────────────────────────────
+Line 89-106 in EmailCampaignSendingService.java:
+  Pageable pageable = PageRequest.of(0, 1000);
+  while (hasMore) {
+    recipientPage = recipientRepository.findByCampaignIdAndStatusOrderByCreatedAtDesc(
+        campaignId, "PENDING", pageable);
+    if (recipientPage.isEmpty()) {
+      hasMore = false;
+      break;
+    }
+    // Process each recipient in page
+    for (EmailCampaignRecipient recipient : recipientPage.getContent()) {
+      // ... send email ...
+    }
+  }
+
+✓ Recipients with status=PENDING are loaded from database
+✓ Processing loops through pages correctly
+✓ No skip conditions added
+✓ Recipients are marked SENT on success
+
+DATABASE STATE ASSUMPTION:
+─────────────────────────────────────────────────────────────────────────────
+Assuming test campaign has recipients with status='PENDING', the query should return them.
+(Need to verify: SELECT * FROM email_campaign_recipients WHERE campaign_id=? AND status='PENDING')
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 3: VERIFY BrevoEmailService
+═══════════════════════════════════════════════════════════════════════════════
+
+ORIGINAL VERSION (commit b893b1d - WORKING):
+─────────────────────────────────────────────────────────────────────────────
+public void sendEmail(String to, String subject, String html) {
+    log.info("Brevo Email Service - Sending email");
+    // ... logging ...
+    
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    headers.set("api-key", apiKey);
+    
+    Map<String, Object> body = Map.of(
+        "sender", Map.of("name", fromName, "email", fromEmail),
+        "to", List.of(Map.of("email", to)),
+        "subject", subject,
+        "htmlContent", html
+    );
+    
+    HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+    
+    try {
+        var response = restTemplate.exchange(
+            "https://api.brevo.com/v3/smtp/email",
+            HttpMethod.POST,
+            entity,
+            String.class
+        );
+        log.info("✓ Brevo API Response: {}", response.getStatusCode());
+    } catch (HttpStatusCodeException ex) {
+        log.error("STATUS = {}", ex.getStatusCode());
+        log.error("BODY = {}", ex.getResponseBodyAsString());
+        throw ex;
+    }
+}
+
+CURRENT VERSION (commit HEAD - AFTER WEBHOOK):
+─────────────────────────────────────────────────────────────────────────────
+public void sendEmail(String to, String subject, String html) {
+    sendEmail(to, subject, html, null);  // ← Delegates to 4-param version
+}
+
+public void sendEmail(String to, String subject, String html, Map<String, Object> metadata) {
+    log.info("Brevo Email Service - Sending email");
+    // ... logging ...
+    log.info("  Metadata: {}", metadata);
+    
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    headers.set("api-key", apiKey);
+    
+    Map<String, Object> body = new HashMap<>();
+    body.put("sender", Map.of("name", fromName, "email", fromEmail));
+    body.put("to", List.of(Map.of("email", to)));
+    body.put("subject", subject);
+    body.put("htmlContent", html);
+    if (metadata != null && !metadata.isEmpty()) {
+        body.put("metadata", metadata);  // ← Only added if present
+    }
+    
+    HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+    
+    try {
+        var response = restTemplate.exchange(
+            "https://api.brevo.com/v3/smtp/email",
+            HttpMethod.POST,
+            entity,
+            String.class
+        );
+        log.info("✓ Brevo API Response: {}", response.getStatusCode());
+    } catch (HttpStatusCodeException ex) {
+        log.error("STATUS = {}", ex.getStatusCode());
+        log.error("BODY = {}", ex.getResponseBodyAsString());
+        throw ex;
+    }
+}
+
+ANALYSIS:
+─────────────────────────────────────────────────────────────────────────────
+✓ BACKWARDS COMPATIBLE: 3-param call delegates to 4-param with null metadata
+✓ REQUEST BODY: Still includes all required fields (sender, to, subject, htmlContent)
+✓ METADATA: Only added if present and non-empty - won't break if null
+✓ API ENDPOINT: https://api.brevo.com/v3/smtp/email is UNCHANGED
+✓ AUTH HEADER: "api-key" header still set with apiKey
+
+CONCLUSION: BrevoEmailService changes are SAFE and BACKWARDS COMPATIBLE
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 4: VERIFY ACTUAL Brevo API REQUEST
+═══════════════════════════════════════════════════════════════════════════════
+
+ORIGINAL SENDING CALL (b893b1d):
+─────────────────────────────────────────────────────────────────────────────
+brevoEmailService.sendEmail(
+    recipient.getRecipientEmail(),
+    renderedSubject,
+    renderedHtml
+);
+
+CURRENT SENDING CALL (HEAD):
+─────────────────────────────────────────────────────────────────────────────
+Line 174-194 in EmailCampaignSendingService.java (after CTA fix):
+try {
+    brevoEmailService.sendEmail(
+        recipient.getRecipientEmail(),
+        renderedSubject,
+        renderedHtml,
+        Map.of(
+            "campaign_id", campaign.getId(),
+            "recipient_id", recipient.getId()
+        )
+    );
+} catch (Exception metadataEx) {
+    log.warn("[DEBUG] Retrying without metadata after failure: {}", metadataEx.getMessage());
+    brevoEmailService.sendEmail(
+        recipient.getRecipientEmail(),
+        renderedSubject,
+        renderedHtml,
+        null
+    );
+}
+
+ANALYSIS:
+─────────────────────────────────────────────────────────────────────────────
+✓ Brevo request body is IDENTICAL when metadata=null
+✓ Fallback retry ensures email sent even if metadata fails
+✓ API response handling is UNCHANGED
+
+PROBLEM IDENTIFIED:
+─────────────────────────────────────────────────────────────────────────────
+The issue is NOT in BrevoEmailService or the API request itself.
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 5: CHECK FOR WEBHOOK REGRESSION
+═══════════════════════════════════════════════════════════════════════════════
+
+WEBHOOK CODE ANALYSIS:
+─────────────────────────────────────────────────────────────────────────────
+✓ BrevoWebhookController - NEW, independent service
+✓ EmailAnalyticsServiceImpl - NEW, processes webhook events only
+✓ EmailCampaignHistoryEntity - NEW, audit log only
+✓ Database migration V16 - Adds columns to email_campaigns, does NOT affect sending
+
+DOES WEBHOOK CODE AFFECT SENDING?
+─────────────────────────────────────────────────────────────────────────────
+✓ NO shared services between sending and analytics
+✓ NO changes to sendCampaign() method
+✓ NO changes to sendCampaignAsync() signature or execution
+✓ NO transaction conflicts (separate @Transactional services)
+✓ NO API credential changes in webhook code
+
+CONCLUSION: Webhook code does NOT directly block email sending
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 6: CHECK DATABASE STATE
+═══════════════════════════════════════════════════════════════════════════════
+
+NEED TO VERIFY (User must check):
+─────────────────────────────────────────────────────────────────────────────
+1. Check email_campaigns table:
+   SELECT id, name, status, total_recipients, sent_count, failed_count, 
+          template_id, custom_html_content, cta_button_text, cta_button_url,
+          created_at, send_started_at, send_completed_at
+   FROM email_campaigns
+   WHERE id = ?  (use campaign you tested)
+
+   Expected: status='SENDING' or 'SENT', send_started_at has timestamp
+
+2. Check email_campaign_recipients table:
+   SELECT id, email, status, sent_at, delivered_at, error_message
+   FROM email_campaign_recipients
+   WHERE campaign_id = ?
+
+   Expected: status='SENT' or 'PENDING' (if not processed yet)
+            sent_at has timestamp if status='SENT'
+            error_message populated if status='FAILED'
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 7: ROOT CAUSE HYPOTHESIS
+═══════════════════════════════════════════════════════════════════════════════
+
+THEORY #1: @Async not being executed
+─────────────────────────────────────────────────────────────────────────────
+sendCampaignAsync() has @Async annotation.
+For @Async to work, application must have:
+  1. @EnableAsync on a configuration class
+  2. TaskExecutor bean configured
+  3. Main thread (HTTP handler) must exit before async task starts
+
+TEST: Check Railway logs for:
+  "[STEP 1] Campaign loaded: ... "
+  "[STEP 2] Template loaded: ... "
+  "[STEP 3] Loading recipients with status=PENDING..."
+
+If NOT present: @Async not running
+
+THEORY #2: Recipients are PENDING but query returns empty
+─────────────────────────────────────────────────────────────────────────────
+Recipients might NOT be in 'PENDING' status.
+
+TEST: Check database:
+  SELECT COUNT(*) FROM email_campaign_recipients 
+  WHERE campaign_id = ? AND status = 'PENDING'
+
+If COUNT = 0: No recipients to send
+
+THEORY #3: Template is NULL and customHtmlContent is NULL
+─────────────────────────────────────────────────────────────────────────────
+Lines 71-84 of current EmailCampaignSendingService:
+  if (template == null && (campaign.getCustomHtmlContent() == null || 
+      campaign.getCustomHtmlContent().trim().isEmpty())) {
+    log.error("[STEP 2] Campaign has no template and no custom HTML content");
+    updateCampaignFailed(campaign, "Campaign must have either a template or custom HTML content");
+    return;  // ← EXIT WITHOUT SENDING
+  }
+
+TEST: Check database:
+  SELECT template_id, custom_html_content FROM email_campaigns WHERE id = ?
+
+If BOTH NULL: Campaign fails at Step 2
+
+THEORY #4: Brevo API rejects request (401/403/400)
+─────────────────────────────────────────────────────────────────────────────
+TEST: Check Railway logs for:
+  "STATUS = 401"  (API key invalid)
+  "STATUS = 403"  (Access denied)
+  "STATUS = 400"  (Malformed request)
+  "STATUS = 429"  (Rate limited)
+  "BODY = {error response}"
+
+If present: Brevo API authentication or request format issue
+
+═══════════════════════════════════════════════════════════════════════════════
+CRITICAL FINDING: Deployment Issue
+═══════════════════════════════════════════════════════════════════════════════
+
+RAILWAY IS RUNNING OLD CODE:
+─────────────────────────────────────────────────────────────────────────────
+Latest commits pushed:
+  1c17f04 - FIX: CRITICAL REGRESSION (Aug 17, 20:42)
+  55d6944 - Rebuild: Ensure email sending logic deployed (Aug 17, 23:12)
+
+But Railway backend is showing webhook events (analytics working), which means:
+  ✓ Webhook code IS deployed
+  ✗ Email sending code MAY be from pre-fix version
+
+ISSUE: Last email sending test was before these fixes were deployed to Railway
+
+═══════════════════════════════════════════════════════════════════════════════
+IMMEDIATE ACTIONS REQUIRED
+═══════════════════════════════════════════════════════════════════════════════
+
+ACTION 1 (REQUIRED): Wait for Railway Auto-Redeploy
+─────────────────────────────────────────────────────────────────────────────
+Commits were pushed to github-new.
+Railway is connected to github-new/main.
+Railway should auto-detect push and redeploy.
+
+Wait 3-5 minutes, then check Railway logs.
+
+ACTION 2 (REQUIRED): Create Debug Campaign with 1 Recipient
+─────────────────────────────────────────────────────────────────────────────
+Create campaign:
+  - Name: "DEBUG TEST 001"
+  - Template: Select any template (NOT custom HTML, NOT without template)
+  - Recipients: 1 Gmail address YOU control
+  - NO CTA button (keep simple)
+  - Send immediately (not scheduled)
+
+This isolates the problem to single email sending.
+
+ACTION 3 (REQUIRED): Monitor Railway Logs in Real-Time
+─────────────────────────────────────────────────────────────────────────────
+After sending debug campaign, check Railway logs for:
+
+EXPECTED LOG SEQUENCE:
+  [ASYNC EMAIL CAMPAIGN SEND - START] ← Entry to async method
+  [STEP 1] Campaign loaded: ... ← Campaign found
+  [STEP 2] Template loaded: ... ← Template found
+  [STEP 3] Loading recipients with status=PENDING... ← Query executed
+  [STEP 3] Page 0 loaded with 1 recipients ← Recipients found
+  [STEP 4] Processing recipient: <email> ← Starting to process
+  [STEP 4] Template rendered for: <email> ← Rendering successful
+  [STEP 4] Rendered Subject: ... ← Subject ready
+  [STEP 4] Rendered HTML length: ... ← HTML content ready
+  [STEP 4] Calling BrevoEmailService.sendEmail()... ← About to call API
+  ✓ Brevo API Response: 201 ← EMAIL SENT TO BREVO
+  [STEP 4] ✓ Email sent successfully to: <email> ← Status updated
+
+FAILURE INDICATORS:
+  "[STEP 2] Campaign has no template and no custom HTML content" 
+    → Need to add template or custom HTML
+  
+  "[STEP 4] Email content is empty for recipient"
+    → Template or customHtmlContent is being rendered as empty
+  
+  "Brevo API error for <email>: 401"
+    → API key invalid or environment var not set on Railway
+  
+  "Brevo API error for <email>: 400"
+    → Malformed request (shouldn't happen, but check metadata)
+  
+  "Brevo API error for <email>: 403"
+    → Sender email not verified in Brevo or IP blocklisted
+
+ACTION 4 (REQUIRED): Verify Railway Environment Variables
+─────────────────────────────────────────────────────────────────────────────
+Go to Railway Dashboard:
+  1. Select backend service
+  2. Click "Variables" tab
+  3. Verify these exist:
+     - BREVO_API_KEY = xsmtpsib-1a0b683362f9729d7968bf60f1f528af2d315348ea19a274468c4db78f712a3c-JBJV4ih6bFCPABIa
+     - APP_MAIL_FROM = xsde790@gmail.com
+     - APP_MAIL_FROM_NAME = TaskFlow
+
+If ANY missing:
+  1. Add them
+  2. Manually trigger redeploy from Railway dashboard
+
+═══════════════════════════════════════════════════════════════════════════════
+STEP 8: TEST WITH PLAIN HTML (NO TEMPLATE)
+═══════════════════════════════════════════════════════════════════════════════
+
+After basic test works with template, create campaign with CUSTOM HTML:
+
+Create campaign:
+  - Name: "DEBUG TEST 002 - CUSTOM HTML"
+  - Template: NONE (leave empty)
+  - Custom HTML Content: "<h1>TEST</h1><p>This is a test email.</p>"
+  - Recipients: 1 Gmail address
+  - Send
+
+Expected logs:
+  [STEP 2] Template loaded: NONE - using custom HTML
+  [STEP 4] Template rendered for: ...
+
+═══════════════════════════════════════════════════════════════════════════════
+WAIT FOR RAILWAY REDEPLOY, THEN EXECUTE STEPS 2-4
+═══════════════════════════════════════════════════════════════════════════════
+
+DO NOT make code changes until deployment is confirmed and tests run.
+
+Report findings with:
+  1. Railway logs (paste relevant log lines)
+  2. Campaign ID tested
+  3. Recipient email used
+  4. Whether email arrived in Gmail (YES/NO)
+  5. Database state after test (campaign status, recipient status)

@@ -1,0 +1,18 @@
+﻿ .../java/com/arjun/crm/config/SecurityConfig.java  |  27 +++
+ .../java/com/arjun/crm/config/WebMvcConfig.java    |  13 ++
+ .../crm/controller/BrevoWebhookController.java     | 116 ++++++++++-
+ .../crm/controller/PublicLeadMagnetController.java |   5 +
+ .../arjun/crm/controller/TestEmailController.java  |   4 +-
+ .../crm/repository/WorkspaceMemberRepository.java  |  17 ++
+ .../arjun/crm/service/brevo/BrevoEmailService.java |  18 +-
+ .../service/impl/EmailAnalyticsServiceImpl.java    | 134 +++++++++++--
+ .../service/impl/EmailCampaignSendingService.java  |  41 +++-
+ .../arjun/crm/service/impl/LeadServiceImpl.java    |   4 +
+ crm-backend/src/main/resources/application.yml     |  17 ++
+ crm-frontend/src/App.jsx                           |   8 +
+ .../components/emailcampaign/EmailCampaignForm.jsx | 212 ++++++++++++++++++++-
+ crm-frontend/src/layouts/Sidebar.jsx               |   1 +
+ crm-frontend/src/services/api.js                   |   4 +-
+ crm-frontend/src/services/emailCampaignService.js  |   3 +
+ crm-frontend/src/store/slices/authSlice.js         |  51 +++++
+ 17 files changed, 631 insertions(+), 44 deletions(-)

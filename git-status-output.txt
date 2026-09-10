@@ -1,0 +1,78 @@
+﻿ M crm-backend/src/main/java/com/arjun/crm/config/SecurityConfig.java
+ M crm-backend/src/main/java/com/arjun/crm/config/WebMvcConfig.java
+ M crm-backend/src/main/java/com/arjun/crm/controller/BrevoWebhookController.java
+ M crm-backend/src/main/java/com/arjun/crm/controller/PublicLeadMagnetController.java
+ M crm-backend/src/main/java/com/arjun/crm/controller/TestEmailController.java
+ M crm-backend/src/main/java/com/arjun/crm/repository/WorkspaceMemberRepository.java
+ M crm-backend/src/main/java/com/arjun/crm/service/brevo/BrevoEmailService.java
+ M crm-backend/src/main/java/com/arjun/crm/service/impl/EmailAnalyticsServiceImpl.java
+ M crm-backend/src/main/java/com/arjun/crm/service/impl/EmailCampaignSendingService.java
+ M crm-backend/src/main/java/com/arjun/crm/service/impl/LeadServiceImpl.java
+ M crm-backend/src/main/resources/application.yml
+ M crm-frontend/src/App.jsx
+ M crm-frontend/src/components/emailcampaign/EmailCampaignForm.jsx
+ M crm-frontend/src/layouts/Sidebar.jsx
+ M crm-frontend/src/services/api.js
+ M crm-frontend/src/services/emailCampaignService.js
+ M crm-frontend/src/store/slices/authSlice.js
+?? EMAIL_DELIVERY_DIAGNOSIS.txt
+?? INVESTIGATION_COMPLETE_NEXT_STEPS.txt
+?? REGRESSION_DEBUG_INVESTIGATION_REPORT.txt
+?? crm-backend/db/migrations/V17__add_idempotency_key_to_email_analytics.sql
+?? crm-backend/src/main/java/com/arjun/crm/annotation/
+?? crm-backend/src/main/java/com/arjun/crm/aspect/
+?? crm-backend/src/main/java/com/arjun/crm/automation/
+?? crm-backend/src/main/java/com/arjun/crm/config/AutomationTemplateDataLoader.java
+?? crm-backend/src/main/java/com/arjun/crm/controller/AIEmailGenerationController.java
+?? crm-backend/src/main/java/com/arjun/crm/controller/AutomationController.java
+?? crm-backend/src/main/java/com/arjun/crm/controller/AutomationExecutionController.java
+?? crm-backend/src/main/java/com/arjun/crm/controller/AutomationStepController.java
+?? crm-backend/src/main/java/com/arjun/crm/controller/AutomationTemplateController.java
+?? crm-backend/src/main/java/com/arjun/crm/dto/request/AIEmailGenerationRequest.java
+?? crm-backend/src/main/java/com/arjun/crm/dto/request/CreateAutomationRequest.java
+?? crm-backend/src/main/java/com/arjun/crm/dto/request/CreateAutomationStepRequest.java
+?? crm-backend/src/main/java/com/arjun/crm/dto/request/UpdateAutomationRequest.java
+?? crm-backend/src/main/java/com/arjun/crm/dto/request/UpdateAutomationStepRequest.java
+?? crm-backend/src/main/java/com/arjun/crm/dto/request/UseTemplateRequest.java
+?? crm-backend/src/main/java/com/arjun/crm/dto/response/AIEmailGenerationResponse.java
+?? crm-backend/src/main/java/com/arjun/crm/dto/response/AutomationExecutionResponse.java
+?? crm-backend/src/main/java/com/arjun/crm/dto/response/AutomationResponse.java
+?? crm-backend/src/main/java/com/arjun/crm/dto/response/AutomationStepResponse.java
+?? crm-backend/src/main/java/com/arjun/crm/dto/response/AutomationTemplateResponse.java
+?? crm-backend/src/main/java/com/arjun/crm/entity/Automation.java
+?? crm-backend/src/main/java/com/arjun/crm/entity/AutomationExecution.java
+?? crm-backend/src/main/java/com/arjun/crm/entity/AutomationStep.java
+?? crm-backend/src/main/java/com/arjun/crm/entity/AutomationTemplate.java
+?? crm-backend/src/main/java/com/arjun/crm/enums/AutomationExecutionStatus.java
+?? crm-backend/src/main/java/com/arjun/crm/enums/AutomationStatus.java
+?? crm-backend/src/main/java/com/arjun/crm/enums/AutomationStepType.java
+?? crm-backend/src/main/java/com/arjun/crm/enums/AutomationTriggerType.java
+?? crm-backend/src/main/java/com/arjun/crm/event/EmailEventPublished.java
+?? crm-backend/src/main/java/com/arjun/crm/event/LeadCreatedEvent.java
+?? crm-backend/src/main/java/com/arjun/crm/interceptor/
+?? crm-backend/src/main/java/com/arjun/crm/listener/AutomationEventListener.java
+?? crm-backend/src/main/java/com/arjun/crm/repository/AutomationExecutionRepository.java
+?? crm-backend/src/main/java/com/arjun/crm/repository/AutomationRepository.java
+?? crm-backend/src/main/java/com/arjun/crm/repository/AutomationStepRepository.java
+?? crm-backend/src/main/java/com/arjun/crm/repository/AutomationTemplateRepository.java
+?? crm-backend/src/main/java/com/arjun/crm/service/AutomationService.java
+?? crm-backend/src/main/java/com/arjun/crm/service/AutomationStepService.java
+?? crm-backend/src/main/java/com/arjun/crm/service/automation/
+?? crm-backend/src/main/java/com/arjun/crm/service/email/
+?? crm-backend/src/main/java/com/arjun/crm/service/impl/AutomationServiceImpl.java
+?? crm-backend/src/main/java/com/arjun/crm/service/impl/AutomationStepServiceImpl.java
+?? crm-backend/src/test/java/com/arjun/crm/automation/
+?? crm-backend/src/test/java/com/arjun/crm/controller/
+?? crm-backend/src/test/java/com/arjun/crm/service/email/
+?? crm-frontend/src/components/automation/
+?? crm-frontend/src/components/emailcampaign/AIEmailGeneration.css
+?? crm-frontend/src/components/emailcampaign/AIEmailGenerationForm.jsx
+?? crm-frontend/src/components/emailcampaign/EmailGenerationForm.jsx
+?? crm-frontend/src/components/emailcampaign/GeneratedEmailPreview.jsx
+?? crm-frontend/src/components/emailcampaign/TemplateConflictModal.jsx
+?? crm-frontend/src/pages/AutomationBuilder.jsx
+?? crm-frontend/src/pages/Automations.jsx
+?? crm-frontend/src/services/aiEmailGenerationService.js
+?? crm-frontend/src/services/automationService.js
+?? git-status-output.txt
+?? "\342\234\223_BUILD_COMPLETE.txt"

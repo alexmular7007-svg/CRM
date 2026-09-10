@@ -203,6 +203,8 @@ public class ChromeExtensionSuiteExecutionServiceImpl implements ChromeExtension
         for (int i = 0; i < enabledItems.size(); i++) {
             ChromeExtensionTestSuiteItem item = enabledItems.get(i);
             ChromeExtensionTestCase testCase = item.getTestCase();
+            log.info("[SUITE_ITEM] suiteId={}, suiteItemId={}, testCaseId={}, testType={}, testName={}",
+                    suite.getId(), item.getId(), testCase.getId(), testCase.getTestType(), testCase.getName());
 
             // 1. Check cancellation before starting next item
             Optional<ChromeExtensionTestRun> currentRunCheck = testRunRepository.findById(testRun.getId());
@@ -241,11 +243,13 @@ public class ChromeExtensionSuiteExecutionServiceImpl implements ChromeExtension
             // 3. Execute according to type
             ChromeExtensionTestResult result;
             if (testCase.getTestType() == TestCaseType.BROWSER) {
+                log.info("[SUITE_BROWSER_BRANCH] testCaseId={}, testType={}", testCase.getId(), testCase.getTestType());
                 result = executeBrowserSuiteItem(workspaceId, extension, testRun, testCase, item.getExecutionOrder(), runLogs);
             } else {
-                // REUSE existing API CRUD execution service without duplicating logic
+                log.info("[SUITE_API_BRANCH] testCaseId={}, testType={}", testCase.getId(), testCase.getTestType());
                 result = testExecutionService.executeSingleTestCase(workspaceId, extension, testRun, testCase, effectiveToken, runLogs);
             }
+
 
             if (result == null) {
                 result = ChromeExtensionTestResult.builder()

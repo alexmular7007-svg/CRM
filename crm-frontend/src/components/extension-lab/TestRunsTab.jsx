@@ -291,11 +291,11 @@ export default function TestRunsTab({
             <Layers size={24} />
           </div>
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-            No Test Runs Executed Yet
+            No test runs yet
           </h3>
           <p className="text-xs text-gray-500 dark:text-gray-400 max-w-md mx-auto">
             {enabledCount > 0
-              ? `You have ${enabledCount} enabled test case${enabledCount === 1 ? '' : 's'}. Click 'Run Test Suite' to execute and capture live pass/fail telemetry.`
+              ? `You have ${enabledCount} enabled test case${enabledCount === 1 ? '' : 's'}. Click 'Run Suite' to execute and capture live pass/fail telemetry.`
               : 'Add and enable test cases in the Test Cases tab to execute automated verification.'}
           </p>
           {enabledCount > 0 && (
@@ -305,7 +305,7 @@ export default function TestRunsTab({
               disabled={createRunMutation.isPending}
               className="mt-2 inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-all shadow-sm"
             >
-              <PlayCircle size={14} /> Run First Test Suite
+              <PlayCircle size={14} /> Run Suite
             </button>
           )}
         </div>
