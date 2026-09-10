@@ -32,6 +32,8 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     @Query("SELECT t FROM Task t WHERE t.project.id = :projectId ORDER BY t.createdAt DESC")
     Page<Task> findByProjectIdOrderByCreatedAtDesc(@Param("projectId") Long projectId, Pageable pageable);
 
+    List<Task> findByProjectId(Long projectId);
+
     Page<Task> findByPriorityOrderByCreatedAtDesc(TaskPriority priority, Pageable pageable);
 
     @Query("SELECT t FROM Task t WHERE t.dueDate < :today AND t.status NOT IN ('DONE', 'CANCELLED')")

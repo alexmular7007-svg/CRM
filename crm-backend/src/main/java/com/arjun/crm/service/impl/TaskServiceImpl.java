@@ -19,6 +19,7 @@ import com.arjun.crm.enums.TaskPriority;
 import com.arjun.crm.enums.TaskStatus;
 import com.arjun.crm.exception.AccessDeniedException;
 import com.arjun.crm.exception.ResourceNotFoundException;
+import com.arjun.crm.repository.AttachmentRepository;
 import com.arjun.crm.repository.ProjectRepository;
 import com.arjun.crm.repository.TaskCommentRepository;
 import com.arjun.crm.repository.TaskActivityRepository;
@@ -60,6 +61,7 @@ public class TaskServiceImpl implements TaskService {
     private final TaskCommentRepository taskCommentRepository;
     private final TaskActivityRepository taskActivityRepository;
     private final TaskAttachmentRepository taskAttachmentRepository;
+    private final AttachmentRepository attachmentRepository;
     private final TaskWatcherRepository taskWatcherRepository;
     private final UserRepository userRepository;
     private final ProjectRepository projectRepository;
@@ -367,30 +369,41 @@ public class TaskServiceImpl implements TaskService {
         }
         
         log.info("Cascading delete for task id: {}", id);
-        
-        // Explicit cascade delete for all related entities
+        deleteTaskEntityAndChildren(task);
+        log.info("Task id: {} and all related data deleted successfully", id);
+    }
+
+    /**
+     * Reusable cleanup and deletion logic for a Task entity and all related leaf records.
+     * Deletes comments, activities, task_attachments, attachments, watchers, and finally the task itself.
+     * Public so ProjectServiceImpl and tests can reuse the exact same cleanup flow.
+     */
+    public void deleteTaskEntityAndChildren(Task task) {
+        Long id = task.getId();
+
         // Comments (cascade will handle mentions)
         taskCommentRepository.deleteByTaskId(id);
-        
+
         // Activities
         taskActivityRepository.deleteByTaskId(id);
-        
-        // Attachments (will need cleanup, may trigger file deletion)
+
+        // Attachments from task_attachments table
         List<TaskAttachment> attachments = taskAttachmentRepository.findByTaskIdOrderByUploadedAtDesc(id);
         for (TaskAttachment attachment : attachments) {
             taskAttachmentRepository.delete(attachment);
         }
-        
+
+        // Attachments from attachments table (mandatory: Attachment.task_id is not mapped as Task collection)
+        attachmentRepository.deleteByTaskId(id);
+
         // Watchers
         List<TaskWatcher> watchers = taskWatcherRepository.findByTaskIdOrderByWatchedAtDesc(id);
         for (TaskWatcher watcher : watchers) {
             taskWatcherRepository.delete(watcher);
         }
-        
+
         // Final task deletion (cascade=ALL on Task entity will clean up any remaining orphans)
         taskRepository.delete(task);
-        
-        log.info("Task id: {} and all related data deleted successfully", id);
     }
 
     @Override

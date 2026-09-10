@@ -69,4 +69,18 @@ public interface AttachmentRepository extends JpaRepository<Attachment, Long> {
     @Modifying(clearAutomatically = true)
     @Query("DELETE FROM Attachment a WHERE a.task IS NOT NULL AND a.task.workspace.id = :workspaceId")
     int deleteByWorkspaceIdAndTask(@Param("workspaceId") Long workspaceId);
+
+    /**
+     * Delete all attachments for a specific task
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM Attachment a WHERE a.task.id = :taskId")
+    int deleteByTaskId(@Param("taskId") Long taskId);
+
+    /**
+     * Delete all attachments for a list of task IDs
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM Attachment a WHERE a.task.id IN :taskIds")
+    int deleteByTaskIdIn(@Param("taskIds") List<Long> taskIds);
 }

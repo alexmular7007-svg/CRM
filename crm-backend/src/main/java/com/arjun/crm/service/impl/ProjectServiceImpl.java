@@ -4,6 +4,7 @@ import com.arjun.crm.dto.request.ProjectCreateRequest;
 import com.arjun.crm.dto.request.ProjectUpdateRequest;
 import com.arjun.crm.dto.response.ProjectResponse;
 import com.arjun.crm.entity.Project;
+import com.arjun.crm.entity.Task;
 import com.arjun.crm.entity.User;
 import com.arjun.crm.entity.Workspace;
 import com.arjun.crm.enums.ProjectStatus;
@@ -11,12 +12,14 @@ import com.arjun.crm.exception.AccessDeniedException;
 import com.arjun.crm.exception.ResourceNotFoundException;
 import com.arjun.crm.repository.ProjectMemberRepository;
 import com.arjun.crm.repository.ProjectRepository;
+import com.arjun.crm.repository.TaskRepository;
 import com.arjun.crm.repository.UserRepository;
 import com.arjun.crm.repository.WorkspaceMemberRepository;
 import com.arjun.crm.repository.WorkspaceRepository;
 import com.arjun.crm.service.ProjectService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
@@ -35,6 +38,8 @@ public class ProjectServiceImpl implements ProjectService {
     private final UserRepository userRepository;
     private final WorkspaceMemberRepository workspaceMemberRepository;
     private final ProjectMemberRepository projectMemberRepository;
+    private final TaskRepository taskRepository;
+    private final TaskServiceImpl taskService;
 
     @Override
     @Transactional
@@ -118,6 +123,15 @@ public class ProjectServiceImpl implements ProjectService {
 
         if (!canDelete) {
             throw new AccessDeniedException("Only workspace owner or project creator can delete project");
+        }
+
+        // Clean up all tasks belonging to this project before project deletion.
+        // Reuses the exact same TaskServiceImpl cascade cleanup logic
+        // (comments, activities, task_attachments, attachments, watchers, and task itself).
+        List<Task> tasks = taskRepository.findByProjectId(projectId);
+        log.info("Deleting {} tasks associated with project ID: {}", tasks.size(), projectId);
+        for (Task task : tasks) {
+            taskService.deleteTaskEntityAndChildren(task);
         }
 
         projectRepository.delete(project);

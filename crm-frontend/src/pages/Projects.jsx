@@ -95,7 +95,7 @@ const Projects = () => {
 
   // Delete project mutation
   const deleteMutation = useMutation({
-    mutationFn: projectService.delete,
+    mutationFn: ({ id, workspaceId }) => projectService.delete(id, workspaceId),
     onSuccess: () => {
       queryClient.invalidateQueries(['projects', workspaceId])
       toast.success('Project deleted successfully')
@@ -131,7 +131,7 @@ const Projects = () => {
 
   const handleDelete = (project) => {
     if (window.confirm(`Are you sure you want to delete "${project.name}"?`)) {
-      deleteMutation.mutate(project.id)
+      deleteMutation.mutate({ id: project.id, workspaceId })
     }
   }
 

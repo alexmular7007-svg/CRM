@@ -27,9 +27,11 @@ export const projectService = {
     return unwrap(response)
   },
 
-  // Delete project
-  delete: async (id) => {
-    const response = await api.delete(`/projects/${id}`)
+  // Delete project — workspaceId required by backend authorization
+  delete: async (id, workspaceId) => {
+    const response = await api.delete(`/projects/${id}`, {
+      params: { workspaceId },
+    })
     return unwrap(response)
   },
 
