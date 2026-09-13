@@ -42,7 +42,7 @@ export default function HeroSection() {
               <Link to="/register" className="w-full sm:w-auto">
                 <button className="w-full sm:w-auto px-8 py-4 rounded-full bg-[#0052FF] hover:bg-[#0043D1] text-white text-xs sm:text-sm font-black uppercase tracking-wider shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 active:scale-95">
                   Get Started Free
-                  <ArrowUpRight size={17} />
+                  <ArrowUpRight size={17} className="text-white shrink-0" />
                 </button>
               </Link>
               <button
@@ -50,7 +50,7 @@ export default function HeroSection() {
                 className="w-full sm:w-auto px-7 py-4 rounded-full border-2 border-[#071A3A]/20 dark:border-white/20 hover:border-[#071A3A] dark:hover:border-white text-[#071A3A] dark:text-white text-xs sm:text-sm font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 hover:bg-[#071A3A]/5 dark:hover:bg-white/5 active:scale-95"
               >
                 Explore Platform
-                <ArrowDown size={15} />
+                <ArrowDown size={15} className="text-[#071A3A] dark:text-white shrink-0" />
               </button>
             </div>
 
