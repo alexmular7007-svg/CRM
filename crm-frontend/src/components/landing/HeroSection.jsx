@@ -14,15 +14,8 @@ export default function HeroSection() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-10 items-center">
           {/* Left Editorial Content (6 cols on lg) */}
           <div className="lg:col-span-6 xl:col-span-6 flex flex-col justify-center">
-            {/* Eyebrow badge */}
-            <div className="inline-flex items-center gap-2 mb-6">
-              <span className="px-3.5 py-1 rounded-full text-[11px] font-black uppercase tracking-[0.2em] bg-[#0052FF]/10 dark:bg-[#A9DFFF]/15 text-[#0052FF] dark:text-[#A9DFFF] border border-[#0052FF]/20 dark:border-[#A9DFFF]/20">
-                Multi-Tenant AI Workspace Platform
-              </span>
-            </div>
-
             {/* Headline */}
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-6xl xl:text-7xl font-black text-[#071A3A] dark:text-white uppercase tracking-tight leading-[0.92] mb-6 sm:mb-8">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl xl:text-6xl font-black text-[#071A3A] dark:text-white uppercase tracking-tight leading-[0.98] sm:leading-[0.96] mb-6 sm:mb-8">
               The Unified AI Workspace
               <span className="block text-[#0052FF] dark:text-[#A9DFFF] mt-1">
                 For Projects, CRM,

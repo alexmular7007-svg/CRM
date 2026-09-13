@@ -12,6 +12,7 @@ import TechnicalCredibility from '../components/landing/TechnicalCredibility'
 import Pricing from '../components/landing/Pricing'
 import FinalCTA from '../components/landing/FinalCTA'
 import Footer from '../components/landing/Footer'
+import FloatingCopilot from '../components/landing/FloatingCopilot'
 import { useThemeContext } from '../contexts/ThemeContext'
 
 export default function Landing() {
@@ -60,6 +61,9 @@ export default function Landing() {
 
       {/* 14. Footer */}
       <Footer />
+
+      {/* Floating Copilot Chatbot */}
+      <FloatingCopilot />
     </div>
   )
 }

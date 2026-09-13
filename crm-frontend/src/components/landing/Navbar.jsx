@@ -62,7 +62,7 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-3 group focus:outline-none">
+            <Link to="/" className="flex items-center gap-3 group focus:outline-none shrink-0 mr-6 lg:mr-10">
               <div className="w-10 h-10 rounded-lg bg-[#071A3A] dark:bg-white flex items-center justify-center text-white dark:text-[#071A3A] font-black text-xl tracking-tighter shadow-sm transition-transform group-hover:scale-105">
                 TF
               </div>
@@ -77,14 +77,14 @@ export default function Navbar() {
             </Link>
 
             {/* Desktop Navigation Links */}
-            <nav className="hidden lg:flex items-center gap-1 border border-[#071A3A]/10 dark:border-white/15 rounded-full px-3 py-1.5 bg-white/70 dark:bg-[#0B1F3A]/70 backdrop-blur-sm shadow-sm">
+            <nav className="hidden lg:flex items-center gap-1 border border-[#071A3A]/10 dark:border-white/15 rounded-full px-3 py-1.5 bg-white/70 dark:bg-[#0B1F3A]/70 backdrop-blur-sm shadow-sm mx-auto">
               {NAV_LINKS.map((link) => {
                 const isActive = activeSection === link.href.replace('#', '')
                 return (
                   <button
                     key={link.label}
                     onClick={() => scrollToSection(link.href)}
-                    className={`px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded-full transition-all duration-150 ${
+                    className={`px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider rounded-full transition-all duration-150 ${
                       isActive
                         ? 'bg-[#071A3A] text-white dark:bg-white dark:text-[#071A3A] shadow-sm'
                         : 'text-[#52627A] dark:text-[#A9DFFF]/80 hover:text-[#071A3A] dark:hover:text-white'
@@ -97,19 +97,19 @@ export default function Navbar() {
             </nav>
 
             {/* Right Actions */}
-            <div className="hidden lg:flex items-center gap-3">
+            <div className="hidden lg:flex items-center gap-5 xl:gap-6 shrink-0 ml-6 lg:ml-10">
               {/* Theme Toggle */}
               <button
                 onClick={() => switchTheme(isDark ? 'light' : 'dark')}
                 aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
                 className="w-10 h-10 rounded-full border border-[#071A3A]/15 dark:border-white/15 flex items-center justify-center text-[#071A3A] dark:text-white hover:bg-[#071A3A]/5 dark:hover:bg-white/10 transition-colors"
               >
-                {isDark ? <Sun size={17} /> : <Moon size={17} />}
+                {isDark ? <Sun size={17} className="text-white" /> : <Moon size={17} className="text-[#071A3A]" />}
               </button>
 
               <Link
                 to="/login"
-                className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-[#071A3A] dark:text-white hover:opacity-75 transition-opacity"
+                className="px-2 py-2 text-xs font-bold uppercase tracking-wider text-[#071A3A] dark:text-white hover:opacity-75 transition-opacity"
               >
                 Sign In
               </Link>
@@ -117,7 +117,7 @@ export default function Navbar() {
               <Link to="/register">
                 <button className="px-5 py-2.5 rounded-full bg-[#0052FF] hover:bg-[#0043D1] text-white text-xs font-bold uppercase tracking-wider shadow-md hover:shadow-lg transition-all flex items-center gap-1.5 active:scale-95">
                   Get Started
-                  <ArrowUpRight size={15} />
+                  <ArrowUpRight size={15} className="text-white shrink-0" />
                 </button>
               </Link>
             </div>
