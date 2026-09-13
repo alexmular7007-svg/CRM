@@ -1,19 +1,19 @@
-﻿import { useEffect } from 'react'
+import { useEffect } from 'react'
 import { X } from 'lucide-react'
 import EmailCampaignForm from './EmailCampaignForm'
 
 export default function EmailCampaignModal({ isOpen, onClose, campaign }) {
   useEffect(() => {
     if (isOpen) {
-      console.log('ðŸŽ¯ MODAL MOUNT')
+      console.log('[MODAL MOUNT]')
       return () => {
-        console.log('ðŸŽ¯ MODAL UNMOUNT')
+        console.log('[MODAL UNMOUNT]')
       }
     }
   }, [isOpen])
 
   const handleClose = () => {
-    console.log('ðŸš¨ CLOSE BUTTON CLICKED')
+    console.log('[CLOSE BUTTON CLICKED]')
     onClose()
   }
 

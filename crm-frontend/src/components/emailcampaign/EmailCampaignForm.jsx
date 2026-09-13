@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSelector } from 'react-redux'
 import toast from 'react-hot-toast'
+import { Sparkles } from 'lucide-react'
 import { emailCampaignService } from '../../services/emailCampaignService'
 import aiEmailGenerationService from '../../services/aiEmailGenerationService'
 import AIEmailGenerationForm from './AIEmailGenerationForm'
@@ -52,8 +53,8 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
   const [errors, setErrors] = useState({})
   
   useEffect(() => {
-    console.log('ðŸ“‹ CAMPAIGN FORM MOUNT')
-    return () => console.log('ðŸ“‹ CAMPAIGN FORM UNMOUNT')
+    console.log('[CAMPAIGN FORM MOUNT]')
+    return () => console.log('[CAMPAIGN FORM UNMOUNT]')
   }, [])
   
   // Fetch templates
@@ -373,8 +374,8 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
       return saved
     },
     onSuccess: (saved) => {
-      console.log('ðŸŽ‰ MUTATION_ON_SUCCESS')
-      console.log('ðŸš¨ CALLING_ON_SUCCESS_CALLBACK')
+      console.log('[MUTATION_ON_SUCCESS]')
+      console.log('[CALLING_ON_SUCCESS_CALLBACK]')
       toast.success(
         form.deliveryMode === 'draft' 
           ? 'Campaign saved as draft' 
@@ -384,7 +385,7 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
       )
       queryClient.invalidateQueries({ queryKey: ['email-campaigns'] })
       onSuccess()
-      console.log('ðŸš¨ ON_SUCCESS_CALLBACK_RETURNED')
+      console.log('[ON_SUCCESS_CALLBACK_RETURNED]')
     },
     onError: (error) => {
       if (error?.isConflict || error?.message === 'TEMPLATE_CONFLICT') {
@@ -443,7 +444,7 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
   const handleSubmit = (e) => {
     e.preventDefault()
     console.log("DEBUG_CAMPAIGN_FORM_SUBMIT");
-    console.log('ðŸ“ FORM_SUBMIT_CLICKED')
+    console.log('[FORM_SUBMIT_CLICKED]')
     
     // Prevent submission if mutation is already running
     if (mutation.isPending) return;
@@ -479,7 +480,7 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
     }
     
     setErrors({})
-    console.log('4ï¸âƒ£ MUTATION_MUTATE_CALLED')
+    console.log('[MUTATION_MUTATE_CALLED]')
     mutation.mutate(form)
   }
   
@@ -516,7 +517,7 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
               name="emailSubject"
               value={form.emailSubject}
               onChange={handleChange}
-              placeholder="e.g., ðŸŽ‰ Get 30% OFF This Week"
+              placeholder="e.g., Get 30% OFF This Week"
               maxLength="255"
               className={fieldClass}
             />
@@ -566,7 +567,7 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
             />
             <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Use Existing Template</span>
           </label>
-          <label className="flex items-center cursor-pointer">
+          <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="radio"
               name="contentMode"
@@ -575,7 +576,12 @@ export default function EmailCampaignForm({ campaign, onSuccess }) {
               onChange={() => handleContentModeChange('ai')}
               className="w-4 h-4 text-violet-600"
             />
-            <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">ðŸ¤– Generate with AI</span>
+            <Sparkles
+              size={17}
+              strokeWidth={2}
+              className="text-[#0052FF] dark:text-[#A9DFFF] shrink-0"
+            />
+            <span className="text-sm text-gray-700 dark:text-gray-300">Generate with AI</span>
           </label>
         </div>
         
