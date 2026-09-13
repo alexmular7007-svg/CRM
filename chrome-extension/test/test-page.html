@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaskFlow Learning Test Webpage (4500px Tall)</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #1f2937;
+      background: #f3f4f6;
+      line-height: 1.6;
+    }
+    header.sticky-header {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: #1e3a8a;
+      color: white;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .hero-box {
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 40px;
+      margin-bottom: 30px;
+      border: 1px solid #e5e7eb;
+    }
+    .section-box {
+      border-radius: 8px;
+      padding: 36px;
+      margin-bottom: 30px;
+      border: 1px solid #e5e7eb;
+      min-height: 550px;
+    }
+    .bg-blue { background: #eff6ff; border-color: #bfdbfe; }
+    .bg-emerald { background: #ecfdf5; border-color: #a7f3d0; }
+    .bg-amber { background: #fffbeb; border-color: #fde68a; }
+    .bg-indigo { background: #eef2ff; border-color: #c7d2fe; }
+    .bg-rose { background: #fff1f2; border-color: #fecdd3; }
+    .bg-slate { background: #f8fafc; border-color: #e2e8f0; }
+
+    h1 { font-size: 28px; margin-bottom: 12px; color: #111827; }
+    h2 { font-size: 22px; margin-bottom: 10px; }
+    p { margin-bottom: 16px; font-size: 15px; }
+    .highlight-target {
+      display: inline-block;
+      background: #fef08a;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    svg.banner-svg {
+      width: 100%;
+      height: 180px;
+      margin: 20px 0;
+      border-radius: 6px;
+    }
+    footer.page-footer {
+      background: #111827;
+      color: #9ca3af;
+      padding: 60px 24px;
+      text-align: center;
+      margin-top: 40px;
+    }
+  </style>
+</head>
+<body>
+  <header class="sticky-header">
+    <strong>TaskFlow Long Test Webpage</strong>
+    <span>Sticky Navigation Header</span>
+  </header>
+
+  <main class="container">
+    <section class="hero-box">
+      <h1>Long Webpage for Full Page Screenshot Testing</h1>
+      <p>This document is intentionally constructed with multiple distinct content blocks reaching over 4,500 pixels in vertical height to thoroughly exercise and verify full-page scrolling, tile stitching, PNG export, and multi-page PDF generation.</p>
+    </section>
+
+    <!-- Section 1 (Y ~ 400px) -->
+    <section class="section-box bg-blue" id="sec-1">
+      <h2>Section 1: Foundations of Chrome Extensions</h2>
+      <p>Chrome Extensions running on Manifest V3 utilize background service workers, declarative or active permissions, and messaging architectures. When capturing screenshots beyond the viewport, standard viewport capture APIs must be combined with programmatic window scrolling.</p>
+      <svg class="banner-svg" viewBox="0 0 800 180">
+        <rect width="800" height="180" fill="#3b82f6" rx="6"></rect>
+        <text x="400" y="95" fill="white" font-size="24" font-weight="bold" text-anchor="middle">Viewport Segment 1</text>
+      </svg>
+      <p>Content continues downward across multiple vertical segments.</p>
+    </section>
+
+    <!-- Section 2 (Y ~ 1100px) -->
+    <section class="section-box bg-emerald" id="sec-2">
+      <h2>Section 2: Highlighting & Wikipedia Integration</h2>
+      <p>Highlighting text on a webpage enables context-driven lookups. For example, theoretical physicist <span class="highlight-target" id="albert-target">Albert Einstein</span> developed the theory of relativity, which revolutionized theoretical physics and astronomy during the 20th century.</p>
+      <svg class="banner-svg" viewBox="0 0 800 180">
+        <rect width="800" height="180" fill="#10b981" rx="6"></rect>
+        <text x="400" y="95" fill="white" font-size="24" font-weight="bold" text-anchor="middle">Viewport Segment 2</text>
+      </svg>
+      <p>Selecting the text above and right-clicking invokes the "Search Wikipedia for \"%s\"" context menu action.</p>
+    </section>
+
+    <!-- Section 3 (Y ~ 1800px) -->
+    <section class="section-box bg-amber" id="sec-3">
+      <h2>Section 3: Canvas Tile Stitching</h2>
+      <p>When stitching viewport segments, each segment is captured as a PNG data URL, decoded into an image bitmap, and blitted onto a master canvas at the appropriate Y offset. Care must be taken to account for device pixel ratio and lazy content rendering delays.</p>
+      <svg class="banner-svg" viewBox="0 0 800 180">
+        <rect width="800" height="180" fill="#f59e0b" rx="6"></rect>
+        <text x="400" y="95" fill="white" font-size="24" font-weight="bold" text-anchor="middle">Viewport Segment 3</text>
+      </svg>
+    </section>
+
+    <!-- Section 4 (Y ~ 2500px) -->
+    <section class="section-box bg-indigo" id="sec-4">
+      <h2>Section 4: Multi-Page PDF Generation</h2>
+      <p>Very long screenshots exceeding normal paper proportions cannot be legibly printed on a single standard page. The Simple PDF Writer splits tall canvases into proportionate vertical slices conforming to ISO 216 A4 ratios.</p>
+      <svg class="banner-svg" viewBox="0 0 800 180">
+        <rect width="800" height="180" fill="#6366f1" rx="6"></rect>
+        <text x="400" y="95" fill="white" font-size="24" font-weight="bold" text-anchor="middle">Viewport Segment 4</text>
+      </svg>
+    </section>
+
+    <!-- Section 5 (Y ~ 3200px) -->
+    <section class="section-box bg-rose" id="sec-5">
+      <h2>Section 5: Scroll Restoration Guarantee</h2>
+      <p>A critical requirement of professional extensions is idempotence: the original user scroll position must be accurately recorded before scrolling commences and faithfully restored upon completion or error.</p>
+      <svg class="banner-svg" viewBox="0 0 800 180">
+        <rect width="800" height="180" fill="#f43f5e" rx="6"></rect>
+        <text x="400" y="95" fill="white" font-size="24" font-weight="bold" text-anchor="middle">Viewport Segment 5</text>
+      </svg>
+    </section>
+
+    <!-- Section 6 (Y ~ 3900px) -->
+    <section class="section-box bg-slate" id="sec-6">
+      <h2>Section 6: Deep Page Termination</h2>
+      <p>This section sits near the bottom of the 4500px page. If an extension only captures the visible viewport, this content will be completely absent from the downloaded image.</p>
+      <svg class="banner-svg" viewBox="0 0 800 180">
+        <rect width="800" height="180" fill="#64748b" rx="6"></rect>
+        <text x="400" y="95" fill="white" font-size="24" font-weight="bold" text-anchor="middle">Deep Page Marker - Section 6</text>
+      </svg>
+    </section>
+  </main>
+
+  <footer class="page-footer">
+    <p>TaskFlow End of Page Marker - Vertical Coordinate ~4500px</p>
+  </footer>
+</body>
+</html>

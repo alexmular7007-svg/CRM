@@ -1,110 +1,97 @@
-import { useRef, useState } from 'react'
-import { motion, useInView, AnimatePresence } from 'framer-motion'
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Link } from 'react-router-dom'
-import { Check, ArrowRight, MessageSquare, ChevronDown, Zap } from 'lucide-react'
+import { Check, ArrowRight, ChevronDown, Sparkles } from 'lucide-react'
 
 const PLANS = [
   {
     id: 'free',
-    name: 'Free',
+    name: 'Free Workspace',
     monthlyPrice: '0',
     yearlyPrice: '0',
-    description: 'For individuals and small teams exploring the platform.',
+    description: 'Complete operational workspace for individuals and small agile teams.',
     features: [
-      'Up to 5 team members',
-      '10 projects',
-      'Basic task management',
-      'Real-time chat',
-      '5 GB storage',
-      'Email support',
+      'Multi-tenant workspace isolation',
+      'Projects & drag-and-drop Kanban',
+      'Task assignments, priorities & watchers',
+      'Real-time team chat & presence',
+      'Cloudinary document attachments',
+      'Basic CRM pipeline & deal tracking',
     ],
-    cta: 'Get started free',
-    ctaIcon: ArrowRight,
-    highlighted: false,
-    badge: null,
+    cta: 'Get Started Free',
+    isAvailable: true,
+    highlighted: true,
   },
   {
     id: 'pro',
-    name: 'Pro',
+    name: 'Pro Team',
     monthlyPrice: '12',
     yearlyPrice: '9',
-    description: 'For growing teams that need advanced features and AI.',
+    description: 'Advanced capacity, workflow automations, and deep diagnostic insights.',
     features: [
-      'Up to 50 team members',
-      'Unlimited projects',
-      'AI task prioritization',
-      'AI deadline prediction',
-      'CRM pipeline',
-      'Analytics dashboard',
-      '100 GB storage',
-      'Priority support',
+      'Everything in Free',
+      'Visual workflow automation builder',
+      'Lead Magnets & public form pages',
+      'Brevo email campaign tracking',
+      'Workspace Health & risk scoring',
+      'Extended audit activity logs',
     ],
     cta: 'Coming Soon',
-    ctaIcon: Zap,
-    highlighted: true,
-    badge: 'Most popular',
-    comingSoon: true,
+    isAvailable: false,
+    highlighted: false,
   },
   {
     id: 'enterprise',
     name: 'Enterprise',
     monthlyPrice: null,
     yearlyPrice: null,
-    description: 'For large organisations with custom requirements and SLA.',
+    description: 'Dedicated infrastructure, custom SLAs, and high-volume deployment.',
     features: [
-      'Unlimited team members',
-      'Unlimited projects',
-      'All Pro features',
-      'AI productivity insights',
-      'Custom AI training',
-      'SSO & SAML',
-      'Dedicated support',
-      'Custom integrations',
-      'SLA guarantee',
+      'Everything in Pro Team',
+      'Unlimited projects & workspaces',
+      'Custom role-based permissions',
+      'Dedicated Redis caching instance',
+      'Custom webhook destinations',
+      'Priority onboarding & SLA support',
     ],
     cta: 'Coming Soon',
-    ctaIcon: MessageSquare,
+    isAvailable: false,
     highlighted: false,
-    badge: null,
-    comingSoon: true,
   },
 ]
 
 const FAQS = [
   {
-    q: 'Can I change plans later?',
-    a: 'Yes, you can upgrade or downgrade your plan at any time. Changes take effect at the next billing cycle.',
+    q: 'Can I start using TaskFlow for free today?',
+    a: 'Yes. The Free plan gives your team access to workspaces, projects, Kanban boards, real-time team chat, and CRM pipelines with immediate setup.',
   },
   {
-    q: 'What payment methods do you accept?',
-    a: 'We accept all major credit cards, PayPal, and wire transfers for Enterprise plans.',
+    q: 'What is the difference between Free and upcoming Pro tiers?',
+    a: 'The Free tier contains the complete core platform. The upcoming Pro tier adds automated marketing workflow execution, public lead magnets, and Brevo email campaign analytics.',
   },
   {
-    q: 'Is there a free trial?',
-    a: 'All paid plans include a 14-day free trial with no credit card required. Cancel anytime.',
+    q: 'How does multi-tenant workspace isolation work?',
+    a: 'Each workspace is completely isolated with its own projects, members, tasks, and deal pipelines. You can create or join multiple workspaces from a single login.',
   },
   {
-    q: 'What happens to my data if I cancel?',
-    a: 'Your data is retained for 30 days after cancellation, giving you time to export everything.',
+    q: 'What happens to our data if our team changes plans?',
+    a: 'Your projects, tasks, chat history, and CRM pipeline remain completely intact. Data is never deleted without explicit workspace owner action.',
   },
 ]
 
-const FaqItem = ({ faq, index }) => {
+function FaqItem({ faq, index }) {
   const [open, setOpen] = useState(false)
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, delay: index * 0.06 }}
-      className="border border-gray-200 dark:border-zinc-800 rounded-xl overflow-hidden"
-    >
+    <div className="border border-[#071A3A]/10 dark:border-white/10 rounded-2xl overflow-hidden bg-white dark:bg-[#0B1F3A] transition-colors">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-5 py-4 md:py-5 text-left bg-white dark:bg-[#18181B] hover:bg-gray-50/60 dark:hover:bg-zinc-800/40 transition-colors min-h-14"
+        className="w-full flex items-center justify-between p-5 text-left hover:bg-[#071A3A]/5 dark:hover:bg-white/5 transition-colors focus:outline-none"
       >
-        <span className="text-[14px] font-medium text-gray-900 dark:text-white">{faq.q}</span>
-        <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
-          <ChevronDown size={16} className="text-gray-400 dark:text-zinc-500 flex-shrink-0" />
+        <span className="text-sm font-black uppercase tracking-tight text-[#071A3A] dark:text-white pr-4">
+          {faq.q}
+        </span>
+        <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }} className="shrink-0">
+          <ChevronDown size={18} className="text-[#52627A] dark:text-white/60" />
         </motion.div>
       </button>
       <AnimatePresence initial={false}>
@@ -113,166 +100,160 @@ const FaqItem = ({ faq, index }) => {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.22 }}
+            transition={{ duration: 0.2 }}
           >
-            <div className="px-5 pb-4 text-[13.5px] text-gray-500 dark:text-zinc-400 bg-white dark:bg-[#18181B] leading-relaxed border-t border-gray-100 dark:border-zinc-800 pt-3">
+            <div className="px-5 pb-5 text-xs sm:text-sm text-[#52627A] dark:text-white/70 leading-relaxed border-t border-[#071A3A]/5 dark:border-white/5 pt-3 font-medium">
               {faq.a}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </div>
   )
 }
 
-const Pricing = () => {
-  const ref = useRef(null)
-  const isInView = useInView(ref, { once: true, margin: '-80px' })
+export default function Pricing() {
   const [yearly, setYearly] = useState(false)
 
   return (
-    <section id="plans" className="py-24 px-4 sm:px-6 border-t border-gray-100 dark:border-zinc-800/60">
-      <div className="max-w-5xl mx-auto">
-
+    <section id="pricing" className="py-24 lg:py-32 bg-[#F7F5F0] dark:bg-[#071A3A] text-[#071A3A] dark:text-white transition-colors duration-300 overflow-hidden border-t border-[#071A3A]/10 dark:border-white/10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <motion.div
-          ref={ref}
-          initial={{ opacity: 0, y: 20 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.5 }}
-          className="mb-14 text-center"
-        >
-          <div className="inline-flex items-center gap-2 border border-[#4F46E5]/25 bg-[#4F46E5]/5 text-[#4F46E5] dark:text-indigo-400 px-3 py-1 rounded-full text-xs font-semibold tracking-wide mb-4">
-            Plans
-          </div>
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900 dark:text-white mb-3">
-            Simple, transparent pricing
+        <div className="max-w-3xl mb-12 text-center mx-auto">
+          <span className="text-[11px] font-black uppercase tracking-[0.25em] text-[#0052FF] dark:text-[#A9DFFF] block mb-3">
+            Transparent Plans
+          </span>
+          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black uppercase tracking-tight leading-[0.95] mb-6 text-[#071A3A] dark:text-white">
+            Simple, Honest
+            <span className="block text-[#0052FF] dark:text-[#A9DFFF] mt-1">Pricing.</span>
           </h2>
-          <p className="text-base text-gray-500 dark:text-zinc-400 max-w-md mx-auto mb-8">
-            Choose the plan that fits your team. All plans include a 14-day free trial.
+          <p className="text-base sm:text-lg text-[#52627A] dark:text-white/80 font-medium leading-relaxed mb-8">
+            Get started on the full core platform today at zero cost. Pro tiers with advanced marketing automations will become available soon.
           </p>
 
-          {/* Toggle */}
-          <div className="inline-flex items-center gap-3 p-1 bg-gray-100 dark:bg-zinc-800 rounded-lg">
+          {/* Monthly / Yearly Toggle */}
+          <div className="inline-flex items-center gap-2 p-1.5 rounded-full bg-white dark:bg-[#0B1F3A] border border-[#071A3A]/15 dark:border-white/15 shadow-xs">
             <button
               onClick={() => setYearly(false)}
-              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${!yearly ? 'bg-white dark:bg-zinc-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-zinc-400'}`}
+              className={`px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all ${
+                !yearly
+                  ? 'bg-[#071A3A] text-white dark:bg-white dark:text-[#071A3A] shadow-sm'
+                  : 'text-[#52627A] dark:text-white/70 hover:text-[#071A3A]'
+              }`}
             >
               Monthly
             </button>
             <button
               onClick={() => setYearly(true)}
-              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 ${yearly ? 'bg-white dark:bg-zinc-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-zinc-400'}`}
+              className={`px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+                yearly
+                  ? 'bg-[#071A3A] text-white dark:bg-white dark:text-[#071A3A] shadow-sm'
+                  : 'text-[#52627A] dark:text-white/70 hover:text-[#071A3A]'
+              }`}
             >
               Yearly
-              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded">-25%</span>
+              <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                -25%
+              </span>
             </button>
           </div>
-        </motion.div>
+        </div>
 
-        {/* Plans */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6 lg:gap-6 mb-16">
-          {PLANS.map((plan, i) => {
-            const CtaIcon = plan.ctaIcon
+        {/* Pricing Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 mb-20">
+          {PLANS.map((plan) => {
             const price = yearly ? plan.yearlyPrice : plan.monthlyPrice
             return (
-              <motion.div
+              <div
                 key={plan.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={isInView ? { opacity: 1, y: 0 } : {}}
-                transition={{ duration: 0.45, delay: i * 0.08 }}
-                whileHover={{ y: -3, transition: { duration: 0.18 } }}
-                className={`relative flex flex-col rounded-xl border p-6 transition-all ${
+                className={`rounded-3xl p-7 sm:p-8 flex flex-col justify-between transition-all relative ${
                   plan.highlighted
-                    ? 'border-[#4F46E5] dark:border-indigo-500 bg-white dark:bg-[#18181B] shadow-lg shadow-indigo-500/10'
-                    : 'border-gray-200 dark:border-zinc-800 bg-white dark:bg-[#18181B] hover:border-gray-300 dark:hover:border-zinc-700'
+                    ? 'border-2 border-[#0052FF] bg-white dark:bg-[#0B1F3A] shadow-2xl'
+                    : 'border-2 border-[#071A3A]/10 dark:border-white/10 bg-white dark:bg-[#0B1F3A] opacity-95'
                 }`}
               >
-                {/* Badge */}
-                {plan.badge && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <div className="flex items-center gap-1 bg-[#4F46E5] text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-md">
-                      <Zap size={9} />
-                      {plan.badge}
-                    </div>
+                {plan.highlighted && (
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                    <span className="px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-[#0052FF] text-white shadow-sm">
+                      Available Now
+                    </span>
                   </div>
                 )}
 
-                {/* Plan name + description */}
-                <div className="mb-5">
-                  <div className="text-[14px] font-semibold text-gray-900 dark:text-white mb-1">{plan.name}</div>
-                  <div className="text-[12.5px] text-gray-500 dark:text-zinc-400 leading-relaxed">{plan.description}</div>
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-xl font-black uppercase tracking-tight text-[#071A3A] dark:text-white">
+                      {plan.name}
+                    </h3>
+                  </div>
+                  <p className="text-xs text-[#52627A] dark:text-white/70 font-medium leading-relaxed mb-6">
+                    {plan.description}
+                  </p>
+
+                  {/* Price */}
+                  <div className="mb-6 pb-6 border-b border-[#071A3A]/10 dark:border-white/10">
+                    {price === null ? (
+                      <div className="text-3xl font-black text-[#071A3A] dark:text-white">Custom</div>
+                    ) : (
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-4xl font-black text-[#071A3A] dark:text-white">${price}</span>
+                        <span className="text-xs font-bold text-[#52627A] dark:text-white/60 uppercase">
+                          / month {yearly ? '(billed annually)' : ''}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Features List */}
+                  <ul className="space-y-3 mb-8">
+                    {plan.features.map((f) => (
+                      <li key={f} className="flex items-start gap-2.5 text-xs text-[#071A3A] dark:text-white/80 font-medium">
+                        <Check size={14} className="text-[#0052FF] dark:text-[#A9DFFF] shrink-0 mt-0.5" />
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
 
-                {/* Price */}
-                <div className="mb-6">
-                  {price === null ? (
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">Custom</div>
-                  ) : (
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-3xl font-bold text-gray-900 dark:text-white">${price}</span>
-                      <span className="text-[13px] text-gray-400 dark:text-zinc-500">/mo{yearly ? ' · billed yearly' : ''}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* CTA */}
-                {plan.comingSoon ? (
-                  <button disabled className="mb-6 w-full py-3 px-4 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-75 min-h-12">
+                {/* CTA Button */}
+                {plan.isAvailable ? (
+                  <Link to="/register" className="w-full">
+                    <button className="w-full py-4 rounded-full bg-[#0052FF] hover:bg-[#0043D1] text-white text-xs font-black uppercase tracking-wider shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 active:scale-95">
+                      {plan.cta}
+                      <ArrowRight size={15} />
+                    </button>
+                  </Link>
+                ) : (
+                  <button
+                    disabled
+                    className="w-full py-4 rounded-full bg-[#071A3A]/10 dark:bg-white/10 text-[#52627A] dark:text-white/50 text-xs font-black uppercase tracking-wider cursor-not-allowed"
+                  >
                     {plan.cta}
                   </button>
-                ) : (
-                  <Link to={plan.id === 'enterprise' ? '/login' : '/register'} className="mb-6">
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className={`w-full flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-medium transition-colors min-h-12 ${
-                        plan.highlighted
-                          ? 'bg-[#4F46E5] hover:bg-[#4338CA] text-white shadow-md shadow-indigo-500/20'
-                          : 'border border-gray-200 dark:border-zinc-700 text-gray-700 dark:text-zinc-300 hover:bg-gray-50 dark:hover:bg-zinc-800 hover:border-gray-300 dark:hover:border-zinc-600'
-                      }`}
-                    >
-                      {plan.cta}
-                      <CtaIcon size={14} />
-                    </motion.button>
-                  </Link>
                 )}
-
-                {/* Divider */}
-                <div className="border-t border-gray-100 dark:border-zinc-800 mb-5" />
-
-                {/* Features */}
-                <div className="space-y-2.5 flex-1">
-                  {plan.features.map((f, fi) => (
-                    <div key={fi} className="flex items-start gap-2.5">
-                      <Check size={13} className={`mt-0.5 flex-shrink-0 ${plan.highlighted ? 'text-[#4F46E5]' : 'text-emerald-500'}`} />
-                      <span className="text-[13px] text-gray-600 dark:text-zinc-400">{f}</span>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
+              </div>
             )
           })}
         </div>
 
-        {/* FAQ */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.5, delay: 0.4 }}
-        >
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 text-center">
-            Frequently asked questions
-          </h3>
-          <div className="max-w-2xl mx-auto space-y-2">
+        {/* FAQ Section */}
+        <div className="max-w-3xl mx-auto pt-6 border-t border-[#071A3A]/10 dark:border-white/10">
+          <div className="text-center mb-10">
+            <span className="text-[11px] font-black uppercase tracking-[0.25em] text-[#0052FF] dark:text-[#A9DFFF] block mb-2">
+              Common Questions
+            </span>
+            <h3 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-[#071A3A] dark:text-white">
+              Frequently Asked Questions
+            </h3>
+          </div>
+
+          <div className="space-y-3">
             {FAQS.map((faq, i) => (
-              <FaqItem key={i} faq={faq} index={i} />
+              <FaqItem key={faq.q} faq={faq} index={i} />
             ))}
           </div>
-        </motion.div>
+        </div>
       </div>
     </section>
   )
 }
-
-export default Pricing

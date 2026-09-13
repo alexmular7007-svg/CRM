@@ -1,250 +1,204 @@
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Play, Search, Bell, Moon, Settings, LayoutDashboard, BarChart3, Users, MessageSquare, Briefcase, Sparkles } from 'lucide-react'
-import RotatingAvatar from './RotatingAvatar'
+import { ArrowUpRight, ArrowDown, CheckCircle2, ShieldCheck, Sparkles, Folder, CheckSquare2, Users, Layers } from 'lucide-react'
 
-const fadeUp = (delay = 0) => ({
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.6, delay, ease: 'easeOut' },
-})
+export default function HeroSection() {
+  const scrollToFeatures = () => {
+    const el = document.getElementById('features')
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
-const HeroSection = () => {
   return (
-    <section className="relative pt-16 pb-12 md:pt-24 md:pb-16 lg:pt-32 lg:pb-20 px-4 md:px-6 lg:px-8 overflow-hidden bg-white dark:bg-[#09090B] min-h-screen flex items-center">
-      <div className="w-full max-w-7xl mx-auto">
-        {/* Single column on mobile/sm, adjustable on md+, 2 columns on lg+ */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1fr_1.2fr] gap-6 md:gap-8 lg:gap-16 xl:gap-20 items-center">
-
-          {/* LEFT COLUMN - Text Content */}
-          <div className="w-full">
-            {/* Main Headline - Responsive sizing */}
-            <motion.h1
-              {...fadeUp(0)}
-              className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-black tracking-tight text-gray-950 dark:text-white leading-tight mb-4 md:mb-6 lg:mb-8"
-            >
-              <span className="block">Manage Projects,</span>
-              <span className="block">CRM, Team</span>
-              <span className="block">Collaboration & AI</span>
-              <span className="block">
-                <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 text-transparent bg-clip-text">One Workspace.</span>
+    <section className="relative pt-28 pb-20 md:pt-36 md:pb-28 lg:pt-40 lg:pb-32 px-4 sm:px-6 lg:px-8 overflow-hidden bg-[#F7F5F0] dark:bg-[#071A3A] transition-colors duration-300">
+      <div className="max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-10 items-center">
+          {/* Left Editorial Content (6 cols on lg) */}
+          <div className="lg:col-span-6 xl:col-span-6 flex flex-col justify-center">
+            {/* Eyebrow badge */}
+            <div className="inline-flex items-center gap-2 mb-6">
+              <span className="px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-[0.2em] bg-[#0052FF]/10 dark:bg-[#A9DFFF]/15 text-[#0052FF] dark:text-[#A9DFFF] border border-[#0052FF]/20 dark:border-[#A9DFFF]/20">
+                Projects · CRM · Team Collaboration
               </span>
-            </motion.h1>
+            </div>
 
-            {/* Description - Responsive text */}
-            <motion.p
-              {...fadeUp(0.05)}
-              className="text-sm md:text-base lg:text-lg text-gray-600 dark:text-gray-300 mb-6 md:mb-8 lg:mb-10 leading-relaxed max-w-2xl font-medium"
-            >
-              TaskFlow AI helps teams plan projects, track leads, collaborate in real time, and gain AI-powered insights to deliver exceptional results.
-            </motion.p>
+            {/* Huge Editorial Headline */}
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-6xl xl:text-7xl font-black text-[#071A3A] dark:text-white uppercase tracking-tight leading-[0.92] mb-6 sm:mb-8">
+              Manage Projects.
+              <span className="block text-[#0052FF] dark:text-[#A9DFFF] mt-1">
+                Move Deals.
+              </span>
+              <span className="block mt-1 text-[#071A3A] dark:text-white">
+                Keep Teams In Sync.
+              </span>
+            </h1>
 
-            {/* CTA Buttons - Stack on mobile, row on md+ */}
-            <motion.div {...fadeUp(0.1)} className="flex flex-col sm:flex-row gap-3 md:gap-4 mb-12 md:mb-16">
+            {/* Editorial Description */}
+            <p className="text-base sm:text-lg text-[#52627A] dark:text-white/80 max-w-xl font-medium leading-relaxed mb-8 sm:mb-10">
+              TaskFlow unites sprint planning, CRM pipelines, real-time team messaging, and proactive risk detection in a single, multi-tenant workspace.
+            </p>
+
+            {/* CTAs */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mb-8">
               <Link to="/register" className="w-full sm:w-auto">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="w-full sm:w-auto group flex items-center justify-center gap-2 px-6 md:px-8 py-3 md:py-4 bg-indigo-600 hover:bg-indigo-700 text-white text-base font-semibold rounded-xl shadow-lg shadow-indigo-600/25 transition-all active:scale-95 min-h-12"
-                >
+                <button className="w-full sm:w-auto px-8 py-4 rounded-full bg-[#0052FF] hover:bg-[#0043D1] text-white text-xs sm:text-sm font-black uppercase tracking-wider shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 active:scale-95">
                   Get Started Free
-                  <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform hidden sm:inline" />
-                </motion.button>
+                  <ArrowUpRight size={17} />
+                </button>
               </Link>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="w-full sm:w-auto flex items-center justify-center gap-3 px-6 md:px-8 py-3 md:py-4 border-2 border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900/50 hover:border-gray-300 dark:hover:border-gray-600 text-base font-semibold rounded-xl transition-all active:scale-95 min-h-12"
+              <button
+                onClick={scrollToFeatures}
+                className="w-full sm:w-auto px-7 py-4 rounded-full border-2 border-[#071A3A]/20 dark:border-white/20 hover:border-[#071A3A] dark:hover:border-white text-[#071A3A] dark:text-white text-xs sm:text-sm font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 hover:bg-[#071A3A]/5 dark:hover:bg-white/5 active:scale-95"
               >
-                <Play size={18} className="text-indigo-600" />
-                View Demo
-              </motion.button>
-            </motion.div>
+                Explore Platform
+                <ArrowDown size={15} />
+              </button>
+            </div>
 
-            {/* Statistics - 3 columns, responsive spacing */}
-            <motion.div {...fadeUp(0.15)} className="grid grid-cols-3 gap-2 md:gap-4 lg:gap-6 pt-6 md:pt-8 lg:pt-12 border-t border-gray-200 dark:border-gray-800">
-              <div>
-                <div className="text-2xl md:text-3xl font-black text-gray-950 dark:text-white mb-1 md:mb-2">50+</div>
-                <div className="text-xs md:text-sm font-semibold text-gray-500 dark:text-gray-400">Active Teams</div>
+            {/* Truthful Platform Proof points */}
+            <div className="flex flex-wrap items-center gap-y-2 gap-x-5 text-xs font-bold text-[#52627A] dark:text-white/70 uppercase tracking-wider pt-4 border-t border-[#071A3A]/10 dark:border-white/10">
+              <div className="flex items-center gap-1.5">
+                <CheckCircle2 size={15} className="text-[#0052FF] dark:text-[#A9DFFF]" />
+                <span>Multi-Tenant Workspaces</span>
               </div>
-              <div>
-                <div className="text-2xl md:text-3xl font-black text-gray-950 dark:text-white mb-1 md:mb-2">10K+</div>
-                <div className="text-xs md:text-sm font-semibold text-gray-500 dark:text-gray-400">Tasks</div>
+              <div className="flex items-center gap-1.5">
+                <ShieldCheck size={15} className="text-[#0052FF] dark:text-[#A9DFFF]" />
+                <span>Role-Based Access</span>
               </div>
-              <div>
-                <div className="text-2xl md:text-3xl font-black text-indigo-600 dark:text-indigo-400 mb-1 md:mb-2">95%</div>
-                <div className="text-xs md:text-sm font-semibold text-gray-500 dark:text-gray-400">Faster</div>
+              <div className="flex items-center gap-1.5">
+                <Sparkles size={15} className="text-[#0052FF] dark:text-[#A9DFFF]" />
+                <span>No Credit Card Needed</span>
               </div>
-            </motion.div>
+            </div>
           </div>
 
-          {/* RIGHT COLUMN - Dashboard Preview (visible on all screens, stacked on mobile) */}
-          <motion.div
-            initial={{ opacity: 0, x: 40 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.3 }}
-            className="relative w-full rounded-2xl border-2 border-gray-300 dark:border-gray-700 bg-gradient-to-br from-white dark:from-[#1A1A1D] via-gray-50 dark:via-[#13131A] to-gray-100 dark:to-[#09090B] shadow-2xl dark:shadow-lg overflow-hidden flex flex-col h-[400px] sm:h-[450px] md:h-[500px] lg:h-[600px] xl:h-[700px]"
-            style={{
-              boxShadow: 'inset 0 1px 0 0 rgba(255, 255, 255, 0.5), 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05)'
-            }}
-          >
-            {/* Browser Header */}
-            <div className="flex h-12 bg-white dark:bg-[#1A1A1D] border-b border-gray-200 dark:border-gray-700 items-center px-4 gap-3 shrink-0">
-              <div className="flex gap-2">
-                <div className="w-3 h-3 rounded-full bg-red-500 hover:bg-red-600 cursor-pointer transition" />
-                <div className="w-3 h-3 rounded-full bg-yellow-500 hover:bg-yellow-600 cursor-pointer transition" />
-                <div className="w-3 h-3 rounded-full bg-green-500 hover:bg-green-600 cursor-pointer transition" />
-              </div>
-              <div className="ml-3 flex-1 flex justify-center text-xs md:text-sm text-gray-500 dark:text-gray-400 font-medium">
-                localhost:3000/dashboard
-              </div>
-            </div>
+          {/* Right High-Fidelity Product UI Composition (6 cols on lg, elevated presence) */}
+          <div className="lg:col-span-6 xl:col-span-6 relative">
+            {/* Subtle architectural background framing accent */}
+            <div className="absolute -inset-2 sm:-inset-4 rounded-3xl bg-gradient-to-tr from-[#0052FF]/10 via-[#BFE9FF]/20 to-[#F6A8C7]/15 dark:from-[#0052FF]/20 dark:via-white/5 dark:to-transparent -z-10 blur-xl opacity-70" />
 
-            <div className="flex flex-1 overflow-hidden">
-              {/* Sidebar */}
-              <div className="w-48 bg-gradient-to-b from-slate-900 to-slate-800 border-r border-slate-700 p-4 flex flex-col gap-6 shrink-0">
-                <div className="flex items-center gap-2 text-white">
-                  <div className="w-7 h-7 rounded bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center text-xs font-bold">✓</div>
-                  <span className="font-bold text-sm">TaskFlow</span>
-                </div>
-
-                <div className="space-y-1">
-                  <div className="text-xs font-bold text-slate-400 uppercase tracking-widest px-2 mb-3">Menu</div>
-                  {[
-                    { icon: LayoutDashboard, label: 'Dashboard', active: true },
-                    { icon: Briefcase, label: 'Projects' },
-                    { icon: Users, label: 'CRM' },
-                    { icon: MessageSquare, label: 'Chat' },
-                    { icon: BarChart3, label: 'Analytics' },
-                    { icon: Sparkles, label: 'AI' },
-                    { icon: Settings, label: 'Settings' },
-                  ].map((item, i) => (
-                    <div key={i} className={`flex items-center gap-3 px-2 py-2 rounded-lg text-xs font-semibold transition-all ${item.active ? 'bg-indigo-600/40 text-indigo-200 border border-indigo-500/30' : 'text-slate-300 hover:text-white hover:bg-slate-700/50'}`}>
-                      <item.icon size={14} />
-                      {item.label}
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-auto pt-4 border-t border-slate-700/50">
-                  <div className="flex items-center gap-2 text-slate-300 text-xs cursor-pointer hover:text-white transition">
-                    <RotatingAvatar size="sm" location="sidebar" />
-                    <span className="font-medium">You</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Main Content */}
-              <div className="flex-1 bg-gradient-to-b from-gray-50 dark:from-[#13131A] to-gray-100 dark:to-[#09090B] p-6 flex flex-col gap-6 overflow-y-auto">
-                {/* Top Bar */}
-                <div className="flex justify-between items-center shrink-0">
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Dashboard</h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Welcome back to your workspace</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                      <Search size={14} className="text-gray-400" />
-                      <input type="text" placeholder="Search..." className="bg-transparent text-xs text-gray-600 dark:text-gray-300 placeholder-gray-400 focus:outline-none w-24" />
-                    </div>
-                    <RotatingAvatar size="md" location="topbar" />
-                    <Bell size={16} className="text-gray-500 dark:text-gray-400" />
-                    <Moon size={16} className="text-gray-500 dark:text-gray-400" />
-                  </div>
-                </div>
-
-                {/* Metrics Cards */}
-                <div className="grid grid-cols-2 gap-3 shrink-0">
-                  {[
-                    { label: 'Projects', value: '24', unit: '+5 this week', color: 'from-blue-500' },
-                    { label: 'Active Tasks', value: '156', unit: '+21% month', color: 'from-indigo-500' },
-                    { label: 'Team Members', value: '32', unit: '+3 this week', color: 'from-emerald-500' },
-                    { label: 'Productivity', value: '92%', unit: '+2pt week', color: 'from-amber-500' },
-                  ].map((metric, i) => (
-                    <div key={i} className="bg-white dark:bg-[#1A1A1D] rounded-lg border-2 border-gray-300 dark:border-gray-700 p-3 shadow-md dark:shadow-sm hover:shadow-lg dark:hover:shadow-md transition-all">
-                      <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">{metric.label}</div>
-                      <div className="text-xl font-black text-gray-900 dark:text-white">{metric.value}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">{metric.unit}</div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Project Progress */}
-                <div className="bg-white dark:bg-[#1A1A1D] rounded-lg border-2 border-gray-300 dark:border-gray-700 p-4 shadow-md dark:shadow-sm shrink-0">
-                  <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Project Progress</h4>
-                  <div className="space-y-3">
-                    {[
-                      { name: 'Website Redesign', progress: 75 },
-                      { name: 'Mobile App', progress: 60 },
-                      { name: 'CRM Integration', progress: 90 },
-                    ].map((proj, i) => (
-                      <div key={i}>
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">{proj.name}</span>
-                          <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">{proj.progress}%</span>
-                        </div>
-                        <div className="h-1.5 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                          <div className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600" style={{ width: `${proj.progress}%` }} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* CRM Pipeline */}
-                <div className="bg-white dark:bg-[#1A1A1D] rounded-lg border-2 border-gray-300 dark:border-gray-700 p-4 shadow-md dark:shadow-sm shrink-0">
-                  <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-4">CRM Pipeline</h4>
-                  <div className="space-y-2 text-xs">
-                    {[
-                      { stage: 'Lead', count: 120, color: 'bg-blue-500' },
-                      { stage: 'Qualified', count: 85, color: 'bg-indigo-500' },
-                      { stage: 'Proposal', count: 45, color: 'bg-purple-500' },
-                      { stage: 'Won', count: 25, color: 'bg-emerald-500' },
-                    ].map((item, i) => (
-                      <div key={i} className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${item.color}`} />
-                          <span className="font-medium text-gray-700 dark:text-gray-300">{item.stage}</span>
-                        </div>
-                        <span className="font-bold text-gray-900 dark:text-white">{item.count}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Team Activity */}
-                <div className="bg-white dark:bg-[#1A1A1D] rounded-lg border-2 border-gray-300 dark:border-gray-700 p-4 shadow-md dark:shadow-sm shrink-0">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Team Activity</p>
-                      <p className="text-lg font-bold text-gray-900 dark:text-white">+12%</p>
-                    </div>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">vs last week</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Floating AI Insight */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
-              className="absolute bottom-3 left-3 right-3 md:bottom-4 md:left-4 md:right-4 lg:bottom-6 lg:left-56 lg:right-6 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl p-3 md:p-4 text-white shadow-2xl border border-indigo-500/30 max-w-xs"
+            <div
+              className="relative rounded-2xl sm:rounded-3xl border-2 border-[#071A3A]/15 dark:border-white/15 bg-white dark:bg-[#0B1F3A] p-4 sm:p-7 shadow-2xl overflow-hidden"
             >
-              <div className="flex items-start gap-3">
-                <Sparkles size={18} className="mt-0.5 flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="text-xs font-bold mb-1">AI Insight</p>
-                  <p className="text-xs leading-relaxed text-indigo-100">3 tasks are at risk of delay. View details →</p>
+              {/* Product Window Header */}
+              <div className="flex items-center justify-between pb-4 mb-4 border-b border-[#071A3A]/10 dark:border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-[#071A3A] dark:bg-[#0052FF] flex items-center justify-center text-white font-black text-xs">
+                    TF
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-black uppercase text-[#071A3A] dark:text-white tracking-wide">
+                        Core Workspace
+                      </span>
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    </div>
+                    <span className="text-[10px] font-bold text-[#52627A] dark:text-[#A9DFFF] uppercase">
+                      Engineering & Sales
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <div className="flex -space-x-1.5 overflow-hidden">
+                    <span className="inline-flex h-6 w-6 rounded-full ring-2 ring-white dark:ring-[#0B1F3A] bg-[#0052FF] text-[9px] font-bold text-white items-center justify-center">
+                      AK
+                    </span>
+                    <span className="inline-flex h-6 w-6 rounded-full ring-2 ring-white dark:ring-[#0B1F3A] bg-[#F6A8C7] text-[9px] font-bold text-[#071A3A] items-center justify-center">
+                      MR
+                    </span>
+                    <span className="inline-flex h-6 w-6 rounded-full ring-2 ring-white dark:ring-[#0B1F3A] bg-[#A9DFFF] text-[9px] font-bold text-[#071A3A] items-center justify-center">
+                      SL
+                    </span>
+                  </div>
                 </div>
               </div>
-            </motion.div>
-          </motion.div>
+
+              {/* Product Top Metrics Strip */}
+              <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4">
+                <div className="p-3 rounded-xl bg-[#F7F5F0] dark:bg-white/5 border border-[#071A3A]/10 dark:border-white/10">
+                  <div className="text-[10px] font-bold uppercase text-[#52627A] dark:text-[#A9DFFF]">Active Sprint</div>
+                  <div className="text-sm sm:text-base font-black text-[#071A3A] dark:text-white mt-0.5">Sprint 14</div>
+                  <div className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">18/24 Done</div>
+                </div>
+                <div className="p-3 rounded-xl bg-[#F7F5F0] dark:bg-white/5 border border-[#071A3A]/10 dark:border-white/10">
+                  <div className="text-[10px] font-bold uppercase text-[#52627A] dark:text-[#A9DFFF]">CRM Funnel</div>
+                  <div className="text-sm sm:text-base font-black text-[#071A3A] dark:text-white mt-0.5">14 Deals</div>
+                  <div className="text-[10px] font-semibold text-[#0052FF] dark:text-[#A9DFFF]">5 in Proposal</div>
+                </div>
+                <div className="p-3 rounded-xl bg-[#F7F5F0] dark:bg-white/5 border border-[#071A3A]/10 dark:border-white/10">
+                  <div className="text-[10px] font-bold uppercase text-[#52627A] dark:text-[#A9DFFF]">Workspace Health</div>
+                  <div className="text-sm sm:text-base font-black text-emerald-600 dark:text-emerald-400 mt-0.5">88 / 100</div>
+                  <div className="text-[10px] font-semibold text-[#52627A] dark:text-white/60">0 Blockers</div>
+                </div>
+              </div>
+
+              {/* Kanban Interactive Representation */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-[#071A3A] dark:text-white flex items-center gap-1.5">
+                    <CheckSquare2 size={13} className="text-[#0052FF]" />
+                    Kanban Execution
+                  </span>
+                  <span className="text-[10px] font-bold text-[#52627A] dark:text-white/60 uppercase">
+                    Drag & Drop
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Task Card 1 */}
+                  <div className="p-3.5 rounded-xl border border-[#071A3A]/15 dark:border-white/15 bg-white dark:bg-[#071A3A] shadow-xs">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300">
+                        Urgent
+                      </span>
+                      <span className="text-[10px] font-mono text-[#52627A] dark:text-white/50">Today</span>
+                    </div>
+                    <div className="text-xs font-bold text-[#071A3A] dark:text-white mb-1.5">
+                      Verify OAuth2 Client Callback
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] text-[#52627A] dark:text-white/60">
+                      <span>#dev-core</span>
+                      <span className="font-bold text-[#0052FF] dark:text-[#A9DFFF]">Review</span>
+                    </div>
+                  </div>
+
+                  {/* Task Card 2 */}
+                  <div className="p-3.5 rounded-xl border border-[#071A3A]/15 dark:border-white/15 bg-white dark:bg-[#071A3A] shadow-xs">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">
+                        High
+                      </span>
+                      <span className="text-[10px] font-mono text-[#52627A] dark:text-white/50">Sep 18</span>
+                    </div>
+                    <div className="text-xs font-bold text-[#071A3A] dark:text-white mb-1.5">
+                      Cloudinary Document Upload
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] text-[#52627A] dark:text-white/60">
+                      <span>#storage</span>
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400">In Progress</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Notification Strip */}
+              <div className="mt-4 p-3 rounded-xl bg-[#0052FF]/10 dark:bg-[#0052FF]/20 border border-[#0052FF]/20 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-6 h-6 rounded-md bg-[#0052FF] text-white flex items-center justify-center">
+                    <Sparkles size={13} />
+                  </div>
+                  <span className="text-[11px] font-bold text-[#071A3A] dark:text-white">
+                    Lead converted to Client record after deal marked Won
+                  </span>
+                </div>
+                <span className="text-[10px] font-bold text-[#0052FF] dark:text-[#A9DFFF] uppercase tracking-wider hidden sm:inline">
+                  Automated
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
   )
 }
-
-export default HeroSection

@@ -122,6 +122,22 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--theme-heading);
 }
 
+/* Allow dark background sections or explicit text color containers to override heading color */
+.text-white h1, .text-white h2, .text-white h3, .text-white h4, .text-white h5, .text-white h6,
+.dark-section h1, .dark-section h2, .dark-section h3, .dark-section h4, .dark-section h5, .dark-section h6,
+[data-section-theme="dark"] h1, [data-section-theme="dark"] h2, [data-section-theme="dark"] h3, [data-section-theme="dark"] h4, [data-section-theme="dark"] h5, [data-section-theme="dark"] h6 {
+  color: #F8FAFC;
+}
+
+h1 span:not([class*="text-"]),
+h2 span:not([class*="text-"]),
+h3 span:not([class*="text-"]),
+h4 span:not([class*="text-"]),
+h5 span:not([class*="text-"]),
+h6 span:not([class*="text-"]) {
+  color: inherit;
+}
+
 /* ── Links ──── */
 a {
   color: var(--theme-primary);

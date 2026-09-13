@@ -1,128 +1,107 @@
 import { Link } from 'react-router-dom'
-import { ExternalLink, Mail, Zap, Heart, Globe, MessageCircle } from 'lucide-react'
+import { ArrowUpRight } from 'lucide-react'
 
-const NAV = {
-  Product: [
-    { label: 'Features', href: '#features' },
-    { label: 'Pricing', href: '#pricing' },
-    { label: 'AI Features', href: '#ai' },
-    { label: 'Changelog', href: '#' },
-    { label: 'Roadmap', href: '#' },
-  ],
-  Company: [
-    { label: 'About', href: '#' },
-    { label: 'Blog', href: '#' },
-    { label: 'Careers', href: '#' },
-    { label: 'Press Kit', href: '#' },
-    { label: 'Contact', href: '#' },
-  ],
-  Resources: [
-    { label: 'Documentation', href: '#' },
-    { label: 'API Reference', href: '#' },
-    { label: 'Help Centre', href: '#' },
-    { label: 'Community', href: '#' },
-    { label: 'Status', href: '#' },
-  ],
-}
-
-const SOCIALS = [
-  { icon: Globe, href: '#', label: 'Website' },
-  { icon: MessageCircle, href: '#', label: 'Community' },
-  { icon: Mail, href: 'mailto:hello@taskflow.ai', label: 'Email' },
-  { icon: ExternalLink, href: '#', label: 'Blog' },
-]
-
-const Footer = () => {
+export default function Footer() {
   const year = new Date().getFullYear()
 
+  const scrollToAnchor = (id) => {
+    const el = document.getElementById(id)
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   return (
-    <footer className="border-t border-gray-200 dark:border-zinc-800 bg-white dark:bg-[#09090B]">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16">
-
-        {/* Top */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-12">
-
-          {/* Brand */}
-          <div className="col-span-2 md:col-span-2">
-            <Link to="/" className="flex items-center gap-2 mb-4 group w-fit">
-              <div className="w-7 h-7 bg-[#4F46E5] rounded-md flex items-center justify-center group-hover:bg-[#4338CA] transition-colors">
-                <Zap size={14} className="text-white" />
+    <footer className="border-t border-[#071A3A]/10 dark:border-white/10 bg-[#F7F5F0] dark:bg-[#071A3A] text-[#071A3A] dark:text-white transition-colors duration-300">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-10 lg:gap-12 mb-14">
+          {/* Brand Info (5 cols) */}
+          <div className="md:col-span-5">
+            <Link to="/" className="flex items-center gap-3 mb-5 group">
+              <div className="w-9 h-9 rounded-lg bg-[#071A3A] dark:bg-white flex items-center justify-center text-white dark:text-[#071A3A] font-black text-lg">
+                TF
               </div>
-              <span className="text-[15px] font-semibold text-gray-900 dark:text-white tracking-tight">
-                TaskFlow<span className="text-[#4F46E5]"> AI</span>
+              <span className="text-xl font-black uppercase tracking-tight text-[#071A3A] dark:text-white">
+                TaskFlow
               </span>
             </Link>
-            <p className="text-[13px] text-gray-500 dark:text-zinc-500 leading-relaxed mb-5 max-w-xs">
-              AI-powered collaboration platform for modern teams. Task management, chat, CRM, and insights — unified.
+            <p className="text-xs sm:text-sm text-[#52627A] dark:text-white/70 max-w-sm font-medium leading-relaxed mb-6">
+              The unified operational workspace for projects, CRM pipelines, real-time messaging, and intelligent health monitoring.
             </p>
-            <div className="flex items-center gap-3">
-              {SOCIALS.map(({ icon: Icon, href, label }) => (
-                <a
-                  key={label}
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={label}
-                  className="w-8 h-8 rounded-md border border-gray-200 dark:border-zinc-800 flex items-center justify-center text-gray-400 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300 hover:border-gray-300 dark:hover:border-zinc-700 transition-colors"
-                >
-                  <Icon size={14} />
-                </a>
-              ))}
+            <div className="text-xs font-mono text-[#52627A] dark:text-white/50">
+              Architecture: Spring Boot 3 · React 18 · PostgreSQL · Redis
             </div>
           </div>
 
-          {/* Nav columns */}
-          {Object.entries(NAV).map(([section, links]) => (
-            <div key={section}>
-              <div className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-zinc-600 mb-4">{section}</div>
-              <ul className="space-y-2.5">
-                {links.map(({ label, href }) => (
-                  <li key={label}>
-                    <a
-                      href={href}
-                      className="text-[13px] text-gray-500 dark:text-zinc-500 hover:text-gray-800 dark:hover:text-zinc-300 transition-colors"
-                    >
-                      {label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          {/* Navigation Links (3 cols) */}
+          <div className="md:col-span-3">
+            <h4 className="text-xs font-black uppercase tracking-widest text-[#0052FF] dark:text-[#A9DFFF] mb-4">
+              Platform
+            </h4>
+            <ul className="space-y-2.5 text-xs font-bold uppercase tracking-wider text-[#52627A] dark:text-white/70">
+              <li>
+                <button onClick={() => scrollToAnchor('features')} className="hover:text-[#071A3A] dark:hover:text-white transition-colors">
+                  Features & Capabilities
+                </button>
+              </li>
+              <li>
+                <button onClick={() => scrollToAnchor('workflow')} className="hover:text-[#071A3A] dark:hover:text-white transition-colors">
+                  Three-Step Workflow
+                </button>
+              </li>
+              <li>
+                <button onClick={() => scrollToAnchor('ai')} className="hover:text-[#071A3A] dark:hover:text-white transition-colors">
+                  Operational Intelligence
+                </button>
+              </li>
+              <li>
+                <button onClick={() => scrollToAnchor('pricing')} className="hover:text-[#071A3A] dark:hover:text-white transition-colors">
+                  Pricing & Plans
+                </button>
+              </li>
+            </ul>
+          </div>
+
+          {/* Access & Legal (4 cols) */}
+          <div className="md:col-span-4">
+            <h4 className="text-xs font-black uppercase tracking-widest text-[#0052FF] dark:text-[#A9DFFF] mb-4">
+              Access & Governance
+            </h4>
+            <ul className="space-y-2.5 text-xs font-bold uppercase tracking-wider text-[#52627A] dark:text-white/70">
+              <li>
+                <Link to="/login" className="hover:text-[#071A3A] dark:hover:text-white transition-colors">
+                  Sign In to Workspace
+                </Link>
+              </li>
+              <li>
+                <Link to="/register" className="hover:text-[#071A3A] dark:hover:text-white transition-colors">
+                  Create New Account
+                </Link>
+              </li>
+              <li>
+                <Link to="/terms" className="hover:text-[#071A3A] dark:hover:text-white transition-colors">
+                  Terms of Service
+                </Link>
+              </li>
+              <li>
+                <Link to="/privacy" className="hover:text-[#071A3A] dark:hover:text-white transition-colors">
+                  Privacy Policy
+                </Link>
+              </li>
+            </ul>
+          </div>
         </div>
 
-        {/* CTA banner */}
-        <div className="rounded-xl border border-[#4F46E5]/20 bg-[#4F46E5]/4 dark:bg-indigo-950/20 px-6 py-5 flex flex-col sm:flex-row items-center justify-between gap-4 mb-12">
+        {/* Bottom Bar */}
+        <div className="pt-8 border-t border-[#071A3A]/10 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-medium text-[#52627A] dark:text-white/60">
           <div>
-            <div className="text-[14px] font-semibold text-gray-900 dark:text-white mb-0.5">Start shipping faster today</div>
-            <div className="text-[12.5px] text-gray-500 dark:text-zinc-400">No credit card required · 14-day free trial · Cancel anytime</div>
+            © {year} TaskFlow. All rights reserved.
           </div>
-          <Link to="/register">
-            <button className="flex items-center gap-2 px-5 py-2.5 bg-[#4F46E5] hover:bg-[#4338CA] text-white text-sm font-medium rounded-lg transition-colors shadow-sm flex-shrink-0">
-              Get started free
-            </button>
-          </Link>
-        </div>
-
-        {/* Bottom bar */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-gray-100 dark:border-zinc-800/60">
-          <div className="text-[12px] text-gray-400 dark:text-zinc-600">
-            © {year} TaskFlow AI, Inc. All rights reserved.
-          </div>
-          <div className="flex items-center gap-5">
-            {['Privacy Policy', 'Terms of Service', 'Cookie Policy'].map((item) => (
-              <a key={item} href="#" className="text-[12px] text-gray-400 dark:text-zinc-600 hover:text-gray-600 dark:hover:text-zinc-400 transition-colors">
-                {item}
-              </a>
-            ))}
-          </div>
-          <div className="flex items-center gap-1 text-[12px] text-gray-400 dark:text-zinc-600">
-            Made with <Heart size={12} className="text-rose-400 fill-current mx-0.5" /> by the TaskFlow team
+          <div className="flex items-center gap-6">
+            <Link to="/terms" className="hover:underline">Terms</Link>
+            <Link to="/privacy" className="hover:underline">Privacy</Link>
+            <Link to="/login" className="hover:underline">Account</Link>
           </div>
         </div>
       </div>
     </footer>
   )
 }
-
-export default Footer

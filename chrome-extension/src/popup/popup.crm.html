@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TaskFlow CRM - Quick Task Manager</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="popup-wrapper">
+    <!-- App Header -->
+    <header class="app-header">
+      <div class="brand-row">
+        <div class="brand-logo">
+          <svg class="logo-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 11l3 3L22 4" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="brand-headings">
+          <h1 class="brand-title">TaskFlow CRM</h1>
+          <h2 class="brand-subtitle">Quick Task Manager</h2>
+        </div>
+      </div>
+      <div class="header-user-actions" id="header-user-actions">
+        <span class="user-greeting" id="user-display-name"></span>
+        <button type="button" class="btn-text-sm hidden" id="btn-sign-out" title="Sign out">Sign Out</button>
+      </div>
+    </header>
+
+    <!-- Phase 1: Hello World Greeting Banner -->
+    <div class="hello-banner" id="hello-banner">
+      <span class="hello-badge">HELLO WORLD</span>
+      <span class="hello-text">Hello from TaskFlow!</span>
+    </div>
+
+    <!-- Sign In Panel (when not authenticated) -->
+    <section class="auth-panel" id="auth-panel">
+      <div class="auth-box">
+        <h3 class="auth-title">Connect to CRM</h3>
+        <p class="auth-desc">Sign in with your CRM account to manage workspace tasks.</p>
+        <div class="alert alert-error hidden" id="login-error-alert"></div>
+        <form id="form-login" class="login-form">
+          <div class="field-group">
+            <label for="login-email">Email</label>
+            <input type="email" id="login-email" placeholder="user@example.com" required autocomplete="username" />
+          </div>
+          <div class="field-group">
+            <label for="login-password">Password</label>
+            <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password" />
+          </div>
+          <button type="submit" class="btn btn-primary btn-block" id="btn-submit-login">Sign In</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Main Workspace & Quick Task Manager Panel (when authenticated) -->
+    <section class="main-panel hidden" id="main-panel">
+      <!-- Top Action Bar -->
+      <div class="action-bar">
+        <div class="workspace-picker">
+          <label for="workspace-switcher" class="sr-only">Workspace</label>
+          <select id="workspace-switcher" class="select-workspace" title="Select Workspace">
+            <option value="">Loading workspaces...</option>
+          </select>
+          <span class="count-pill" id="task-count-badge">0</span>
+        </div>
+        <button type="button" class="btn btn-primary" id="btn-show-create-form">
+          <svg class="btn-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>Assign New Task</span>
+        </button>
+      </div>
+
+      <!-- Assign New Task Form (collapsible panel) -->
+      <div class="create-task-drawer hidden" id="create-task-drawer">
+        <div class="drawer-header">
+          <h3 class="drawer-title">Assign New Task</h3>
+          <button type="button" class="btn-close" id="btn-close-create-drawer" title="Close">✕</button>
+        </div>
+        <div class="alert alert-error hidden" id="create-error-alert"></div>
+        <form id="form-create-task" class="create-form">
+          <div class="field-group">
+            <label for="new-task-title">Title <span class="req">*</span></label>
+            <input type="text" id="new-task-title" placeholder="e.g. Follow up with client" required />
+          </div>
+          <div class="field-group">
+            <label for="new-task-desc">Description</label>
+            <textarea id="new-task-desc" rows="2" placeholder="Task details and instructions..."></textarea>
+          </div>
+          <div class="field-group">
+            <label for="new-task-project">Project <span class="req">*</span></label>
+            <select id="new-task-project" required>
+              <option value="">Select Project</option>
+            </select>
+            <p class="field-hint hidden" id="no-projects-hint">No projects available in this workspace. Create a project in the CRM before assigning tasks.</p>
+          </div>
+          <div class="field-row">
+            <div class="field-group flex-1">
+              <label for="new-task-assignee">Assign To</label>
+              <select id="new-task-assignee">
+                <option value="">Unassigned</option>
+              </select>
+            </div>
+            <div class="field-group flex-1">
+              <label for="new-task-priority">Priority</label>
+              <select id="new-task-priority">
+                <option value="LOW">LOW</option>
+                <option value="MEDIUM" selected>MEDIUM</option>
+                <option value="HIGH">HIGH</option>
+                <option value="URGENT">URGENT</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-group">
+            <label for="new-task-duedate">Due Date</label>
+            <input type="date" id="new-task-duedate" />
+          </div>
+          <div class="drawer-actions">
+            <button type="button" class="btn btn-secondary" id="btn-cancel-create">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="btn-submit-create-task">Assign Task</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Notification Toast -->
+      <div class="toast hidden" id="toast">
+        <svg class="toast-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <span class="toast-message" id="toast-message">Task updated</span>
+      </div>
+
+      <!-- Task List Container -->
+      <div class="task-container" id="task-container">
+        <!-- State: Loading -->
+        <div class="state-view" id="state-loading">
+          <div class="spinner"></div>
+          <p>Loading tasks...</p>
+        </div>
+
+        <!-- State: Empty -->
+        <div class="state-view hidden" id="state-empty">
+          <p class="empty-title">No tasks found</p>
+          <p class="empty-sub">Your workspace has no active tasks.</p>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-create-first-task">+ Assign First Task</button>
+        </div>
+
+        <!-- Task List Items -->
+        <ul class="task-list hidden" id="task-items">
+          <!-- Dynamically populated task rows -->
+        </ul>
+      </div>
+
+      <!-- Recent Activity Section -->
+      <section class="recent-activity-section" id="recent-activity-section">
+        <div class="activity-header">
+          <div class="activity-title-wrap">
+            <svg class="activity-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
+            <h4 class="activity-title">Recent Activity</h4>
+          </div>
+          <span class="activity-pill" id="activity-count-badge">0</span>
+        </div>
+        <div class="activity-empty hidden" id="activity-empty">
+          <span>No recent activity</span>
+        </div>
+        <ul class="activity-list" id="activity-items">
+          <!-- Dynamically populated activities -->
+        </ul>
+      </section>
+
+      <!-- Footer Bar -->
+      <footer class="app-footer">
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-refresh-tasks">
+          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 4v6h-6M1 20v-6h6"></path>
+            <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"></path>
+          </svg>
+          <span>Refresh</span>
+        </button>
+        <span class="status-indicator">Connected to CRM</span>
+      </footer>
+    </section>
+  </div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

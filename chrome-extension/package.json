@@ -5,7 +5,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node test/validate-extension.js",
+    "test": "node test/validate-extension.js && node test/e2e-chromium.test.js",
+    "test:unit": "node test/validate-extension.js",
+    "test:e2e": "node test/e2e-chromium.test.js",
     "lint": "node test/validate-extension.js",
     "build": "node test/validate-extension.js",
     "check": "node test/validate-extension.js"

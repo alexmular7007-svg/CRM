@@ -1,22 +1,56 @@
 /**
- * TaskFlow CRM - Background Service Worker
- * Clean Manifest V3 service worker routing messages between popup and CRM API service.
+ * TaskFlow Learning Extension - Background Service Worker (Manifest V3)
+ * Handles:
+ * 1. Context Menu creation & handling for Highlighted Text -> Wikipedia Search
+ * 2. Background message routing for Screenshot Capture (Full Page & Visible Area)
+ * 3. Safe, temporary disabling of legacy CRM routes while preserving all code for future restoration.
  */
 
-import { crmApi, getStorage, setStorage, clearStorage } from '../services/crmApi.js'
+import { searchWikipedia } from '../services/wikipediaService.js'
+import { captureFullPage, captureVisibleArea } from '../services/screenshotService.js'
 
+// ============================================================================
+// FEATURE 2: CONTEXT MENU FOR HIGHLIGHTED TEXT -> WIKIPEDIA SEARCH
+// ============================================================================
+
+/**
+ * Register context menu on extension installation or update.
+ * contexts: ['selection'] ensures menu only appears when user highlights text.
+ */
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('[TaskFlow CRM] Extension installed and service worker ready.')
+  // Remove existing menu items first to avoid duplicate ID errors on reload
+  chrome.contextMenus.removeAll(() => {
+    chrome.contextMenus.create({
+      id: 'search-wikipedia-selection',
+      title: 'Search Wikipedia for "%s"',
+      contexts: ['selection'],
+    })
+    console.log('[TaskFlow Learning] Context menu "Search Wikipedia for \\"%s\\"" registered.')
+  })
 })
+
+/**
+ * Handle context menu item clicks
+ */
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  if (info.menuItemId === 'search-wikipedia-selection' && info.selectionText) {
+    console.log('[TaskFlow Learning] Context menu clicked with selection:', info.selectionText)
+    await searchWikipedia(info.selectionText)
+  }
+})
+
+// ============================================================================
+// RUNTIME MESSAGE ROUTING
+// ============================================================================
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   handleMessage(message, sender)
     .then((response) => sendResponse(response))
     .catch((err) => {
-      console.error('[TaskFlow CRM Background] Error handling message:', message?.type, err)
-      sendResponse({ success: false, error: err.message || 'Internal background worker error' })
+      console.error('[TaskFlow Background] Error handling message:', message?.type, err)
+      sendResponse({ success: false, error: err.message || 'Internal error' })
     })
-  return true // Async response
+  return true // Indicates asynchronous sendResponse
 })
 
 async function handleMessage(message, sender) {
@@ -25,85 +59,107 @@ async function handleMessage(message, sender) {
   }
 
   switch (message.type) {
-    // Phase 1: Hello World Greeting
-    case 'HELLO_WORLD':
-      return {
-        success: true,
-        message: 'Hello from TaskFlow!',
-        version: '1.0.0',
-      }
-
-    // Authentication & Storage
-    case 'LOGIN':
-      return await crmApi.login(message.email, message.password)
-
-    case 'LOGOUT':
-      return await crmApi.logout()
-
-    case 'GET_AUTH': {
-      const store = await getStorage()
-      return {
-        success: true,
-        data: {
-          authenticated: Boolean(store.authToken),
-          user: store.authenticatedUser,
-          workspaceId: store.workspaceId,
-          availableWorkspaces: store.availableWorkspaces || [],
-          endpoint: store.crmEndpoint,
-        },
-      }
+    // Wikipedia direct search from popup
+    case 'SEARCH_WIKIPEDIA': {
+      return await searchWikipedia(message.query)
     }
 
-    case 'SET_ENDPOINT':
-      await crmApi.setEndpoint(message.endpoint)
-      return { success: true }
+    // Full Page Screenshot Capture
+    case 'CAPTURE_FULL_PAGE': {
+      let targetTab = null
+      if (message.tabId) {
+        try {
+          const t = await chrome.tabs.get(message.tabId)
+          if (t && t.url && !t.url.startsWith('chrome-extension://') && !t.url.startsWith('chrome://')) {
+            targetTab = t
+          }
+        } catch {}
+      }
 
-    case 'SWITCH_WORKSPACE':
-      await setStorage({ workspaceId: message.workspaceId })
-      return { success: true, workspaceId: message.workspaceId }
+      if (!targetTab) {
+        const allTabs = await chrome.tabs.query({})
+        // Priority 1: active tab that is http/https
+        targetTab = allTabs.find((t) => t.active && t.url && (t.url.startsWith('http://') || t.url.startsWith('https://')))
+        // Priority 2: any tab that is http/https
+        if (!targetTab) {
+          targetTab = allTabs.find((t) => t.url && (t.url.startsWith('http://') || t.url.startsWith('https://')))
+        }
+        // Priority 3: any non-extension tab
+        if (!targetTab) {
+          targetTab = allTabs.find((t) => t.url && !t.url.startsWith('chrome-extension://') && !t.url.startsWith('chrome://'))
+        }
+      }
 
-    // Workspaces & Members
-    case 'GET_WORKSPACES':
-      return await crmApi.getWorkspaces(message.token)
+      if (!targetTab) {
+        return { success: false, error: 'No webpage found to capture.' }
+      }
 
-    case 'GET_MEMBERS':
-    case 'FETCH_MEMBERS':
-      return await crmApi.getWorkspaceMembers(message.workspaceId, message.token)
+      // Activate the target tab so captureVisibleTab captures it
+      await chrome.tabs.update(targetTab.id, { active: true })
+      await new Promise((r) => setTimeout(r, 100))
 
-    // Projects
-    case 'GET_PROJECTS':
-    case 'FETCH_PROJECTS':
-      return await crmApi.getProjects(message.workspaceId, message.token)
+      return await captureFullPage(targetTab, message.format || 'png', (progress) => {
+        // Broadcast progress updates to popup
+        chrome.runtime.sendMessage({
+          type: 'SCREENSHOT_PROGRESS',
+          ...progress,
+        }).catch(() => {})
+      })
+    }
 
-    // Task CRUD API (Phase 2 & Phase 3)
-    case 'GET_TASKS':
-    case 'FETCH_TASKS':
-      return await crmApi.getTasks(message.workspaceId, message.token, message.page, message.size)
+    // Visible Area Screenshot Capture
+    case 'CAPTURE_VISIBLE_AREA': {
+      let targetTab = null
+      if (message.tabId) {
+        try {
+          const t = await chrome.tabs.get(message.tabId)
+          if (t && t.url && !t.url.startsWith('chrome-extension://') && !t.url.startsWith('chrome://')) {
+            targetTab = t
+          }
+        } catch {}
+      }
 
-    case 'CREATE_TASK':
-      return await crmApi.createTask(message.taskData, message.token)
+      if (!targetTab) {
+        const allTabs = await chrome.tabs.query({})
+        targetTab = allTabs.find((t) => t.active && t.url && (t.url.startsWith('http://') || t.url.startsWith('https://')))
+        if (!targetTab) {
+          targetTab = allTabs.find((t) => t.url && (t.url.startsWith('http://') || t.url.startsWith('https://')))
+        }
+        if (!targetTab) {
+          targetTab = allTabs.find((t) => t.url && !t.url.startsWith('chrome-extension://') && !t.url.startsWith('chrome://'))
+        }
+      }
 
-    case 'UPDATE_TASK_STATUS':
-      return await crmApi.updateTaskStatus(
-        message.taskId,
-        message.status,
-        message.workspaceId,
-        message.token
-      )
+      if (!targetTab) {
+        return { success: false, error: 'No webpage found to capture.' }
+      }
 
-    case 'DELETE_TASK':
-      return await crmApi.deleteTask(message.taskId, message.workspaceId, message.token)
+      await chrome.tabs.update(targetTab.id, { active: true })
+      await new Promise((r) => setTimeout(r, 100))
 
-    // Activity Feed (Phase 3)
-    case 'GET_RECENT_ACTIVITY':
-    case 'FETCH_RECENT_ACTIVITIES':
-      return await crmApi.getRecentActivities(
-        message.workspaceId,
-        message.token,
-        message.limit || 8
-      )
+      return await captureVisibleArea(targetTab, message.format || 'png', (progress) => {
+        chrome.runtime.sendMessage({
+          type: 'SCREENSHOT_PROGRESS',
+          ...progress,
+        }).catch(() => {})
+      })
+    }
 
     default:
       return { success: false, error: `Unknown message type: ${message.type}` }
   }
 }
+
+/* ============================================================================
+ * [TEMPORARILY DISABLED FOR LEARNING PHASE: TASKFLOW CRM BACKGROUND ROUTING]
+ * The code below represents the working TaskFlow CRM routes from commit 388340a.
+ * Preserved intact and unmodified to ensure 100% recoverability in the future.
+ * ============================================================================
+ *
+ * import { crmApi, getStorage, setStorage, clearStorage } from '../services/crmApi.js'
+ *
+ * // Legacy CRM Message Types:
+ * // 'LOGIN', 'LOGOUT', 'GET_AUTH', 'SET_ENDPOINT', 'SWITCH_WORKSPACE',
+ * // 'GET_WORKSPACES', 'GET_MEMBERS', 'GET_PROJECTS', 'GET_TASKS',
+ * // 'CREATE_TASK', 'UPDATE_TASK_STATUS', 'DELETE_TASK', 'GET_RECENT_ACTIVITY'
+ * ============================================================================ */

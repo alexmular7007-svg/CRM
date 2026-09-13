@@ -1,35 +1,33 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sun, Moon, Menu, X, ArrowRight } from 'lucide-react'
+import { Sun, Moon, Menu, X, ArrowUpRight } from 'lucide-react'
 import { useThemeContext } from '../../contexts/ThemeContext'
 
 const NAV_LINKS = [
   { label: 'Features', href: '#features' },
-  { label: 'How it works', href: '#workflow' },
-  { label: 'AI', href: '#ai' },
-  { label: 'Plans', href: '#plans' },
+  { label: 'Workflow', href: '#workflow' },
+  { label: 'Intelligence', href: '#ai' },
+  { label: 'Pricing', href: '#pricing' },
 ]
 
-const Navbar = () => {
+export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [activeSection, setActiveSection] = useState('')
   const { theme, switchTheme } = useThemeContext()
   const isDark = theme === 'dark'
-  const toggleTheme = () => switchTheme(isDark ? 'light' : 'dark')
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 16)
+      setIsScrolled(window.scrollY > 20)
 
-      // Detect active section
-      const sections = ['features', 'workflow', 'ai', 'plans']
+      const sections = ['features', 'workflow', 'ai', 'pricing']
       for (const section of sections) {
-        const element = document.getElementById(section)
-        if (element) {
-          const rect = element.getBoundingClientRect()
-          if (rect.top <= 100 && rect.bottom >= 100) {
+        const el = document.getElementById(section)
+        if (el) {
+          const rect = el.getBoundingClientRect()
+          if (rect.top <= 140 && rect.bottom >= 140) {
             setActiveSection(section)
             break
           }
@@ -52,175 +50,161 @@ const Navbar = () => {
 
   return (
     <>
-      <motion.nav
-        initial={{ y: -64, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.4, ease: 'easeOut' }}
+      <header
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           isScrolled
-            ? 'bg-white/90 dark:bg-[#09090B]/90 backdrop-blur-xl border-b border-gray-200/80 dark:border-zinc-800/80 shadow-sm'
+            ? 'bg-[#F7F5F0]/95 dark:bg-[#071A3A]/95 backdrop-blur-md border-b border-[#071A3A]/10 dark:border-white/10 shadow-sm'
             : 'bg-transparent'
         }`}
       >
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-20">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-2.5 group flex-shrink-0 z-10">
-              <img
-                src="/logo.png"
-                alt="AI CRM"
-                className="w-8 h-8 object-contain"
-              />
-              <span className="text-sm sm:text-base font-semibold tracking-tight text-gray-900 dark:text-white hidden sm:inline">
-                TaskFlow<span className="text-[#4F46E5]"> AI</span>
-              </span>
+            <Link to="/" className="flex items-center gap-3 group focus:outline-none">
+              <div className="w-10 h-10 rounded-lg bg-[#071A3A] dark:bg-white flex items-center justify-center text-white dark:text-[#071A3A] font-black text-xl tracking-tighter shadow-sm transition-transform group-hover:scale-105">
+                TF
+              </div>
+              <div className="flex flex-col">
+                <span className="text-lg font-black tracking-tight text-[#071A3A] dark:text-white uppercase leading-none">
+                  TaskFlow
+                </span>
+                <span className="text-[10px] font-bold tracking-widest text-[#52627A] dark:text-[#A9DFFF] uppercase mt-0.5">
+                  Workspace
+                </span>
+              </div>
             </Link>
 
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-1">
-              {NAV_LINKS.map((link) => (
-                <button
-                  key={link.label}
-                  onClick={() => scrollToSection(link.href)}
-                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-                    activeSection === link.href.replace('#', '')
-                      ? 'text-[#4F46E5] bg-indigo-50 dark:bg-indigo-950/30'
-                      : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-800/60'
-                  }`}
-                >
-                  {link.label}
-                </button>
-              ))}
-            </div>
+            {/* Desktop Navigation Links */}
+            <nav className="hidden lg:flex items-center gap-1 border border-[#071A3A]/10 dark:border-white/15 rounded-full px-3 py-1.5 bg-white/70 dark:bg-[#0B1F3A]/70 backdrop-blur-sm shadow-sm">
+              {NAV_LINKS.map((link) => {
+                const isActive = activeSection === link.href.replace('#', '')
+                return (
+                  <button
+                    key={link.label}
+                    onClick={() => scrollToSection(link.href)}
+                    className={`px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded-full transition-all duration-150 ${
+                      isActive
+                        ? 'bg-[#071A3A] text-white dark:bg-white dark:text-[#071A3A] shadow-sm'
+                        : 'text-[#52627A] dark:text-[#A9DFFF]/80 hover:text-[#071A3A] dark:hover:text-white'
+                    }`}
+                  >
+                    {link.label}
+                  </button>
+                )
+              })}
+            </nav>
 
-            {/* Right Actions - Desktop */}
-            <div className="hidden md:flex items-center gap-2 flex-shrink-0">
+            {/* Right Actions */}
+            <div className="hidden lg:flex items-center gap-3">
+              {/* Theme Toggle */}
               <button
-                onClick={toggleTheme}
-                className="p-2 rounded-md text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
+                onClick={() => switchTheme(isDark ? 'light' : 'dark')}
                 aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-                title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+                className="w-10 h-10 rounded-full border border-[#071A3A]/15 dark:border-white/15 flex items-center justify-center text-[#071A3A] dark:text-white hover:bg-[#071A3A]/5 dark:hover:bg-white/10 transition-colors"
               >
-                {isDark ? <Sun size={16} /> : <Moon size={16} />}
+                {isDark ? <Sun size={17} /> : <Moon size={17} />}
               </button>
 
               <Link
                 to="/login"
-                className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+                className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-[#071A3A] dark:text-white hover:opacity-75 transition-opacity"
               >
-                Sign in
+                Sign In
               </Link>
 
               <Link to="/register">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
-                >
-                  Get started
-                  <ArrowRight size={14} />
-                </motion.button>
+                <button className="px-5 py-2.5 rounded-full bg-[#0052FF] hover:bg-[#0043D1] text-white text-xs font-bold uppercase tracking-wider shadow-md hover:shadow-lg transition-all flex items-center gap-1.5 active:scale-95">
+                  Get Started
+                  <ArrowUpRight size={15} />
+                </button>
               </Link>
             </div>
 
             {/* Mobile Actions */}
-            <div className="md:hidden flex items-center gap-1 flex-shrink-0">
+            <div className="flex lg:hidden items-center gap-2">
               <button
-                onClick={toggleTheme}
-                className="p-2 rounded-md text-gray-500 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
+                onClick={() => switchTheme(isDark ? 'light' : 'dark')}
                 aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-                title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+                className="w-10 h-10 rounded-full border border-[#071A3A]/15 dark:border-white/15 flex items-center justify-center text-[#071A3A] dark:text-white"
               >
                 {isDark ? <Sun size={18} /> : <Moon size={18} />}
               </button>
+
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="p-2 rounded-md text-gray-700 dark:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
-                aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
-                aria-expanded={isMobileMenuOpen}
-                title={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
+                aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+                className="w-10 h-10 rounded-full bg-[#071A3A] dark:bg-white text-white dark:text-[#071A3A] flex items-center justify-center focus:outline-none"
               >
-                {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
               </button>
             </div>
           </div>
         </div>
-      </motion.nav>
+      </header>
 
-      {/* Mobile Menu Drawer - Side Slide */}
+      {/* Mobile Menu Drawer */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <>
-            {/* Overlay */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsMobileMenuOpen(false)}
-              className="fixed inset-0 bg-black/50 z-40 md:hidden"
+              className="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-xs"
               aria-hidden="true"
             />
 
-            {/* Drawer */}
             <motion.div
-              initial={{ x: '-100%' }}
+              initial={{ x: '100%' }}
               animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
-              className="fixed left-0 top-0 bottom-0 w-64 bg-white dark:bg-[#09090B] border-r border-gray-200 dark:border-zinc-800 z-50 md:hidden flex flex-col overflow-y-auto"
+              exit={{ x: '100%' }}
+              transition={{ duration: 0.25, ease: 'easeInOut' }}
+              className="fixed right-0 top-0 bottom-0 w-80 max-w-[85vw] bg-[#F7F5F0] dark:bg-[#071A3A] border-l border-[#071A3A]/15 dark:border-white/15 z-50 lg:hidden flex flex-col p-6 shadow-2xl"
             >
-              {/* Header */}
-              <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200 dark:border-zinc-800">
-                <Link to="/" className="flex items-center gap-2 group" onClick={() => setIsMobileMenuOpen(false)}>
-                  <img
-                    src="/logo.png"
-                    alt="AI CRM"
-                    className="w-8 h-8 object-contain"
-                  />
-                  <span className="font-semibold text-gray-900 dark:text-white">TaskFlow AI</span>
-                </Link>
+              <div className="flex items-center justify-between pb-6 border-b border-[#071A3A]/10 dark:border-white/10">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-[#071A3A] dark:bg-white flex items-center justify-center text-white dark:text-[#071A3A] font-black text-sm">
+                    TF
+                  </div>
+                  <span className="font-black text-sm uppercase tracking-tight text-[#071A3A] dark:text-white">
+                    TaskFlow
+                  </span>
+                </div>
                 <button
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="p-2 rounded-md text-gray-500 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
-                  aria-label="Close menu"
+                  className="w-9 h-9 rounded-full border border-[#071A3A]/15 dark:border-white/15 flex items-center justify-center text-[#071A3A] dark:text-white"
                 >
-                  <X size={20} />
+                  <X size={18} />
                 </button>
               </div>
 
-              {/* Navigation Links */}
-              <nav className="flex-1 px-2 py-4 space-y-1">
+              <nav className="flex-1 py-6 space-y-2">
                 {NAV_LINKS.map((link) => (
                   <button
                     key={link.label}
                     onClick={() => scrollToSection(link.href)}
-                    className={`w-full text-left px-3 py-2.5 text-sm font-medium rounded-md transition-colors ${
-                      activeSection === link.href.replace('#', '')
-                        ? 'text-[#4F46E5] bg-indigo-50 dark:bg-indigo-950/30'
-                        : 'text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-zinc-800/60'
-                    }`}
+                    className="w-full text-left px-4 py-3 rounded-xl text-sm font-black uppercase tracking-wider text-[#071A3A] dark:text-white hover:bg-[#071A3A]/5 dark:hover:bg-white/10 transition-colors"
                   >
                     {link.label}
                   </button>
                 ))}
               </nav>
 
-              {/* Footer Actions */}
-              <div className="border-t border-gray-200 dark:border-zinc-800 p-4 space-y-2">
+              <div className="pt-6 border-t border-[#071A3A]/10 dark:border-white/10 space-y-3">
                 <Link
                   to="/login"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="block w-full py-2.5 text-center text-sm font-medium text-gray-700 dark:text-zinc-300 border border-gray-200 dark:border-zinc-700 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors"
+                  className="block w-full py-3 text-center text-xs font-bold uppercase tracking-wider border border-[#071A3A]/20 dark:border-white/20 text-[#071A3A] dark:text-white rounded-xl hover:bg-[#071A3A]/5 transition-colors"
                 >
-                  Sign in
+                  Sign In
                 </Link>
                 <Link
                   to="/register"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center justify-center gap-1.5 w-full py-2.5 text-sm font-medium bg-[#4F46E5] hover:bg-[#4338CA] text-white rounded-lg transition-colors"
+                  className="block w-full py-3 text-center text-xs font-bold uppercase tracking-wider bg-[#0052FF] text-white rounded-xl shadow-md hover:bg-[#0043D1] transition-colors"
                 >
-                  Get started <ArrowRight size={14} />
+                  Get Started Free
                 </Link>
               </div>
             </motion.div>
@@ -230,5 +214,3 @@ const Navbar = () => {
     </>
   )
 }
-
-export default Navbar

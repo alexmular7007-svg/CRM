@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "TaskFlow Learning Extensions",
+  "name": "TaskFlow CRM - Quick Task Manager",
   "version": "1.0.0",
-  "description": "Full Page Screenshot (PNG/PDF) and Highlighted Text Wikipedia Search",
+  "description": "Quick Task Manager Chrome Extension for TaskFlow CRM. Manage tasks, assign work, and track activity.",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -10,7 +10,7 @@
   },
   "action": {
     "default_popup": "src/popup/popup.html",
-    "default_title": "TaskFlow Learning Extensions",
+    "default_title": "TaskFlow CRM - Quick Task Manager",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
@@ -23,24 +23,17 @@
   },
   "content_scripts": [
     {
-      "matches": [
-        "http://*/*",
-        "https://*/*"
-      ],
-      "js": [
-        "src/content/content.js"
-      ],
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["src/content/content.js"],
       "run_at": "document_idle"
     }
   ],
   "permissions": [
-    "activeTab",
-    "tabs",
-    "scripting",
-    "downloads",
-    "contextMenus"
+    "storage",
+    "activeTab"
   ],
   "host_permissions": [
-    "<all_urls>"
+    "http://localhost:8080/*",
+    "https://*.up.railway.app/*"
   ]
 }
