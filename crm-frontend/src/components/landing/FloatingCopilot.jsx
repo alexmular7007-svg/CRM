@@ -1,46 +1,38 @@
 import { useRef, useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Send, Sparkles, ChevronRight, Zap } from 'lucide-react'
-import { searchProductKnowledge } from '../../services/landingPageKnowledgeService'
+import { getAIResponseForQuery } from '../../services/landingPageKnowledgeService'
 
 const DEMO_CONVERSATIONS = [
   {
     visitor: "What does TaskFlow AI do?",
-    ai: "TaskFlow AI combines Project Management, CRM Pipeline, Team Chat, Analytics, and AI Insights into one unified workspace. It's designed to help teams collaborate seamlessly and make data-driven decisions. Perfect for SaaS teams, consulting firms, sales teams, and agencies!"
+    ai: "TaskFlow AI combines Project Management, CRM Pipeline, Team Chat, Analytics, and AI Insights into one unified workspace. It's designed to help teams collaborate seamlessly and make data-driven decisions!"
   },
   {
     visitor: "Can I manage sales leads?",
-    ai: "Absolutely! Our CRM Pipeline lets you track leads from prospect to closed deal. Visualize your entire sales funnel with 5+ customizable stages, manage negotiations, and leverage AI insights to close deals faster. Example: Track 240 leads through qualification, proposals, and negotiations."
+    ai: "Absolutely! Our CRM Pipeline lets you track leads from prospect to closed deal. Visualize your entire sales funnel with 7 stages, track deal values, and convert won deals into active client workspaces."
   },
   {
     visitor: "Can I collaborate with my team?",
-    ai: "Yes! Real-time chat, task assignments, @mentions, typing indicators, read receipts, and message reactions are all built-in. Your team stays synchronized with online status and project-specific channels. Perfect for distributed teams!"
+    ai: "Yes! Real-time STOMP WebSockets chat, project channels, direct messages, online presence indicators, @mentions, read receipts, and task cross-linking are all built-in."
   },
   {
     visitor: "How does AI help?",
-    ai: "Our Grok-powered AI analyzes your team's patterns to provide smart task prioritization, deadline predictions, workspace health scoring (0-100%), bottleneck detection, workload analysis, and productivity recommendations to help you work smarter."
+    ai: "TaskFlow AI analyzes workspace patterns to provide smart task prioritization, deadline risk predictions, workspace health scoring (0-100%), bottleneck detection, and workload balancing."
   },
   {
     visitor: "Can I track project progress?",
-    ai: "Of course! The analytics dashboard shows real-time project progress, team performance metrics, productivity analytics, lead tracking, burndown charts, and forecasting. Make informed decisions with real-time data and custom reports."
-  },
-  {
-    visitor: "What AI insights can I get?",
-    ai: "You'll get workspace health scores, overdue task detection, project delay predictions, team member workload analysis, risk predictions for projects and deals, and smart task prioritization based on urgency and complexity."
-  },
-  {
-    visitor: "Is it secure?",
-    ai: "Yes! Enterprise-grade security with role-based access control (Owner/Admin/Member), SSO & SAML support, end-to-end encryption, audit logs, GDPR compliance, and regular security audits. Perfect for enterprises."
+    ai: "Of course! Track sprint velocity, task completion statuses across To Do, In Progress, Review, Done, and team capacity metrics in real time."
   },
 ]
 
 const QUICK_ACTIONS = [
-  { label: 'Features', section: '#features', icon: '✨' },
+  { label: 'Work Management', section: '#projects', icon: '📋' },
   { label: 'CRM Pipeline', section: '#crm', icon: '💼' },
-  { label: 'Workflow', section: '#workflow', icon: '📊' },
-  { label: 'Pricing', section: '#pricing', icon: '💰' },
-  { label: 'AI Insights', section: '#ai', icon: '🧠' },
-  { label: 'Tech Stack', section: '#tech', icon: '⚙️' },
+  { label: 'Real-Time Chat', section: '#chat', icon: '💬' },
+  { label: 'AI Intelligence', section: '#ai', icon: '🧠' },
+  { label: 'Marketing Engine', section: '#marketing', icon: '📣' },
+  { label: 'Pricing & Plans', section: '#pricing', icon: '💰' },
 ]
 
 export default function FloatingCopilot() {
@@ -63,73 +55,33 @@ export default function FloatingCopilot() {
   // Scroll to bottom of messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [messages, isTyping])
 
   const scrollToSection = (section) => {
-    const element = document.querySelector(section)
+    const id = section.replace('#', '')
+    const element = document.getElementById(id)
     if (element) {
-      element.scrollIntoView({ behavior: 'smooth' })
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' })
       setIsOpen(false)
     }
   }
 
   const handleSendMessage = async (text = userInput) => {
-    if (!text.trim()) return
+    if (!text || typeof text !== 'string' || !text.trim()) return
 
-    // Add user message
-    const newMessages = [...messages, {
+    const queryText = text.trim()
+    setMessages(prev => [...prev, {
       type: 'user',
-      text: text.trim(),
+      text: queryText,
       timestamp: new Date()
-    }]
-    setMessages(newMessages)
+    }])
     setUserInput('')
 
-    // Search product knowledge base
-    const knowledgeResults = searchProductKnowledge(text)
-    let aiResponse = ''
+    const aiResponse = getAIResponseForQuery(queryText)
 
-    // If we found relevant knowledge, use it
-    if (knowledgeResults.length > 0) {
-      const knowledge = knowledgeResults[0]
-      
-      if (knowledge.type === 'feature') {
-        const feature = knowledge.data
-        aiResponse = `${feature.title} - ${feature.description}\n\nKey benefits:\n${feature.keyBenefits.slice(0, 3).map((b) => `• ${b}`).join('\n')}`
-      } else if (knowledge.type === 'pricing') {
-        aiResponse = `Great question! We have three plans:\n• Free: Perfect for trying out\n• Professional ($12/mo): For growing teams with AI features\n• Enterprise: Custom pricing for large organizations\n\nAll include 14-day free trial with no credit card required.`
-      } else if (knowledge.type === 'workflow') {
-        aiResponse = `Our workflow is simple:\n1. Create workspace\n2. Organize into projects\n3. Manage tasks with AI\n4. Collaborate in real-time\n5. Track & improve with analytics\n\nGet started in minutes!`
-      } else if (knowledge.type === 'useCase') {
-        aiResponse = `${knowledge.data.title}: ${knowledge.data.description}`
-      }
-    } else {
-      // Fallback to demo conversations matching
-      const lowerText = text.toLowerCase()
-
-      if (lowerText.includes('what') && lowerText.includes('taskflow')) {
-        aiResponse = DEMO_CONVERSATIONS[0].ai
-      } else if (lowerText.includes('lead') || lowerText.includes('crm') || lowerText.includes('sales')) {
-        aiResponse = DEMO_CONVERSATIONS[1].ai
-      } else if (lowerText.includes('team') || lowerText.includes('collaborate') || lowerText.includes('chat')) {
-        aiResponse = DEMO_CONVERSATIONS[2].ai
-      } else if (lowerText.includes('ai') || lowerText.includes('intelligence') || lowerText.includes('smart')) {
-        aiResponse = DEMO_CONVERSATIONS[3].ai
-      } else if (lowerText.includes('project') || lowerText.includes('progress') || lowerText.includes('track')) {
-        aiResponse = DEMO_CONVERSATIONS[4].ai
-      } else if (lowerText.includes('insight') || lowerText.includes('health') || lowerText.includes('workspace')) {
-        aiResponse = DEMO_CONVERSATIONS[5].ai
-      } else if (lowerText.includes('secure') || lowerText.includes('security') || lowerText.includes('sso')) {
-        aiResponse = DEMO_CONVERSATIONS[6].ai
-      } else {
-        aiResponse = "That's a great question! I'm here to help you understand TaskFlow AI. Feel free to ask about our features, pricing, CRM capabilities, project management, analytics, AI insights, security, or anything else. What would you like to know?"
-      }
-    }
-
-    // Simulate typing with realistic delay based on response length
     setIsTyping(true)
-    const typingDelay = Math.min(800 + (aiResponse.length / 10), 2000)
-    
+    const typingDelay = Math.min(400 + (aiResponse.length / 12), 1200)
+
     setTimeout(() => {
       setMessages(prev => [...prev, {
         type: 'ai',
@@ -432,7 +384,12 @@ export default function FloatingCopilot() {
                   placeholder="Ask a question..."
                   value={userInput}
                   onChange={(e) => setUserInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      handleSendMessage()
+                    }
+                  }}
                   className="flex-1 px-3 py-2.5 rounded-lg border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-gray-900 dark:text-white text-xs placeholder-gray-400 dark:placeholder-zinc-500 focus:outline-none focus:border-[#4F46E5] dark:focus:border-indigo-500 transition-colors"
                   disabled={isTyping}
                 />

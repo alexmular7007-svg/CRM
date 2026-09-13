@@ -356,86 +356,61 @@ export const PRODUCT_KNOWLEDGE = {
 };
 
 /**
- * Search function to find relevant product information
- * Used to provide context-aware responses from the copilot
+ * Get intelligent conversational AI response for any landing page user query
  */
-export function searchProductKnowledge(query) {
-  const lowerQuery = query.toLowerCase();
-  const results = [];
+export function getAIResponseForQuery(query) {
+  const lower = query.toLowerCase().trim();
 
-  // Search through features
-  Object.entries(PRODUCT_KNOWLEDGE.features).forEach(([key, feature]) => {
-    if (
-      feature.title.toLowerCase().includes(lowerQuery) ||
-      feature.description.toLowerCase().includes(lowerQuery) ||
-      key.toLowerCase().includes(lowerQuery)
-    ) {
-      results.push({
-        type: 'feature',
-        data: feature,
-        key,
-      });
-    }
-  });
-
-  // Search through use cases
-  PRODUCT_KNOWLEDGE.useCases.forEach((useCase) => {
-    if (
-      useCase.title.toLowerCase().includes(lowerQuery) ||
-      useCase.description.toLowerCase().includes(lowerQuery)
-    ) {
-      results.push({
-        type: 'useCase',
-        data: useCase,
-      });
-    }
-  });
-
-  // Search through pricing
-  if (lowerQuery.includes('price') || lowerQuery.includes('plan') || lowerQuery.includes('cost')) {
-    results.push({
-      type: 'pricing',
-      data: PRODUCT_KNOWLEDGE.pricing,
-    });
+  // 1. Pricing / Cost / Plans / Free / Trial
+  if (/price|pricing|plan|cost|free|tier|billing|subscription|trial/.test(lower)) {
+    return "TaskFlow offers a complete Free Workspace tier available today! It includes multi-tenant workspace isolation, drag-and-drop Kanban project tracking, CRM sales pipelines, real-time team chat, and Cloudinary document attachments.\n\nUpcoming Pro Team ($12/mo) and Enterprise tiers add visual workflow automations, public lead magnets, and Brevo email campaign tracking.";
   }
 
-  // Search through workflow
-  if (lowerQuery.includes('workflow') || lowerQuery.includes('how') || lowerQuery.includes('process')) {
-    results.push({
-      type: 'workflow',
-      data: PRODUCT_KNOWLEDGE.workflow,
-    });
+  // 2. Kanban / Projects / Work Management / Tasks / Milestones / Subtasks / Watchers / Sprint
+  if (/project|kanban|task|sprint|milestone|subtask|watcher|attachment|drag|board|roadmap/.test(lower)) {
+    return "TaskFlow's Work Management & Kanban engine breaks roadmaps into clear milestones and actionable tasks. You can move tasks across To Do, In Progress, Review, and Done with DnD-Kit drag & drop, attach files via Cloudinary, set priority tags, and add team watchers for automatic deadline alerts.";
   }
 
-  return results;
-}
-
-/**
- * Format product knowledge into a conversational response
- */
-export function formatProductResponse(knowledge) {
-  if (!knowledge) {
-    return 'I don\'t have specific information about that topic, but I\'m happy to help! Feel free to ask about our features, pricing, or book a demo.';
+  // 3. CRM / Sales / Pipeline / Deals / Leads / Funnel / Lead Magnet / Conversion / Client
+  if (/crm|lead|deal|sales|pipeline|funnel|stage|won|client|convert|ingest|scoring/.test(lower)) {
+    return "TaskFlow features a 7-stage CRM sales pipeline (New Lead → Contacted → Qualified → Proposal → Negotiation → Won → Lost). It tracks deal values, lead scores, and company contacts.\n\nKey feature: 1-Click Lead → Client → Project Workflow! Marking a deal Won automatically provisions a client record and project workspace.";
   }
 
-  if (typeof knowledge === 'string') {
-    return knowledge;
+  // 4. Chat / Team / Message / Channel / STOMP / WebSocket / Realtime / Collaboration / Mention / Presence
+  if (/chat|message|channel|team|stomp|websocket|realtime|real-time|presence|mention|online|reaction|communicate/.test(lower)) {
+    return "TaskFlow embeds real-time STOMP WebSockets messaging right inside your workspace. Teams get project-specific channels (e.g., #project-launch-v2), direct messaging, online presence indicators, @mentions, read receipts, and cross-linked task references.";
   }
 
-  if (knowledge.type === 'feature') {
-    const feature = knowledge.data;
-    return `${feature.title} - ${feature.description}\n\nKey Benefits:\n${feature.keyBenefits.map((b) => `• ${b}`).join('\n')}`;
+  // 5. AI / Intelligence / Health / Risk / Bottleneck / Score / Delay / Operational
+  if (/ai|intelligence|health|risk|score|bottleneck|delay|prediction|diagnostic|alert|insight|priority/.test(lower)) {
+    return "TaskFlow AI continuously monitors workspace health (scored 0-100%), task velocity, and team capacity. It flags overdue items, predicts delivery delay probabilities before sprint deadlines slip, and recommends practical workload reassignments.";
   }
 
-  if (knowledge.type === 'pricing') {
-    const pricing = knowledge.data;
-    return `${pricing.title}\n\n${pricing.description}\n\nOur plans:\n${pricing.plans.map((p) => `• ${p.name}: ${p.description}`).join('\n')}`;
+  // 6. Marketing / Lead Magnet / Email / Brevo / Campaign / Automation / Workflow Builder / Form
+  if (/marketing|magnet|email|brevo|campaign|automation|trigger|opt-in|form|slug|growth/.test(lower)) {
+    return "TaskFlow's Growth Engine lets you build public Lead Magnet opt-in forms hosted at /m/:token/:slug. Inbound submissions automatically create CRM leads with scoring, dispatch follow-up email campaigns via Brevo with open/click tracking, and trigger visual workflow automations.";
   }
 
-  if (knowledge.type === 'workflow') {
-    const workflow = knowledge.data;
-    return `${workflow.title}\n\n${workflow.steps.map((s) => `${s.number} ${s.title}: ${s.description}`).join('\n')}`;
+  // 7. Tech Stack / Architecture / Spring Boot / Postgres / Redis / WebSockets / Docker / JWT
+  if (/tech|stack|architecture|backend|spring|java|postgres|postgresql|redis|jwt|docker|database|server/.test(lower)) {
+    return "TaskFlow is built on standard enterprise infrastructure: Spring Boot 3 API with HikariCP connection pooling, PostgreSQL relational database with multi-tenant partitioning, Redis caching layer, WebSocket & STOMP real-time bus, and JWT / OAuth2 authentication.";
   }
 
-  return 'I\'d be happy to help with more information about TaskFlow AI!';
+  // 8. Roles / Permissions / RBAC / Owner / Admin / Member / Security / SSO
+  if (/role|permission|rbac|owner|admin|member|security|access|sso|saml|auth/.test(lower)) {
+    return "TaskFlow enforces strict Role-Based Access Control (RBAC): Workspace Owners manage billing and governance, Admins control projects, CRM pipelines, and team roles, while Members collaborate on assigned tasks and channels securely.";
+  }
+
+  // 9. Competitor Comparisons (Salesforce, Monday, Linear)
+  if (/salesforce|monday|linear|competitor|alternative|compare|vs/.test(lower)) {
+    return "Unlike fragmented tools or single-purpose apps, TaskFlow combines Kanban project tracking, CRM deal pipelines, STOMP team chat, marketing automations, and AI operational intelligence into one fast, multi-tenant workspace with zero app switching.";
+  }
+
+  // 10. Greetings & Overview (Hi, Hello, What is TaskFlow, Demo)
+  if (/hi|hello|hey|greetings|start|demo|what|overview|about|help|who/.test(lower)) {
+    return "👋 Welcome to TaskFlow AI! TaskFlow is the unified AI workspace for projects, CRM pipelines, real-time team chat, automated marketing, and operational intelligence.\n\nAsk me about:\n• 📋 Work Management & Kanban\n• 💼 CRM Sales Pipelines\n• 💬 Real-Time Team Chat\n• ⚡ AI Operational Intelligence\n• 📣 Marketing Automations\n• 💰 Pricing & Free Tier";
+  }
+
+  // Fallback
+  return "TaskFlow AI unites sprint planning, CRM pipelines, real-time team messaging, marketing campaigns, and proactive risk detection in a single workspace.\n\nFeel free to ask me about any feature, pricing plan, CRM workflow, or architecture detail!";
 }
