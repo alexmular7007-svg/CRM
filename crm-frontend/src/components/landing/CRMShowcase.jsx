@@ -12,7 +12,7 @@ const STAGES = [
 
 export default function CRMShowcase() {
   return (
-    <section className="py-24 lg:py-32 bg-[#071A3A] text-white overflow-hidden border-t border-white/10 dark-section" data-section-theme="dark">
+    <section id="crm" className="py-24 lg:py-32 bg-[#071A3A] text-white overflow-hidden border-t border-white/10 dark-section" data-section-theme="dark">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
           {/* Left Visual Pipeline Board Composition (7 cols on lg, order-1) */}

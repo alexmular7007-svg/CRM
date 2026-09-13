@@ -30,7 +30,7 @@ const ENGINE_STEPS = [
 
 export default function MarketingEngineSection() {
   return (
-    <section className="py-24 lg:py-32 bg-[#071A3A] text-white overflow-hidden border-t border-white/10 dark-section" data-section-theme="dark">
+    <section id="marketing" className="py-24 lg:py-32 bg-[#071A3A] text-white overflow-hidden border-t border-white/10 dark-section" data-section-theme="dark">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="max-w-3xl mb-14">

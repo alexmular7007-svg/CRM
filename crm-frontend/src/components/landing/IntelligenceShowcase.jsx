@@ -68,86 +68,108 @@ export default function IntelligenceShowcase() {
           </div>
         </div>
 
-        {/* Large Workspace Diagnostic Center Showcase */}
-        <div className="rounded-3xl border-2 border-[#071A3A]/15 dark:border-white/15 bg-white dark:bg-[#0B1F3A] p-5 sm:p-8 shadow-2xl space-y-6">
-          {/* Header */}
-          <div className="flex items-center justify-between pb-4 border-b border-[#071A3A]/10 dark:border-white/10">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#0052FF] flex items-center justify-center text-white">
-                <Activity size={20} />
+        {/* Large Workspace Diagnostic Center Showcase with AI Person Photo */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+          {/* Left Column: Image 3 Framing */}
+          <div className="lg:col-span-5 relative rounded-3xl border-2 border-[#071A3A]/15 dark:border-white/15 overflow-hidden shadow-2xl bg-[#0B1F3A] min-h-[380px]">
+            <img
+              src="/images/ai-person.jpg"
+              alt="TaskFlow Professional utilizing AI Operational Intelligence"
+              className="w-full h-full object-cover object-center filter brightness-95 dark:brightness-90"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#071A3A] via-[#071A3A]/30 to-transparent pointer-events-none" />
+            <div className="absolute bottom-4 left-4 right-4 p-4 rounded-2xl bg-white/95 dark:bg-[#071A3A]/95 backdrop-blur-md border border-[#071A3A]/10 dark:border-white/20">
+              <div className="flex items-center gap-2.5 mb-1">
+                <Sparkles size={16} className="text-[#0052FF] dark:text-[#A9DFFF]" />
+                <span className="text-xs font-black uppercase text-[#071A3A] dark:text-white">
+                  Proactive Assistant Active
+                </span>
               </div>
-              <div>
-                <h3 className="text-sm font-black uppercase text-[#071A3A] dark:text-white tracking-wide">
-                  Workspace Diagnostic Center
-                </h3>
-                <p className="text-[10px] font-bold text-[#52627A] dark:text-[#A9DFFF] uppercase">
-                  Continuous Health Assessment & Risk Flagging
-                </p>
-              </div>
-            </div>
-            <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
-              Status: Strong
-            </span>
-          </div>
-
-          {/* Health Score Gauge & Top Metrics */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="p-5 rounded-2xl bg-[#F7F5F0] dark:bg-[#071A3A] border border-[#071A3A]/10 dark:border-white/10 flex flex-col justify-between">
-              <span className="text-[10px] font-bold uppercase text-[#52627A] dark:text-white/60">Health Index</span>
-              <div className="text-4xl font-black text-emerald-600 dark:text-emerald-400 my-1.5">
-                88<span className="text-xs font-medium text-[#52627A] dark:text-white/50">/100</span>
-              </div>
-              <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                Velocity within target
-              </span>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-[#F7F5F0] dark:bg-[#071A3A] border border-[#071A3A]/10 dark:border-white/10 flex flex-col justify-between">
-              <span className="text-[10px] font-bold uppercase text-[#52627A] dark:text-white/60">Delays Projected</span>
-              <div className="text-4xl font-black text-[#071A3A] dark:text-white my-1.5">
-                0
-              </div>
-              <span className="text-[11px] font-semibold text-[#52627A] dark:text-white/60">
-                All deadlines tracking
-              </span>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-[#F7F5F0] dark:bg-[#071A3A] border border-[#071A3A]/10 dark:border-white/10 flex flex-col justify-between">
-              <span className="text-[10px] font-bold uppercase text-[#52627A] dark:text-white/60">Team Workload</span>
-              <div className="text-4xl font-black text-[#0052FF] dark:text-[#A9DFFF] my-1.5">
-                Balanced
-              </div>
-              <span className="text-[11px] font-semibold text-[#0052FF] dark:text-[#A9DFFF]">
-                Capacity at 74%
-              </span>
+              <p className="text-[11px] text-[#52627A] dark:text-white/70 font-medium">
+                Detects deadline bottlenecks & automatically suggests reassignments across active sprints.
+              </p>
             </div>
           </div>
 
-          {/* Actionable Intelligence Alert Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-            {/* Alert Item 1 */}
-            <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/25 border border-amber-300 dark:border-amber-800 flex items-start gap-3">
-              <AlertTriangle size={18} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-              <div>
-                <div className="text-xs font-bold text-[#071A3A] dark:text-white mb-1">
-                  Task Nearing Deadline Without Active Review
+          {/* Right Column: Diagnostic Dashboard */}
+          <div className="lg:col-span-7 rounded-3xl border-2 border-[#071A3A]/15 dark:border-white/15 bg-white dark:bg-[#0B1F3A] p-5 sm:p-7 shadow-2xl flex flex-col justify-between space-y-5">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-[#071A3A]/10 dark:border-white/10">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[#0052FF] flex items-center justify-center text-white">
+                  <Activity size={18} />
                 </div>
-                <p className="text-[11px] text-[#52627A] dark:text-white/70 leading-relaxed">
-                  "Stripe Webhook Signature Verification" is due in 36 hours with no commits in 2 days. Recommend reassigning review to available engineer.
-                </p>
+                <div>
+                  <h3 className="text-sm font-black uppercase text-[#071A3A] dark:text-white tracking-wide">
+                    Workspace Diagnostic Center
+                  </h3>
+                  <p className="text-[10px] font-bold text-[#52627A] dark:text-[#A9DFFF] uppercase">
+                    Continuous Health Assessment & Risk Flagging
+                  </p>
+                </div>
+              </div>
+              <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                Status: Strong
+              </span>
+            </div>
+
+            {/* Health Score Gauge & Top Metrics */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="p-4 rounded-2xl bg-[#F7F5F0] dark:bg-[#071A3A] border border-[#071A3A]/10 dark:border-white/10">
+                <span className="text-[9px] font-bold uppercase text-[#52627A] dark:text-white/60">Health Index</span>
+                <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 my-1">
+                  88<span className="text-xs font-medium text-[#52627A] dark:text-white/50">/100</span>
+                </div>
+                <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 block truncate">
+                  Velocity inside target
+                </span>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-[#F7F5F0] dark:bg-[#071A3A] border border-[#071A3A]/10 dark:border-white/10">
+                <span className="text-[9px] font-bold uppercase text-[#52627A] dark:text-white/60">Delays Projected</span>
+                <div className="text-2xl sm:text-3xl font-black text-[#071A3A] dark:text-white my-1">
+                  0
+                </div>
+                <span className="text-[10px] font-semibold text-[#52627A] dark:text-white/60 block truncate">
+                  All deadlines on track
+                </span>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-[#F7F5F0] dark:bg-[#071A3A] border border-[#071A3A]/10 dark:border-white/10">
+                <span className="text-[9px] font-bold uppercase text-[#52627A] dark:text-white/60">Team Workload</span>
+                <div className="text-2xl sm:text-3xl font-black text-[#0052FF] dark:text-[#A9DFFF] my-1 truncate">
+                  Balanced
+                </div>
+                <span className="text-[10px] font-semibold text-[#0052FF] dark:text-[#A9DFFF] block truncate">
+                  Capacity at 74%
+                </span>
               </div>
             </div>
 
-            {/* Alert Item 2 */}
-            <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/25 border border-emerald-300 dark:border-emerald-800 flex items-start gap-3">
-              <CheckCircle2 size={18} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-              <div>
-                <div className="text-xs font-bold text-[#071A3A] dark:text-white mb-1">
-                  CRM Deal Pipeline Velocity Up 18%
+            {/* Actionable Intelligence Alert Cards */}
+            <div className="space-y-3 pt-1">
+              <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/25 border border-amber-300 dark:border-amber-800 flex items-start gap-3">
+                <AlertTriangle size={17} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <div className="text-xs font-bold text-[#071A3A] dark:text-white mb-0.5">
+                    Task Nearing Deadline Without Active Review
+                  </div>
+                  <p className="text-[11px] text-[#52627A] dark:text-white/70 leading-relaxed">
+                    "Stripe Webhook Signature Verification" due in 36 hours. Recommended reassigning review to available engineer.
+                  </p>
                 </div>
-                <p className="text-[11px] text-[#52627A] dark:text-white/70 leading-relaxed">
-                  Lead-to-proposal conversion pace improved after automated email sequence implementation. 5 proposals currently awaiting closing confirmation.
-                </p>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/25 border border-emerald-300 dark:border-emerald-800 flex items-start gap-3">
+                <CheckCircle2 size={17} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                <div>
+                  <div className="text-xs font-bold text-[#071A3A] dark:text-white mb-0.5">
+                    CRM Deal Pipeline Velocity Up 18%
+                  </div>
+                  <p className="text-[11px] text-[#52627A] dark:text-white/70 leading-relaxed">
+                    Lead-to-proposal conversion pace improved after automated email sequence implementation.
+                  </p>
+                </div>
               </div>
             </div>
           </div>

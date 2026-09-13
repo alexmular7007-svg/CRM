@@ -5,9 +5,11 @@ import { Sun, Moon, Menu, X, ArrowUpRight } from 'lucide-react'
 import { useThemeContext } from '../../contexts/ThemeContext'
 
 const NAV_LINKS = [
-  { label: 'Features', href: '#features' },
-  { label: 'Workflow', href: '#workflow' },
-  { label: 'Intelligence', href: '#ai' },
+  { label: 'Work Management', href: '#projects' },
+  { label: 'CRM Pipeline', href: '#crm' },
+  { label: 'Real-Time Chat', href: '#chat' },
+  { label: 'AI Intelligence', href: '#ai' },
+  { label: 'Marketing Engine', href: '#marketing' },
   { label: 'Pricing', href: '#pricing' },
 ]
 
@@ -22,7 +24,7 @@ export default function Navbar() {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20)
 
-      const sections = ['features', 'workflow', 'ai', 'pricing']
+      const sections = ['projects', 'crm', 'chat', 'ai', 'marketing', 'pricing']
       for (const section of sections) {
         const el = document.getElementById(section)
         if (el) {

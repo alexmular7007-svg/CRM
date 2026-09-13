@@ -3,7 +3,7 @@ import { MessageSquareCode, Users, Bell, Eye, Paperclip, Send, CheckCheck, Hash 
 
 export default function CollaborationShowcase() {
   return (
-    <section className="py-16 lg:py-24 bg-[#BFE9FF] dark:bg-[#0A1A2F] text-[#071A3A] dark:text-white transition-colors duration-300 overflow-hidden">
+    <section id="chat" className="py-16 lg:py-24 bg-[#BFE9FF] dark:bg-[#0A1A2F] text-[#071A3A] dark:text-white transition-colors duration-300 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Top Editorial Narrative & Feature Pills */}
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-12">

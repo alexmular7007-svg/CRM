@@ -6,20 +6,20 @@ export default function PlatformStatement() {
     <section id="features" className="py-24 lg:py-32 bg-[#BFE9FF] dark:bg-[#0B1F3A] text-[#071A3A] dark:text-white transition-colors duration-300 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
-          {/* Left Text Block */}
+          {/* Left Text & Value Pillar Block */}
           <div className="lg:col-span-6">
             <span className="text-[11px] font-black uppercase tracking-[0.25em] text-[#0052FF] dark:text-[#A9DFFF] block mb-3">
-              The Architecture of Alignment
+              Unified Operational Architecture
             </span>
             <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black uppercase tracking-tight leading-[0.95] mb-6 text-[#071A3A] dark:text-white">
-              One Workspace.
-              <span className="block mt-1">Everything Moving.</span>
+              Everything your team needs.
+              <span className="block text-[#0052FF] dark:text-[#A9DFFF] mt-1">Zero tool fragmentation.</span>
             </h2>
             <p className="text-base sm:text-lg text-[#071A3A]/80 dark:text-white/80 font-medium leading-relaxed mb-8 max-w-xl">
-              Stop toggling between disconnected issue trackers, separate CRM databases, isolated team chats, and stand-alone email tools. TaskFlow connects your entire operational lifecycle inside one unified platform.
+              Stop toggling between disconnected issue trackers, separate CRM databases, isolated team chats, and stand-alone email tools. TaskFlow connects your entire operational lifecycle inside one multi-tenant workspace.
             </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               <div className="p-4 rounded-xl bg-white/80 dark:bg-white/5 border border-[#071A3A]/10 dark:border-white/10 backdrop-blur-xs">
                 <div className="flex items-center gap-2 text-xs font-black uppercase text-[#0052FF] dark:text-[#A9DFFF] mb-1">
                   <Layers size={14} />
@@ -42,83 +42,71 @@ export default function PlatformStatement() {
             </div>
           </div>
 
-          {/* Right Visual Composition: Multi-System Synergy Hub */}
+          {/* Right Visual Composition: Workspace Team Photo + Event Hub */}
           <div className="lg:col-span-6">
-            <div
-              className="rounded-3xl border-2 border-[#071A3A]/15 dark:border-white/15 bg-white dark:bg-[#071A3A] p-6 sm:p-8 shadow-2xl space-y-5"
-            >
-              <div className="flex items-center justify-between pb-4 border-b border-[#071A3A]/10 dark:border-white/10">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-[#0052FF] text-white flex items-center justify-center font-black">
-                    <Zap size={20} />
-                  </div>
+            <div className="relative rounded-3xl border-2 border-[#071A3A]/15 dark:border-white/15 bg-white dark:bg-[#071A3A] overflow-hidden shadow-2xl space-y-0">
+              {/* Team Collaboration Photo Header */}
+              <div className="relative h-56 sm:h-64 w-full overflow-hidden">
+                <img
+                  src="/images/workspace-team.jpg"
+                  alt="TaskFlow Team Collaborating on Unified Projects and Sales Pipelines"
+                  className="w-full h-full object-cover object-center filter brightness-95"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#071A3A] via-transparent to-transparent" />
+                <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between text-white">
                   <div>
-                    <h3 className="text-sm font-black uppercase tracking-wide text-[#071A3A] dark:text-white">
-                      Cross-Functional Hub
-                    </h3>
-                    <p className="text-[11px] font-bold text-[#52627A] dark:text-[#A9DFFF] uppercase">
-                      Synchronized Events
-                    </p>
+                    <span className="text-xs font-black uppercase tracking-wider block">Cross-Functional Synergy</span>
+                    <span className="text-[10px] text-[#A9DFFF] font-bold">Engineering · Sales · Marketing · Management</span>
                   </div>
+                  <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-500 text-white">
+                    Active Session
+                  </span>
                 </div>
-                <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
-                  Live Engine
-                </span>
               </div>
 
-              {/* Event Pipeline Visualization */}
-              <div className="space-y-3">
-                <div className="p-3.5 rounded-xl bg-[#F7F5F0] dark:bg-white/5 border border-[#071A3A]/10 dark:border-white/10 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-2.5 h-2.5 rounded-full bg-[#0052FF]" />
-                    <div>
+              {/* Event Pipeline Overlay Container */}
+              <div className="p-5 sm:p-6 space-y-3 bg-white dark:bg-[#071A3A]">
+                <div className="flex items-center justify-between pb-3 border-b border-[#071A3A]/10 dark:border-white/10">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-lg bg-[#0052FF] text-white flex items-center justify-center font-black text-xs">
+                      <Zap size={15} />
+                    </div>
+                    <span className="text-xs font-black uppercase text-[#071A3A] dark:text-white">
+                      Automated Lead → Client → Project Event Pipeline
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="p-3 rounded-xl bg-[#F7F5F0] dark:bg-white/5 border border-[#071A3A]/10 dark:border-white/10 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-2 h-2 rounded-full bg-[#0052FF]" />
                       <div className="text-xs font-bold text-[#071A3A] dark:text-white">
-                        Public Form Ingestion
-                      </div>
-                      <div className="text-[10px] text-[#52627A] dark:text-white/60">
-                        Lead Magnet form submitted via /m/token/enterprise-guide
+                        1. Public Form Submission
                       </div>
                     </div>
+                    <span className="text-[10px] font-mono font-bold text-[#0052FF] dark:text-[#A9DFFF]">Trigger</span>
                   </div>
-                  <span className="text-[10px] font-mono font-bold text-[#0052FF] dark:text-[#A9DFFF]">Trigger</span>
-                </div>
 
-                <div className="flex justify-center -my-1">
-                  <div className="h-4 w-0.5 bg-[#071A3A]/20 dark:border-white/20" />
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-[#F7F5F0] dark:bg-white/5 border border-[#071A3A]/10 dark:border-white/10 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                    <div>
+                  <div className="p-3 rounded-xl bg-[#F7F5F0] dark:bg-white/5 border border-[#071A3A]/10 dark:border-white/10 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-2 h-2 rounded-full bg-amber-500" />
                       <div className="text-xs font-bold text-[#071A3A] dark:text-white">
-                        CRM Lead Created & Scored
-                      </div>
-                      <div className="text-[10px] text-[#52627A] dark:text-white/60">
-                        Assigned to Sales Team · Stage: Qualified · Score: 85
+                        2. CRM Lead Ingested & Scored (85/100)
                       </div>
                     </div>
+                    <span className="text-[10px] font-mono font-bold text-amber-600 dark:text-amber-400">Automated</span>
                   </div>
-                  <span className="text-[10px] font-mono font-bold text-amber-600 dark:text-amber-400">Automated</span>
-                </div>
 
-                <div className="flex justify-center -my-1">
-                  <div className="h-4 w-0.5 bg-[#071A3A]/20 dark:border-white/20" />
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-[#F7F5F0] dark:bg-white/5 border border-[#071A3A]/10 dark:border-white/10 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                    <div>
+                  <div className="p-3 rounded-xl bg-[#F7F5F0] dark:bg-white/5 border border-[#071A3A]/10 dark:border-white/10 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500" />
                       <div className="text-xs font-bold text-[#071A3A] dark:text-white">
-                        Delivery & Team Notification
-                      </div>
-                      <div className="text-[10px] text-[#52627A] dark:text-white/60">
-                        Brevo email sent · WebSocket push sent to #sales channel
+                        3. Deal Won → Client & Project Kanban Provisioned
                       </div>
                     </div>
+                    <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400">Completed</span>
                   </div>
-                  <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400">Delivered</span>
                 </div>
               </div>
             </div>
