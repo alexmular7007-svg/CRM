@@ -23,34 +23,9 @@ import { websocketService } from '../services/websocketService'
 import { workspaceService } from '../services/workspaceService'
 import UserAvatar from '../components/common/UserAvatar'
 import AuthenticatedSidebar from './AuthenticatedSidebar'
+import MobileNavigationDrawer from './MobileNavigationDrawer'
 import { useThemeContext } from '../contexts/ThemeContext'
 import { perfMonitor } from '../utils/performanceMonitor'
-
-// Navigation items for mobile drawer
-const MOBILE_NAV_ITEMS = [
-  { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { path: '/workspaces', icon: FolderOpen, label: 'Workspaces' },
-  { path: '/crm', icon: Users, label: 'CRM Pipeline' },
-  { path: '/chat', icon: MessageSquare, label: 'Chat' },
-  { path: '/analytics', icon: BarChart3, label: 'Analytics' },
-  { path: '/ai-insights', icon: Zap, label: 'AI Insights' },
-  {
-    label: 'Marketing',
-    icon: Megaphone,
-    children: [
-      { path: '/marketing/lead-magnets', label: 'Lead Magnets' },
-      { path: '/marketing/email-campaigns', label: 'Email Campaigns' },
-      { path: '/marketing/automations', label: 'Automations' },
-    ],
-  },
-  {
-    label: 'Developer Tools',
-    icon: Puzzle,
-    children: [
-      { path: '/chrome-extensions', label: 'Extension Lab' },
-    ],
-  },
-]
 
 /* ─── User dropdown menu ───────────────────────────────────────────────── */
 const UserMenu = ({ user, logout, unreadCount, onNotifications }) => {
@@ -119,429 +94,81 @@ const UserMenu = ({ user, logout, unreadCount, onNotifications }) => {
         />
       </button>
 
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.96, y: -4 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96, y: -4 }}
-            transition={{ duration: 0.15, ease: 'easeOut' }}
-            style={{
-              backgroundColor: currentTheme.colors.surface,
-              borderColor: currentTheme.colors.border,
-            }}
-            className="absolute right-0 top-full z-50 mt-2 w-56 origin-top-right rounded-xl border shadow-lg"
-          >
-            {/* Identity header */}
-            <div
-              style={{ borderColor: currentTheme.colors.border }}
-              className="flex items-center gap-3 border-b px-4 py-3"
-            >
-              <UserAvatar user={user} size="md" />
-              <div className="min-w-0">
-                <p
-                  style={{ color: currentTheme.colors.text }}
-                  className="truncate text-[13px] font-semibold"
-                >
-                  {user?.displayName || user?.fullName || 'User'}
-                </p>
-                <p
-                  style={{ color: currentTheme.colors.textSecondary }}
-                  className="truncate text-[11px]"
-                >
-                  {user?.email}
-                </p>
-              </div>
-            </div>
-
-            {/* Menu items */}
-            <div className="p-1.5">
-              {menuItems.map(({ label, icon: Icon, to, action, badge }) => {
-                const content = (
-                  <span className="flex items-center gap-2.5">
-                    <Icon size={14} className="flex-shrink-0" />
-                    <span className="flex-1 text-[13px] font-medium">{label}</span>
-                    {badge && (
-                      <span className="min-w-[18px] rounded-full bg-red-500 px-1.5 py-px text-center text-[10px] font-bold text-white">
-                        {badge}
-                      </span>
-                    )}
-                  </span>
-                )
-                const baseClasses = 'flex w-full items-center rounded-lg px-2.5 py-2 transition-colors'
-                const itemStyle = { color: currentTheme.colors.text }
-
-                if (to) {
-                  return (
-                    <a
-                      key={label}
-                      href={to}
-                      onClick={() => setOpen(false)}
-                      style={{
-                        ...itemStyle,
-                        backgroundColor: 'transparent',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = currentTheme.colors.surfaceSecondary
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'transparent'
-                      }}
-                      className={baseClasses}
-                    >
-                      {content}
-                    </a>
-                  )
-                }
-
-                return (
-                  <button
-                    key={label}
-                    onClick={action}
-                    style={{
-                      ...itemStyle,
-                      backgroundColor: 'transparent',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = currentTheme.colors.surfaceSecondary
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'transparent'
-                    }}
-                    className={baseClasses}
-                  >
-                    {content}
-                  </button>
-                )
-              })}
-            </div>
-
-            {/* Logout */}
-            <div
-              style={{ borderColor: currentTheme.colors.border }}
-              className="border-t p-1.5"
-            >
-              <button
-                onClick={() => {
-                  setOpen(false)
-                  logout()
-                }}
-                style={{ color: currentTheme.colors.danger }}
+      {open && (
+        <div
+          style={{
+            backgroundColor: currentTheme.colors.surface,
+            borderColor: currentTheme.colors.border,
+          }}
+          className="absolute right-0 top-full mt-1.5 w-52 rounded-xl border p-1 shadow-lg shadow-black/10 z-50"
+        >
+          {menuItems.map((item) => (
+            item.to ? (
+              <Link
+                key={item.label}
+                to={item.to}
+                onClick={() => setOpen(false)}
+                className="flex items-center justify-between rounded-lg px-3 py-2 text-[13px] font-medium transition-colors"
+                style={{ color: currentTheme.colors.text }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = currentTheme.colors.surfaceSecondary
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.backgroundColor = 'transparent'
                 }}
-                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 transition-colors"
               >
-                <FiLogOut size={14} className="flex-shrink-0" />
-                <span className="text-[13px] font-medium">Log out</span>
+                <div className="flex items-center gap-2.5">
+                  <item.icon size={15} style={{ color: currentTheme.colors.textSecondary }} />
+                  {item.label}
+                </div>
+              </Link>
+            ) : (
+              <button
+                key={item.label}
+                onClick={item.action}
+                className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-[13px] font-medium transition-colors text-left"
+                style={{ color: currentTheme.colors.text }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = currentTheme.colors.surfaceSecondary
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent'
+                }}
+              >
+                <div className="flex items-center gap-2.5">
+                  <item.icon size={15} style={{ color: currentTheme.colors.textSecondary }} />
+                  {item.label}
+                </div>
+                {item.badge && (
+                  <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white leading-none">
+                    {item.badge}
+                  </span>
+                )}
               </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            )
+          ))}
+
+          <div className="my-1 h-px" style={{ backgroundColor: currentTheme.colors.border }} />
+
+          <button
+            onClick={() => { setOpen(false); logout(); }}
+            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors text-left"
+            style={{ color: currentTheme.colors.danger || '#ef4444' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = currentTheme.colors.surfaceSecondary
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent'
+            }}
+          >
+            <FiLogOut size={15} />
+            Logout
+          </button>
+        </div>
+      )}
     </div>
   )
 }
-
-/* ─── Mobile Navigation Drawer ─────────────────────────────────────────── */
-const MobileNavigationDrawer = memo(({ isOpen, onClose, user, logout, unreadCount, onNotifications, currentTheme }) => {
-  const navigate = useNavigate()
-  const location = useLocation()
-  const [expandedMenu, setExpandedMenu] = useState(null)
-
-  useEffect(() => {
-    const activeGroup = MOBILE_NAV_ITEMS.find(
-      (item) => item.children && item.children.some((child) => location.pathname.startsWith(child.path))
-    )
-    if (activeGroup) {
-      setExpandedMenu(activeGroup.label)
-    }
-  }, [location.pathname])
-
-  const handleNavigation = (path) => {
-    navigate(path)
-    onClose()
-  }
-
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Overlay */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-black z-40 lg:hidden"
-            style={{ opacity: 0.5 }}
-            aria-hidden="true"
-          />
-
-          {/* Drawer */}
-          <motion.div
-            initial={{ x: '-100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '-100%' }}
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
-            style={{
-              backgroundColor: currentTheme.colors.sidebar,
-              borderColor: currentTheme.colors.border,
-            }}
-            className="fixed left-0 top-0 bottom-0 w-64 border-r h-screen overflow-y-auto flex flex-col z-50 lg:hidden"
-          >
-            {/* Drawer Header */}
-            <div
-              className="p-4 border-b flex items-center justify-between flex-shrink-0"
-              style={{ borderColor: currentTheme.colors.border }}
-            >
-              <Link to="/" onClick={onClose} className="flex items-center gap-2 group">
-                <img 
-                  src="/logo.png" 
-                  alt="TaskFlow AI" 
-                  className="w-8 h-8 object-contain"
-                />
-                <span
-                  style={{ color: currentTheme.colors.text }}
-                  className="font-bold text-base"
-                >
-                  TaskFlow AI
-                </span>
-              </Link>
-              <button
-                onClick={onClose}
-                className="p-2 rounded-lg transition-colors touch-target"
-                style={{ backgroundColor: currentTheme.colors.surface }}
-                aria-label="Close navigation menu"
-              >
-                <FiX size={20} style={{ color: currentTheme.colors.text }} />
-              </button>
-            </div>
-
-            {/* Navigation Links */}
-            <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-              {MOBILE_NAV_ITEMS.map((item) => {
-                if (item.children) {
-                  const Icon = item.icon
-                  const isExpanded = expandedMenu === item.label
-                  const hasActiveChild = item.children.some((child) => location.pathname.startsWith(child.path))
-
-                  return (
-                    <div key={item.label}>
-                      <button
-                        onClick={() => setExpandedMenu(isExpanded ? null : item.label)}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors relative touch-target"
-                        style={{
-                          backgroundColor: isExpanded || hasActiveChild ? currentTheme.colors.surface : 'transparent',
-                          color: isExpanded || hasActiveChild ? currentTheme.colors.primary : currentTheme.colors.textSecondary,
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = currentTheme.colors.surfaceSecondary
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = isExpanded || hasActiveChild ? currentTheme.colors.surface : 'transparent'
-                        }}
-                      >
-                        <Icon size={18} className="flex-shrink-0" />
-                        <span className="text-sm font-medium flex-1 text-left">{item.label}</span>
-                        <ChevronDown
-                          size={14}
-                          className="flex-shrink-0 transition-transform duration-200"
-                          style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                        />
-                        {(isExpanded || hasActiveChild) && (
-                          <div
-                            className="absolute left-0 top-0 bottom-0 w-1 rounded-r-lg"
-                            style={{ backgroundColor: currentTheme.colors.primary }}
-                          />
-                        )}
-                      </button>
-
-                      {isExpanded && (
-                        <div className="pl-4 space-y-0.5 mt-1">
-                          {item.children.map((child) => {
-                            const isActive = location.pathname.startsWith(child.path)
-                            return (
-                              <button
-                                key={child.path}
-                                onClick={() => handleNavigation(child.path)}
-                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors relative touch-target"
-                                style={{
-                                  backgroundColor: isActive ? currentTheme.colors.surface : 'transparent',
-                                  color: isActive ? currentTheme.colors.primary : currentTheme.colors.textSecondary,
-                                }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.backgroundColor = currentTheme.colors.surfaceSecondary
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.backgroundColor = isActive ? currentTheme.colors.surface : 'transparent'
-                                }}
-                              >
-                                <span className="text-sm font-medium flex-1 text-left">{child.label}</span>
-                                {isActive && (
-                                  <div
-                                    className="absolute left-0 top-0 bottom-0 w-1 rounded-r-lg"
-                                    style={{ backgroundColor: currentTheme.colors.primary }}
-                                  />
-                                )}
-                              </button>
-                            )
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )
-                }
-
-                const { path, icon: Icon, label } = item
-                const isActive = location.pathname.startsWith(path)
-                return (
-                  <button
-                    key={path}
-                    onClick={() => handleNavigation(path)}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors relative touch-target"
-                    style={{
-                      backgroundColor: isActive ? currentTheme.colors.surface : 'transparent',
-                      color: isActive ? currentTheme.colors.primary : currentTheme.colors.textSecondary,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = currentTheme.colors.surfaceSecondary
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = isActive ? currentTheme.colors.surface : 'transparent'
-                    }}
-                  >
-                    <Icon size={18} className="flex-shrink-0" />
-                    <span className="text-sm font-medium flex-1 text-left">{label}</span>
-                    {isActive && (
-                      <div
-                        className="absolute left-0 top-0 bottom-0 w-1 rounded-r-lg"
-                        style={{ backgroundColor: currentTheme.colors.primary }}
-                      />
-                    )}
-                  </button>
-                )
-              })}
-            </nav>
-
-            {/* Divider */}
-            <div
-              style={{ backgroundColor: currentTheme.colors.border }}
-              className="h-px mx-3"
-            />
-
-            {/* User Section */}
-            <div className="p-3 space-y-2 flex-shrink-0">
-              {/* Profile */}
-              <button
-                onClick={() => handleNavigation('/profile')}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors touch-target"
-                style={{
-                  backgroundColor: location.pathname === '/profile' ? currentTheme.colors.surface : 'transparent',
-                  color: location.pathname === '/profile' ? currentTheme.colors.primary : currentTheme.colors.textSecondary,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = currentTheme.colors.surfaceSecondary
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = location.pathname === '/profile' ? currentTheme.colors.surface : 'transparent'
-                }}
-              >
-                <FiUser size={18} className="flex-shrink-0" />
-                <span className="text-sm font-medium">Profile</span>
-              </button>
-
-              {/* Settings */}
-              <button
-                onClick={() => handleNavigation('/settings')}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors touch-target"
-                style={{
-                  backgroundColor: location.pathname === '/settings' ? currentTheme.colors.surface : 'transparent',
-                  color: location.pathname === '/settings' ? currentTheme.colors.primary : currentTheme.colors.textSecondary,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = currentTheme.colors.surfaceSecondary
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = location.pathname === '/settings' ? currentTheme.colors.surface : 'transparent'
-                }}
-              >
-                <FiSettings size={18} className="flex-shrink-0" />
-                <span className="text-sm font-medium">Settings</span>
-              </button>
-
-              {/* Notifications */}
-              <button
-                onClick={() => {
-                  onNotifications()
-                  onClose()
-                }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors touch-target"
-                style={{
-                  backgroundColor: 'transparent',
-                  color: currentTheme.colors.textSecondary,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = currentTheme.colors.surfaceSecondary
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent'
-                }}
-              >
-                <div className="relative">
-                  <FiBell size={18} className="flex-shrink-0" />
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
-                      {unreadCount > 9 ? '9+' : unreadCount}
-                    </span>
-                  )}
-                </div>
-                <span className="text-sm font-medium">Notifications</span>
-              </button>
-
-              {/* Logout */}
-              <button
-                onClick={() => {
-                  onClose()
-                  logout()
-                }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors touch-target"
-                style={{
-                  color: currentTheme.colors.danger,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = currentTheme.colors.surfaceSecondary
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent'
-                }}
-              >
-                <FiLogOut size={18} className="flex-shrink-0" />
-                <span className="text-sm font-medium">Logout</span>
-              </button>
-            </div>
-
-            {/* Footer */}
-            <div
-              className="border-t p-3 text-center text-xs flex-shrink-0"
-              style={{
-                borderColor: currentTheme.colors.border,
-                color: currentTheme.colors.textMuted,
-              }}
-            >
-              TaskFlow AI v1.0.0
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
-  )
-})
-
-MobileNavigationDrawer.displayName = 'MobileNavigationDrawer'
 
 /* ─── Main Authenticated Layout ─────────────────────────────────────────── */
 const AuthenticatedLayout = () => {

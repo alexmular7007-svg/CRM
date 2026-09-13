@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, memo } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   LayoutDashboard,
@@ -9,567 +9,374 @@ import {
   BarChart3,
   Zap,
   Settings,
-  Menu,
-  X,
   Megaphone,
   ChevronDown,
   Puzzle,
+  PanelLeft,
+  PanelLeftClose,
 } from 'lucide-react'
 import { useThemeContext } from '../contexts/ThemeContext'
 
-const NAV = [
-  { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { path: '/workspaces', icon: FolderOpen, label: 'Workspaces' },
-  { path: '/crm', icon: Users, label: 'CRM Pipeline' },
-  { path: '/chat', icon: MessageSquare, label: 'Chat' },
-  { path: '/analytics', icon: BarChart3, label: 'Analytics' },
-  { path: '/ai-insights', icon: Zap, label: 'AI Insights' },
+const NAV_GROUPS = [
   {
-    label: 'Marketing',
-    icon: Megaphone,
-    children: [
-      { path: '/marketing/lead-magnets', label: 'Lead Magnets' },
-      { path: '/marketing/email-campaigns', label: 'Email Campaigns' },
-      { path: '/marketing/automations', label: 'Automations' },
-    ]
+    title: 'MAIN',
+    items: [
+      { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+      { path: '/workspaces', icon: FolderOpen, label: 'Workspaces' },
+      { path: '/crm', icon: Users, label: 'CRM Pipeline' },
+      { path: '/chat', icon: MessageSquare, label: 'Chat' },
+      { path: '/analytics', icon: BarChart3, label: 'Analytics' },
+      { path: '/ai-insights', icon: Zap, label: 'AI Insights' },
+    ],
   },
   {
-    label: 'Developer Tools',
-    icon: Puzzle,
-    children: [
-      { path: '/chrome-extensions', label: 'Extension Lab' },
-    ]
+    title: 'MARKETING',
+    items: [
+      {
+        label: 'Marketing',
+        icon: Megaphone,
+        children: [
+          { path: '/marketing/lead-magnets', label: 'Lead Magnets' },
+          { path: '/marketing/email-campaigns', label: 'Email Campaigns' },
+          { path: '/marketing/automations', label: 'Automations' },
+        ],
+      },
+    ],
   },
-  { path: '/settings', icon: Settings, label: 'Settings' },
+  {
+    title: 'DEVELOPER TOOLS',
+    items: [
+      {
+        label: 'Developer Tools',
+        icon: Puzzle,
+        children: [
+          { path: '/chrome-extensions', label: 'Extension Lab' },
+        ],
+      },
+    ],
+  },
+  {
+    title: 'SYSTEM',
+    items: [
+      { path: '/settings', icon: Settings, label: 'Settings' },
+    ],
+  },
 ]
 
 const AuthenticatedSidebar = memo(() => {
-  // State management
+  // State management: 'collapsed' (72px) or 'pinned' (260px)
   const [sidebarState, setSidebarState] = useState(() => {
     const saved = localStorage.getItem('sidebar-state')
-    return saved || 'collapsed' // 'collapsed', 'pinned'
+    return saved || 'collapsed'
   })
-  const [isPeeking, setIsPeeking] = useState(false)
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
-  const [showMobileDrawer, setShowMobileDrawer] = useState(false)
+  
   const [expandedMenu, setExpandedMenu] = useState(null)
   const sidebarRef = useRef(null)
-  const peekTimeoutRef = useRef(null)
-
   const { currentTheme } = useThemeContext()
   const location = useLocation()
   const navigate = useNavigate()
-
-  // Auto-expand group containing active route
-  useEffect(() => {
-    const activeGroup = NAV.find(
-      (item) => item.children && item.children.some((child) => location.pathname.startsWith(child.path))
-    )
-    if (activeGroup) {
-      setExpandedMenu(activeGroup.label)
-    }
-  }, [location.pathname])
-
-  // Handle resize
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768)
-    }
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
 
   // Persist sidebar state
   useEffect(() => {
     localStorage.setItem('sidebar-state', sidebarState)
   }, [sidebarState])
 
-  // Handle mouse enter for peek mode (desktop only)
-  const handleMouseEnter = () => {
-    if (isMobile || sidebarState === 'pinned') return
-    if (peekTimeoutRef.current) clearTimeout(peekTimeoutRef.current)
-    setIsPeeking(true)
-  }
-
-  // Handle mouse leave for peek mode (desktop only)
-  const handleMouseLeave = () => {
-    if (isMobile || sidebarState === 'pinned') return
-    if (peekTimeoutRef.current) clearTimeout(peekTimeoutRef.current)
-    peekTimeoutRef.current = setTimeout(() => {
-      setIsPeeking(false)
-    }, 50)
-  }
-
-  // Toggle pin state
-  const togglePin = () => {
-    if (sidebarState === 'pinned') {
-      setSidebarState('collapsed')
-      setIsPeeking(false)
-    } else {
-      setSidebarState('pinned')
-      setIsPeeking(false)
+  // Auto-expand group containing active route
+  useEffect(() => {
+    for (const group of NAV_GROUPS) {
+      const activeGroup = group.items.find(
+        (item) => item.children && item.children.some((child) => location.pathname.startsWith(child.path))
+      )
+      if (activeGroup) {
+        setExpandedMenu(activeGroup.label)
+        break
+      }
     }
+  }, [location.pathname])
+
+  // Toggle between collapsed (72px) and expanded/pinned (260px)
+  const togglePin = () => {
+    setSidebarState((prev) => (prev === 'pinned' ? 'collapsed' : 'pinned'))
   }
 
-  // Close mobile drawer
-  const closeMobileDrawer = () => {
-    setShowMobileDrawer(false)
-  }
+  const isExpanded = sidebarState === 'pinned'
+  const sidebarWidth = isExpanded ? '260px' : '72px'
 
-  // Determine sidebar width
-  const getWidth = () => {
-    if (sidebarState === 'pinned') return '280px'
-    if (isPeeking) return '140px'
-    return '72px'
-  }
-
-  const showLabels = isPeeking || sidebarState === 'pinned'
-  const showFullLabels = sidebarState === 'pinned'
-
-  // Desktop Sidebar
-  if (!isMobile) {
-    return (
-      <motion.aside
-        ref={sidebarRef}
-        initial={false}
-        animate={{ width: getWidth() }}
-        transition={{ duration: 0.22, ease: 'easeInOut' }}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-        style={{
-          backgroundColor: currentTheme.colors.sidebar,
-          borderColor: currentTheme.colors.border,
-          zIndex: isPeeking ? 40 : 30,
-          boxSizing: 'border-box',
-          borderWidth: '1px',
-          borderRightWidth: '1px',
-          margin: 0,
-          padding: 0,
-        }}
-        className="hidden lg:flex flex-col border-r h-screen overflow-hidden"
-      >
-        {/* Logo/Header */}
-        <div
-          style={{ borderColor: currentTheme.colors.border, boxSizing: 'border-box', borderWidth: '1px', borderBottomWidth: '1px', margin: 0 }}
-          className="flex items-center justify-between border-b px-3 py-2 h-16 flex-shrink-0"
-        >
-          <button
-            onClick={togglePin}
-            title={sidebarState === 'pinned' ? 'Click to unpin' : 'Click to pin'}
-            className="flex-1 h-12 rounded-lg flex items-center justify-center gap-2 transition-all duration-200"
-            style={{
-              backgroundColor: currentTheme.colors.surface,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = currentTheme.colors.surfaceSecondary
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = currentTheme.colors.surface
-            }}
-          >
-            {/* Logo Image */}
-            <img
-              src="/logo.png"
-              alt="AI CRM"
-              className="h-8 w-8 object-contain"
-              style={{ filter: 'brightness(1)' }}
-            />
-
-            {/* Text - Shows in pinned or peek mode */}
-            {showLabels && (
-              <motion.span
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                transition={{ duration: 0.12 }}
-                className="text-sm font-bold"
-                style={{ color: currentTheme.colors.primary }}
-              >
-                {showFullLabels ? 'AI CRM' : 'AI'}
-              </motion.span>
-            )}
-          </button>
-
-
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 px-2 py-2 space-y-0.5 overflow-y-auto">
-          {NAV.map((item) => {
-            // Handle collapsible items (with children)
-            if (item.children) {
-              const Icon = item.icon
-              const isExpanded = expandedMenu === item.label
-              const hasActiveChild = item.children.some((child) => location.pathname.startsWith(child.path))
-              
-              return (
-                <div key={item.label}>
-                  {/* Parent Menu Button */}
-                  <motion.button
-                    onClick={() => setExpandedMenu(isExpanded ? null : item.label)}
-                    title={!showLabels ? item.label : ''}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors relative group"
-                    style={{
-                      backgroundColor: isExpanded || hasActiveChild ? currentTheme.colors.surface : 'transparent',
-                      color: isExpanded || hasActiveChild ? currentTheme.colors.primary : currentTheme.colors.textSecondary,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = currentTheme.colors.surfaceSecondary
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = isExpanded || hasActiveChild ? currentTheme.colors.surface : 'transparent'
-                    }}
-                  >
-                    <Icon size={18} className="flex-shrink-0" />
-
-                    {showLabels && (
-                      <motion.span
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -10 }}
-                        transition={{ duration: 0.12 }}
-                        className="text-sm font-medium flex-1 text-left truncate"
-                      >
-                        {showFullLabels ? item.label : item.label.split(' ')[0]}
-                      </motion.span>
-                    )}
-
-                    {/* Chevron for expanded state */}
-                    {showLabels && (
-                      <ChevronDown
-                        size={14}
-                        className="flex-shrink-0 transition-transform duration-200"
-                        style={{
-                          transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                        }}
-                      />
-                    )}
-
-                    {!showLabels && (
-                      <div
-                        className="absolute left-full ml-3 px-2.5 py-1.5 text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap font-medium shadow-lg"
-                        style={{
-                          backgroundColor: currentTheme.colors.surface,
-                          color: currentTheme.colors.text,
-                          border: `1px solid ${currentTheme.colors.border}`,
-                        }}
-                      >
-                        {item.label}
-                      </div>
-                    )}
-                  </motion.button>
-
-                  {/* Children items - only show in pinned or peek mode */}
-                  {isExpanded && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="pl-4 space-y-0.5 mt-1 overflow-hidden"
-                    >
-                      {item.children.map((child) => {
-                        const isActive = location.pathname.startsWith(child.path)
-                        return (
-                          <motion.button
-                            key={child.path}
-                            onClick={() => navigate(child.path)}
-                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors relative group"
-                            style={{
-                              backgroundColor: isActive ? currentTheme.colors.surface : 'transparent',
-                              color: isActive ? currentTheme.colors.primary : currentTheme.colors.textSecondary,
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = currentTheme.colors.surfaceSecondary
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = isActive ? currentTheme.colors.surface : 'transparent'
-                            }}
-                          >
-                            <span className="text-sm font-medium flex-1 text-left">{child.label}</span>
-                            {isActive && (
-                              <div
-                                className="absolute left-0 top-0 bottom-0 w-1 rounded-r-lg"
-                                style={{ backgroundColor: currentTheme.colors.primary }}
-                              />
-                            )}
-                          </motion.button>
-                        )
-                      })}
-                    </motion.div>
-                  )}
-                </div>
-              )
-            }
-
-            // Handle regular items (no children)
-            const { path, icon: Icon, label } = item
-            const isActive = location.pathname.startsWith(path)
-
-            return (
-              <motion.button
-                key={path}
-                onClick={() => navigate(path)}
-                title={!showLabels ? label : ''}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors relative group"
-                style={{
-                  backgroundColor: isActive ? currentTheme.colors.surface : 'transparent',
-                  color: isActive ? currentTheme.colors.primary : currentTheme.colors.textSecondary,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = currentTheme.colors.surfaceSecondary
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = isActive ? currentTheme.colors.surface : 'transparent'
-                }}
-              >
-                <Icon size={18} className="flex-shrink-0" />
-
-                {showLabels && (
-                  <motion.span
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -10 }}
-                    transition={{ duration: 0.12 }}
-                    className="text-sm font-medium flex-1 text-left truncate"
-                  >
-                    {showFullLabels ? label : label.split(' ')[0]}
-                  </motion.span>
-                )}
-
-                {isActive && (
-                  <div
-                    className="absolute left-0 top-0 bottom-0 w-1 rounded-r-lg"
-                    style={{ backgroundColor: currentTheme.colors.primary }}
-                  />
-                )}
-
-                {!showLabels && (
-                  <div
-                    className="absolute left-full ml-3 px-2.5 py-1.5 text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap font-medium shadow-lg"
-                    style={{
-                      backgroundColor: currentTheme.colors.surface,
-                      color: currentTheme.colors.text,
-                      border: `1px solid ${currentTheme.colors.border}`,
-                    }}
-                  >
-                    {label}
-                  </div>
-                )}
-              </motion.button>
-            )
-          })}
-        </nav>
-
-        {/* Footer help text - REMOVED */}
-
-
-      </motion.aside>
-    )
-  }
-
-  // Mobile Version with Drawer
   return (
-    <>
-      {/* Mobile Menu Button */}
-      {!showMobileDrawer && (
-        <button
-          onClick={() => setShowMobileDrawer(true)}
-          className="lg:hidden fixed bottom-6 right-6 p-4 rounded-full z-40 transition-transform active:scale-95"
-          style={{
-            backgroundColor: currentTheme.colors.primary,
-            color: currentTheme.colors.buttonPrimaryText,
-            boxShadow: `0 4px 12px ${currentTheme.colors.shadow}`,
-          }}
-        >
-          <Menu size={24} />
-        </button>
-      )}
-
-      {/* Mobile Drawer */}
-      {showMobileDrawer && (
-        <>
-          {/* Overlay */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={closeMobileDrawer}
-            className="lg:hidden fixed inset-0 bg-black z-40"
-            style={{ opacity: 0.5 }}
-          />
-
-          {/* Drawer */}
-          <motion.aside
-            initial={{ x: '-100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '-100%' }}
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
-            style={{
-              backgroundColor: currentTheme.colors.sidebar,
-              borderColor: currentTheme.colors.border,
-            }}
-            className="lg:hidden fixed left-0 top-0 bottom-0 w-64 border-r h-screen overflow-y-auto flex flex-col z-50"
-          >
-            {/* Mobile Header */}
-            <div
-              className="p-4 border-b flex items-center justify-between"
-              style={{ borderColor: currentTheme.colors.border }}
-            >
-              <div className="flex items-center gap-3">
-                <img
-                  src="/logo.png"
-                  alt="AI CRM"
-                  className="h-8 w-8 object-contain"
-                />
-                <span
-                  style={{ color: currentTheme.colors.text }}
-                  className="font-bold text-base"
-                >
-                  AI CRM
-                </span>
+    <motion.aside
+      ref={sidebarRef}
+      initial={false}
+      animate={{ width: sidebarWidth }}
+      transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+      style={{
+        backgroundColor: currentTheme?.colors?.sidebar || '#071A3A',
+        borderColor: currentTheme?.colors?.border || 'rgba(255, 255, 255, 0.1)',
+        boxSizing: 'border-box',
+        borderWidth: '1px',
+        borderRightWidth: '1px',
+        margin: 0,
+        padding: 0,
+      }}
+      className="hidden lg:flex flex-col border-r h-screen overflow-hidden select-none shrink-0"
+    >
+      {/* Header Container */}
+      <div
+        style={{ borderColor: currentTheme?.colors?.border || 'rgba(255, 255, 255, 0.1)' }}
+        className={`flex items-center ${isExpanded ? 'justify-between px-3.5' : 'justify-center px-2'} h-16 shrink-0 border-b`}
+      >
+        {isExpanded ? (
+          <>
+            <Link to="/dashboard" className="flex items-center gap-3 overflow-hidden">
+              <div className="w-9 h-9 rounded-xl bg-[#0052FF] flex items-center justify-center text-white font-black text-xs shadow-md shrink-0">
+                TF
               </div>
-              <button
-                onClick={closeMobileDrawer}
-                className="p-2 hover:rounded-lg transition-colors"
-                style={{ backgroundColor: currentTheme.colors.surface }}
+              <motion.div
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -8 }}
+                transition={{ duration: 0.15 }}
+                className="flex flex-col min-w-0"
               >
-                <X size={20} style={{ color: currentTheme.colors.text }} />
-              </button>
-            </div>
+                <span
+                  style={{ color: currentTheme?.colors?.text || '#FFFFFF' }}
+                  className="text-sm font-black uppercase tracking-wider truncate leading-tight"
+                >
+                  TaskFlow AI
+                </span>
+                <span
+                  style={{ color: currentTheme?.colors?.textMuted || '#94A3B8' }}
+                  className="text-[10px] font-bold uppercase tracking-widest truncate"
+                >
+                  Workspace
+                </span>
+              </motion.div>
+            </Link>
 
-            {/* Mobile Navigation */}
-            <nav className="flex-1 p-2 space-y-1">
-              {NAV.map((item) => {
-                // Handle collapsible items
-                if (item.children) {
-                  const Icon = item.icon
-                  const isExpanded = expandedMenu === item.label
-                  
-                  return (
-                    <div key={item.label}>
-                      <button
-                        onClick={() => setExpandedMenu(isExpanded ? null : item.label)}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors relative"
-                        style={{
-                          backgroundColor: isExpanded ? currentTheme.colors.surface : 'transparent',
-                          color: isExpanded ? currentTheme.colors.primary : currentTheme.colors.textSecondary,
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = currentTheme.colors.surfaceSecondary
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = isExpanded ? currentTheme.colors.surface : 'transparent'
-                        }}
-                      >
-                        <Icon size={18} className="flex-shrink-0" />
-                        <span className="text-sm font-medium flex-1 text-left">{item.label}</span>
-                        <ChevronDown
-                          size={14}
-                          className="flex-shrink-0 transition-transform duration-200"
-                          style={{
-                            transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                          }}
-                        />
-                        {isExpanded && (
-                          <div
-                            className="absolute left-0 top-0 bottom-0 w-1 rounded-r-lg"
-                            style={{ backgroundColor: currentTheme.colors.primary }}
-                          />
-                        )}
-                      </button>
-
-                      {/* Children items */}
-                      {isExpanded && (
-                        <div className="pl-4 space-y-0.5 mt-1">
-                          {item.children.map((child) => {
-                            const isActive = location.pathname.startsWith(child.path)
-                            return (
-                              <button
-                                key={child.path}
-                                onClick={() => {
-                                  navigate(child.path)
-                                  closeMobileDrawer()
-                                }}
-                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors relative"
-                                style={{
-                                  backgroundColor: isActive ? currentTheme.colors.surface : 'transparent',
-                                  color: isActive ? currentTheme.colors.primary : currentTheme.colors.textSecondary,
-                                }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.backgroundColor = currentTheme.colors.surfaceSecondary
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.backgroundColor = isActive ? currentTheme.colors.surface : 'transparent'
-                                }}
-                              >
-                                <span className="text-sm font-medium flex-1 text-left">{child.label}</span>
-                                {isActive && (
-                                  <div
-                                    className="absolute left-0 top-0 bottom-0 w-1 rounded-r-lg"
-                                    style={{ backgroundColor: currentTheme.colors.primary }}
-                                  />
-                                )}
-                              </button>
-                            )
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )
-                }
-
-                // Regular items
-                const { path, icon: Icon, label } = item
-                const isActive = location.pathname.startsWith(path)
-
-                return (
-                  <button
-                    key={path}
-                    onClick={() => {
-                      navigate(path)
-                      closeMobileDrawer()
-                    }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors relative"
-                    style={{
-                      backgroundColor: isActive ? currentTheme.colors.surface : 'transparent',
-                      color: isActive ? currentTheme.colors.primary : currentTheme.colors.textSecondary,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = currentTheme.colors.surfaceSecondary
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = isActive ? currentTheme.colors.surface : 'transparent'
-                    }}
-                  >
-                    <Icon size={18} className="flex-shrink-0" />
-                    <span className="text-sm font-medium flex-1 text-left">{label}</span>
-
-                    {isActive && (
-                      <div
-                        className="absolute left-0 top-0 bottom-0 w-1 rounded-r-lg"
-                        style={{ backgroundColor: currentTheme.colors.primary }}
-                      />
-                    )}
-                  </button>
-                )
-              })}
-            </nav>
-
-            {/* Mobile Footer */}
-            <div
-              className="border-t p-3 text-center text-xs"
+            {/* Toggle Collapse Control Button */}
+            <button
+              onClick={togglePin}
+              aria-label="Collapse sidebar"
+              title="Collapse sidebar"
+              className="p-2 rounded-lg transition-colors flex items-center justify-center"
               style={{
-                borderColor: currentTheme.colors.border,
-                color: currentTheme.colors.textMuted,
+                backgroundColor: 'transparent',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = currentTheme?.colors?.surfaceSecondary || 'rgba(255, 255, 255, 0.06)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent'
               }}
             >
-              v1.0.0
+              <PanelLeftClose size={18} style={{ color: currentTheme?.colors?.textSecondary || '#CBD5E1' }} />
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={togglePin}
+            aria-label="Expand sidebar"
+            title="Expand sidebar"
+            className="w-10 h-10 rounded-xl bg-[#0052FF] hover:bg-[#0043D6] flex items-center justify-center text-white shadow-md transition-all group relative"
+          >
+            <PanelLeft size={18} />
+            <div
+              className="absolute left-full ml-3 px-3 py-1.5 text-xs font-semibold rounded-md opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 z-50 whitespace-nowrap shadow-xl bg-[#071A3A] dark:bg-[#0F172A] text-white border border-white/10"
+              role="tooltip"
+            >
+              Expand Sidebar
             </div>
-          </motion.aside>
-        </>
-      )}
-    </>
+          </button>
+        )}
+      </div>
+
+      {/* Navigation Groups Container */}
+      <nav className="flex-1 px-2.5 py-3 space-y-5 overflow-y-auto overflow-x-hidden">
+        {NAV_GROUPS.map((group) => (
+          <div key={group.title} className="space-y-1">
+            {/* Section Header (Visible in Expanded Mode) */}
+            {isExpanded && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.12 }}
+                className="px-3 pt-2 pb-1 text-[10px] font-extrabold uppercase tracking-[0.12em]"
+                style={{ color: currentTheme?.colors?.textMuted || '#94A3B8' }}
+              >
+                {group.title}
+              </motion.div>
+            )}
+
+            {group.items.map((item) => {
+              // Handle Collapsible Submenus (Marketing & Developer Tools)
+              if (item.children) {
+                const Icon = item.icon
+                const isSubExpanded = expandedMenu === item.label
+                const hasActiveChild = item.children.some((child) => location.pathname.startsWith(child.path))
+
+                return (
+                  <div key={item.label}>
+                    <button
+                      onClick={() => {
+                        if (!isExpanded) {
+                          setSidebarState('pinned')
+                          setExpandedMenu(item.label)
+                        } else {
+                          setExpandedMenu(isSubExpanded ? null : item.label)
+                        }
+                      }}
+                      aria-label={item.label}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 relative group min-h-[44px]"
+                      style={{
+                        backgroundColor: (isSubExpanded || hasActiveChild) && isExpanded ? (currentTheme?.colors?.surface || 'rgba(255, 255, 255, 0.08)') : 'transparent',
+                        color: (isSubExpanded || hasActiveChild) ? (currentTheme?.colors?.primary || '#0052FF') : (currentTheme?.colors?.textSecondary || '#CBD5E1'),
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = currentTheme?.colors?.surfaceSecondary || 'rgba(255, 255, 255, 0.06)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = (isSubExpanded || hasActiveChild) && isExpanded ? (currentTheme?.colors?.surface || 'rgba(255, 255, 255, 0.08)') : 'transparent'
+                      }}
+                    >
+                      <Icon size={18} className="shrink-0" />
+
+                      {isExpanded && (
+                        <motion.span
+                          initial={{ opacity: 0, x: -6 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -6 }}
+                          transition={{ duration: 0.12 }}
+                          className="text-sm font-semibold flex-1 text-left truncate"
+                        >
+                          {item.label}
+                        </motion.span>
+                      )}
+
+                      {/* Submenu Indicator Chevron */}
+                      {isExpanded && (
+                        <ChevronDown
+                          size={15}
+                          className="shrink-0 transition-transform duration-200"
+                          style={{
+                            transform: isSubExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                          }}
+                        />
+                      )}
+
+                      {/* Collapsed Tooltip */}
+                      {!isExpanded && (
+                        <div
+                          className="absolute left-full ml-3 px-3 py-1.5 text-xs font-semibold rounded-md opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 z-50 whitespace-nowrap shadow-xl bg-[#071A3A] dark:bg-[#0F172A] text-white border border-white/10"
+                          role="tooltip"
+                        >
+                          {item.label}
+                        </div>
+                      )}
+                    </button>
+
+                    {/* Submenu Children Items (Only shown when Expanded) */}
+                    {isExpanded && isSubExpanded && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.18 }}
+                        className="pl-4 space-y-1 mt-1 border-l border-white/10 ml-4 overflow-hidden"
+                      >
+                        {item.children.map((child) => {
+                          const isActive = location.pathname.startsWith(child.path)
+                          return (
+                            <button
+                              key={child.path}
+                              onClick={() => navigate(child.path)}
+                              aria-label={child.label}
+                              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors relative group min-h-[40px]"
+                              style={{
+                                backgroundColor: isActive ? (currentTheme?.colors?.surface || 'rgba(255, 255, 255, 0.1)') : 'transparent',
+                                color: isActive ? (currentTheme?.colors?.primary || '#0052FF') : (currentTheme?.colors?.textSecondary || '#CBD5E1'),
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = currentTheme?.colors?.surfaceSecondary || 'rgba(255, 255, 255, 0.06)'
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = isActive ? (currentTheme?.colors?.surface || 'rgba(255, 255, 255, 0.1)') : 'transparent'
+                              }}
+                            >
+                              <span className="text-xs font-semibold flex-1 text-left truncate">{child.label}</span>
+                              {isActive && (
+                                <div
+                                  className="absolute left-0 top-1 bottom-1 w-1 rounded-r-md"
+                                  style={{ backgroundColor: currentTheme?.colors?.primary || '#0052FF' }}
+                                />
+                              )}
+                            </button>
+                          )
+                        })}
+                      </motion.div>
+                    )}
+                  </div>
+                )
+              }
+
+              // Handle Top-Level Navigation Items
+              const { path, icon: Icon, label } = item
+              const isActive = location.pathname.startsWith(path)
+
+              return (
+                <button
+                  key={path}
+                  onClick={() => navigate(path)}
+                  aria-label={label}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 relative group min-h-[44px]"
+                  style={{
+                    backgroundColor: isActive ? (currentTheme?.colors?.surface || 'rgba(255, 255, 255, 0.08)') : 'transparent',
+                    color: isActive ? (currentTheme?.colors?.primary || '#0052FF') : (currentTheme?.colors?.textSecondary || '#CBD5E1'),
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = currentTheme?.colors?.surfaceSecondary || 'rgba(255, 255, 255, 0.06)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = isActive ? (currentTheme?.colors?.surface || 'rgba(255, 255, 255, 0.08)') : 'transparent'
+                  }}
+                >
+                  <Icon size={18} className="shrink-0" />
+
+                  {isExpanded && (
+                    <motion.span
+                      initial={{ opacity: 0, x: -6 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -6 }}
+                      transition={{ duration: 0.12 }}
+                      className="text-sm font-semibold flex-1 text-left truncate"
+                    >
+                      {label}
+                    </motion.span>
+                  )}
+
+                  {/* Active Indicator Pill */}
+                  {isActive && (
+                    <div
+                      className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-md"
+                      style={{ backgroundColor: currentTheme?.colors?.primary || '#0052FF' }}
+                    />
+                  )}
+
+                  {/* Collapsed Tooltip */}
+                  {!isExpanded && (
+                    <div
+                      className="absolute left-full ml-3 px-3 py-1.5 text-xs font-semibold rounded-md opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 z-50 whitespace-nowrap shadow-xl bg-[#071A3A] dark:bg-[#0F172A] text-white border border-white/10"
+                      role="tooltip"
+                    >
+                      {label}
+                    </div>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        ))}
+      </nav>
+    </motion.aside>
   )
 })
 
