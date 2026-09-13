@@ -40,11 +40,11 @@ export default function FinalCTA() {
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-y-2 gap-x-6 text-xs font-bold text-white/80 uppercase tracking-wider">
-            <span>Free Tier Available</span>
-            <span>·</span>
-            <span>Multi-Tenant Workspaces</span>
-            <span>·</span>
-            <span>Role-Based Access Control</span>
+            <span className="text-white/80">Free Tier Available</span>
+            <span className="text-white/40">·</span>
+            <span className="text-white/80">Multi-Tenant Workspaces</span>
+            <span className="text-white/40">·</span>
+            <span className="text-white/80">Role-Based Access Control</span>
           </div>
         </div>
       </div>

@@ -55,18 +55,18 @@ export default function HeroSection() {
             </div>
 
             {/* Truthful Platform Proof points */}
-            <div className="flex flex-wrap items-center gap-y-2 gap-x-5 text-xs font-bold text-[#52627A] dark:text-white/70 uppercase tracking-wider pt-4 border-t border-[#071A3A]/10 dark:border-white/10">
+            <div className="flex flex-wrap items-center gap-y-2 gap-x-5 text-xs font-bold text-white/80 uppercase tracking-wider pt-4 border-t border-white/20">
               <div className="flex items-center gap-1.5">
-                <CheckCircle2 size={15} className="text-[#0052FF] dark:text-[#A9DFFF]" />
-                <span>Multi-Tenant Workspaces</span>
+                <CheckCircle2 size={15} className="text-[#A9DFFF]" />
+                <span className="text-white/80">Free Tier Available</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <ShieldCheck size={15} className="text-[#0052FF] dark:text-[#A9DFFF]" />
-                <span>Role-Based Access</span>
+                <ShieldCheck size={15} className="text-[#A9DFFF]" />
+                <span className="text-white/80">Multi-Tenant Workspaces</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <Sparkles size={15} className="text-[#0052FF] dark:text-[#A9DFFF]" />
-                <span>No Credit Card Needed</span>
+                <Sparkles size={15} className="text-[#A9DFFF]" />
+                <span className="text-white/80">Role-Based Access Control</span>
               </div>
             </div>
           </div>

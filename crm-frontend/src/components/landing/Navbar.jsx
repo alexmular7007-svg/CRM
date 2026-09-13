@@ -125,7 +125,7 @@ export default function Navbar() {
               <button
                 onClick={() => switchTheme(isDark ? 'light' : 'dark')}
                 aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-                className="w-10 h-10 rounded-full border border-[#071A3A]/15 dark:border-white/15 flex items-center justify-center text-[#071A3A] dark:text-white"
+                className="w-10 h-10 rounded-full border border-[#071A3A]/15 dark:border-white/15 flex items-center justify-center text-[#071A3A] dark:text-white hover:bg-[#071A3A]/5 dark:hover:bg-white/10 transition-colors"
               >
                 {isDark ? <Sun size={18} /> : <Moon size={18} />}
               </button>
@@ -133,9 +133,9 @@ export default function Navbar() {
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
-                className="w-10 h-10 rounded-full bg-[#071A3A] dark:bg-white text-white dark:text-[#071A3A] flex items-center justify-center focus:outline-none"
+                className="w-10 h-10 rounded-full bg-white dark:bg-[#0B1F3A] border border-[#071A3A]/15 dark:border-white/20 text-[#071A3A] dark:text-white flex items-center justify-center focus:outline-none shadow-sm hover:bg-gray-50 dark:hover:bg-[#0E274A] transition-colors"
               >
-                {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+                {isMobileMenuOpen ? <X size={20} className="text-[#071A3A] dark:text-white" /> : <Menu size={20} className="text-[#071A3A] dark:text-white" />}
               </button>
             </div>
           </div>

@@ -212,6 +212,12 @@ export const ThemeProvider = ({ children }) => {
       root.style.setProperty(`--theme-${key}`, value)
     })
 
+    if (theme === 'dark') {
+      root.classList.add('dark')
+    } else {
+      root.classList.remove('dark')
+    }
+
     localStorage.setItem('app-theme', theme)
   }, [theme])
 

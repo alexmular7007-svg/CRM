@@ -138,6 +138,23 @@ h6 span:not([class*="text-"]) {
   color: inherit;
 }
 
+/* Ensure dark editorial sections inherit light text and SVGs inherit parent color */
+.dark-section,
+[data-section-theme="dark"] {
+  color: #F8FAFC;
+}
+
+.dark-section p:not([class*="text-"]),
+.dark-section span:not([class*="text-"]),
+[data-section-theme="dark"] p:not([class*="text-"]),
+[data-section-theme="dark"] span:not([class*="text-"]) {
+  color: inherit;
+}
+
+svg {
+  color: inherit;
+}
+
 /* ── Links ──── */
 a {
   color: var(--theme-primary);
